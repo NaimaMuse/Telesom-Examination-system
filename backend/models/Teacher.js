@@ -52,10 +52,6 @@ const teacherSchema = new mongoose.Schema(
   }
 );
 
-// Indexes
-teacherSchema.index({ teacherId: 1 });
-teacherSchema.index({ user: 1 });
-
 const Teacher = mongoose.model('Teacher', teacherSchema);
 
 module.exports = Teacher;

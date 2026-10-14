@@ -12,6 +12,7 @@ const enrollmentSchema = new mongoose.Schema(
       ref: 'Course',
       required: [true, 'Course reference is required'],
     },
+    
     academicYear: {
       type: String,
       required: [true, 'Academic year is required'],

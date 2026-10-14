@@ -4,9 +4,7 @@ const Student = require('../models/Student');
 const generateToken = require('../utils/generateToken');
 
 /**
- * @desc    Authenticate user & get JWT token
- *          - Students log in using Student ID ONLY (no password required)
- *          - Admins & Teachers log in using Email + Password
+ * Authenticate students with their student ID and staff with email/password.
  * @route   POST /api/auth/login
  * @access  Public
  */

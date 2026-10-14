@@ -22,7 +22,14 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Password hash is required'],
+      // Students log in with Student ID only, so they do not store a password.
+      // Admin and teacher accounts still require a hashed password.
+      required: [
+        function passwordRequired() {
+          return this.role !== 'student';
+        },
+        'Password hash is required',
+      ],
       minlength: [6, 'Password must be at least 6 characters long'],
       select: false, // Prevents password from being returned in queries by default
     },

@@ -74,7 +74,6 @@ const quizSchema = new mongoose.Schema(
 );
 
 // Indexes
-quizSchema.index({ quizCode: 1 });
 quizSchema.index({ course: 1, quizDate: 1 });
 
 const Quiz = mongoose.model('Quiz', quizSchema);

@@ -47,7 +47,6 @@ const courseSchema = new mongoose.Schema(
 );
 
 // Indexes
-courseSchema.index({ courseCode: 1 });
 courseSchema.index({ department: 1 });
 
 const Course = mongoose.model('Course', courseSchema);
