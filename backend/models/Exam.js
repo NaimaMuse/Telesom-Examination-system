@@ -89,7 +89,6 @@ const examSchema = new mongoose.Schema(
 );
 
 // Indexes
-examSchema.index({ examCode: 1 });
 examSchema.index({ course: 1, examDate: 1 });
 
 const Exam = mongoose.model('Exam', examSchema);

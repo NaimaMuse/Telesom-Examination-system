@@ -11,8 +11,14 @@ const notFound = (req, res, next) => {
  * Centralized error handling middleware
  */
 const errorHandler = (err, req, res, next) => {
-  // If status code is 200, default to 500 internal server error
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  if (res.headersSent) {
+    return next(err);
+  }
+  const requestedStatus = err.statusCode || err.status || res.statusCode;
+  const statusCode =
+    Number.isInteger(requestedStatus) && requestedStatus >= 400 && requestedStatus <= 599
+      ? requestedStatus
+      : 500;
 
   res.status(statusCode).json({
     success: false,
