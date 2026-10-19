@@ -1,0 +1,12 @@
+{
+  "name": "telesom-examination-system",
+  "version": "1.0.0",
+  "description": "Telesom Academy Examination & Academic Management System",
+  "scripts": {
+    "start": "node -e \"console.log('Run npm run dev to start both frontend and backend')\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "seed": "npm --prefix backend run seed",
+    "test:backend": "npm --prefix backend test"
+  }
+}

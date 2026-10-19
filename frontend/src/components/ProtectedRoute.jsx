@@ -3,8 +3,15 @@ import { useAuth } from '../context/AuthContext';
 
 /**
  * ProtectedRoute
- * Redirects to /login if not authenticated.
- * Optionally restrict by role: <ProtectedRoute roles={['admin']}> ...
+ *
+ * - If not authenticated → redirect to /login
+ * - If authenticated but wrong role → redirect to user's own dashboard
+ * - If authenticated + correct role → render children
+ *
+ * Usage:
+ *   <ProtectedRoute>                        — any authenticated user
+ *   <ProtectedRoute roles={['admin']}>      — admin only
+ *   <ProtectedRoute roles={['teacher']}>    — teacher only
  */
 export default function ProtectedRoute({ children, roles }) {
   const { isAuthenticated, user } = useAuth();
@@ -14,8 +21,13 @@ export default function ProtectedRoute({ children, roles }) {
   }
 
   if (roles && user && !roles.includes(user.role)) {
-    // Authenticated but wrong role — go to their dashboard
-    return <Navigate to="/dashboard" replace />;
+    // Redirect to the correct role dashboard
+    const roleHome = {
+      admin:   '/admin/dashboard',
+      teacher: '/teacher/dashboard',
+      student: '/student/dashboard',
+    };
+    return <Navigate to={roleHome[user.role] || '/login'} replace />;
   }
 
   return children;

@@ -5,15 +5,17 @@ const controller = createResourceController(Course, {
   fields: [
     'courseCode',
     'title',
+    'name',
     'description',
     'credits',
+    'status',
     'department',
     'semester',
     'academicYear',
     'isActive',
   ],
-  filterFields: ['courseCode', 'department', 'semester', 'academicYear', 'isActive'],
-  sortFields: ['createdAt', 'updatedAt', 'courseCode', 'title'],
+  filterFields: ['courseCode', 'title', 'name', 'status', 'department', 'semester', 'academicYear', 'isActive'],
+  sortFields: ['createdAt', 'updatedAt', 'courseCode', 'title', 'name', 'credits', 'status'],
 });
 
 module.exports = {

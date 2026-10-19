@@ -2,15 +2,21 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/Login';
-import DashboardPage from './pages/Dashboard';
+import SignupPage from './pages/Signup';
+import RoleRedirect from './pages/RoleRedirect';
+import DashboardLayout from './components/DashboardLayout';
 
 /**
  * App — root router + auth context wrapper.
  *
- * Route structure (this step):
+ * Routes:
  *   /           → redirect to /login
  *   /login      → LoginPage (public)
- *   /dashboard  → DashboardPage (requires authentication)
+ *   /signup     → SignupPage (public)
+ *   /dashboard  → RoleRedirect (protected, redirects based on role)
+ *   /admin/*    → Admin dashboards (protected, role=admin)
+ *   /teacher/*  → Teacher dashboards (protected, role=teacher)
+ *   /student/*  → Student dashboards (protected, role=student)
  */
 export default function App() {
   return (
@@ -20,15 +26,46 @@ export default function App() {
           {/* Default: redirect root to /login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
 
-          {/* Public */}
+          {/* Public Authentication Pages */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
 
-          {/* Protected */}
+          {/* Protected base redirect based on role */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <RoleRedirect />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin area */}
+          <Route
+            path="/admin/*"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <DashboardLayout role="admin" />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Teacher area */}
+          <Route
+            path="/teacher/*"
+            element={
+              <ProtectedRoute roles={['teacher']}>
+                <DashboardLayout role="teacher" />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Student area */}
+          <Route
+            path="/student/*"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <DashboardLayout role="student" />
               </ProtectedRoute>
             }
           />

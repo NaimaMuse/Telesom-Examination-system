@@ -1,0 +1,89 @@
+import { useState, useEffect } from 'react';
+import api from '../../services/api';
+
+const PLACEHOLDER_QUIZZES = [
+  { _id:'q1', course:'CS101', quiz:'Quiz 1 – Variables', date:'2026-10-20', marks:9,  totalMarks:10, grade:'A', status:'graded' },
+  { _id:'q2', course:'BUS101',quiz:'Quiz 1 – Intro',    date:'2026-10-22', marks:7,  totalMarks:10, grade:'B', status:'graded' },
+  { _id:'q3', course:'CS101', quiz:'Quiz 2 – Functions', date:'2026-11-05', marks:null, totalMarks:10, grade:null, status:'upcoming' },
+];
+
+function gradeColor(g){ return !g?'':g==='A'?'grade-A':g==='B'?'grade-B':g==='C'?'grade-C':g==='D'?'grade-D':'grade-F'; }
+
+export default function StudentQuizzes() {
+  const [quizzes, setQuizzes] = useState(PLACEHOLDER_QUIZZES);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(()=>{
+    const fetch=async()=>{
+      setLoading(true);
+      try{const res=await api.get('/student/quizzes');if(res.data?.quizzes)setQuizzes(res.data.quizzes);}catch{}finally{setLoading(false);}
+    };
+    fetch();
+  },[]);
+
+  const graded   = quizzes.filter(q=>q.status==='graded');
+  const upcoming = quizzes.filter(q=>q.status==='upcoming');
+  const avg      = graded.length?Math.round(graded.reduce((a,q)=>a+(q.marks/q.totalMarks)*100,0)/graded.length):0;
+
+  return (
+    <>
+      <div className="page-header">
+        <div className="page-header-left"><h1>Quizzes</h1><p>View your quiz results</p></div>
+      </div>
+
+      <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
+        <div className="stat-card"><div className="stat-icon blue">📊</div><div className="stat-info"><div className="stat-value">{avg}%</div><div className="stat-label">Quiz Average</div></div></div>
+        <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><div className="stat-value">{graded.length}</div><div className="stat-label">Completed</div></div></div>
+        <div className="stat-card"><div className="stat-icon gold">⏳</div><div className="stat-info"><div className="stat-value">{upcoming.length}</div><div className="stat-label">Upcoming</div></div></div>
+        <div className="stat-card"><div className="stat-icon purple">🏆</div><div className="stat-info"><div className="stat-value">{graded.filter(q=>q.grade==='A').length}</div><div className="stat-label">A Grades</div></div></div>
+      </div>
+
+      {upcoming.length > 0 && (
+        <div className="card" style={{marginBottom:'1.5rem'}}>
+          <div className="card-header"><span className="card-title">Upcoming Quizzes</span></div>
+          <div className="card-body" style={{display:'flex',flexDirection:'column',gap:'0.65rem'}}>
+            {upcoming.map(q=>(
+              <div key={q._id} style={{display:'flex',alignItems:'center',gap:'12px',padding:'0.75rem',background:'#fffbeb',borderRadius:'var(--radius-sm)',border:'1px solid #fef3c7'}}>
+                <span style={{fontSize:'1.2rem'}}>🧩</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:'0.875rem'}}>{q.quiz}</div>
+                  <div style={{fontSize:'0.75rem',color:'var(--text-secondary)'}}>{q.course} • {q.date}</div>
+                </div>
+                <span className="badge badge-warning">Upcoming</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Quiz Results ({graded.length})</span></div>
+        {loading?<div className="spinner-wrap"><div className="spinner"/></div>
+          :graded.length===0?<div className="empty-state"><div className="empty-state-icon">🧩</div><h3>No quiz results yet</h3></div>
+          :(
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead><tr><th>#</th><th>Course</th><th>Quiz</th><th>Date</th><th>Marks</th><th>%</th><th>Grade</th></tr></thead>
+              <tbody>
+                {graded.map((q,i)=>{
+                  const pct=q.totalMarks?Math.round((q.marks/q.totalMarks)*100):0;
+                  return (
+                    <tr key={q._id}>
+                      <td>{i+1}</td>
+                      <td><span className="badge badge-info">{q.course}</span></td>
+                      <td style={{fontWeight:600}}>{q.quiz}</td>
+                      <td>{q.date}</td>
+                      <td>{q.marks}/{q.totalMarks}</td>
+                      <td>{pct}%</td>
+                      <td><span className={gradeColor(q.grade)}>{q.grade||'—'}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}

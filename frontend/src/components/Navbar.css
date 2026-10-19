@@ -1,0 +1,291 @@
+/* ── Telesom Academy Navbar ─────────────────────────────────────────── */
+.telesom-navbar-wrapper {
+  background-color: #ffffff;
+  border-bottom: 1px solid #edf2ee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.telesom-navbar {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+/* ── Left: Brand & Explore ── */
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.btn-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--telesom-green);
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.btn-explore:hover {
+  background-color: var(--telesom-green-light);
+  color: var(--telesom-green-hover);
+}
+
+.explore-icon {
+  color: var(--telesom-green);
+}
+
+/* ── Center: Nav items ── */
+.nav-center {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-item {
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.2rem;
+  transition: color var(--transition);
+}
+
+.nav-item:hover {
+  color: var(--telesom-green);
+}
+
+.nav-item.has-dropdown svg {
+  transition: transform var(--transition);
+  color: #64748b;
+}
+
+.nav-item.has-dropdown:hover svg {
+  transform: translateY(2px);
+  color: var(--telesom-green);
+}
+
+/* ── Right: Search, Cart, Log in, Sign Up ── */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  padding: 0.45rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.icon-btn:hover {
+  background-color: #f1f5f9;
+  color: var(--telesom-green);
+}
+
+.cart-badge-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  padding: 0.45rem;
+  border-radius: 50%;
+  transition: color var(--transition);
+}
+
+.cart-badge-wrapper:hover {
+  color: var(--telesom-green);
+}
+
+.cart-counter {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  background-color: var(--telesom-green);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ffffff;
+}
+
+/* ── Log in Button (Telesom Green) ── */
+.btn-nav-login {
+  background-color: var(--telesom-green);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.55rem 1.35rem;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition), transform 0.1s ease, box-shadow var(--transition);
+  box-shadow: 0 2px 4px rgba(34, 153, 72, 0.15);
+  border: 1px solid transparent;
+}
+
+.btn-nav-login:hover {
+  background-color: var(--telesom-green-hover);
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(34, 153, 72, 0.25);
+}
+
+.btn-nav-login:active {
+  background-color: var(--telesom-green-active);
+  transform: translateY(1px);
+}
+
+/* ── Sign Up Button (Telesom Gold/Amber) ── */
+.btn-nav-signup {
+  background-color: var(--telesom-gold);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.55rem 1.35rem;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition), transform 0.1s ease, box-shadow var(--transition);
+  box-shadow: 0 2px 4px rgba(214, 139, 41, 0.18);
+  border: 1px solid transparent;
+}
+
+.btn-nav-signup:hover {
+  background-color: var(--telesom-gold-hover);
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(214, 139, 41, 0.28);
+}
+
+.btn-nav-signup:active {
+  background-color: var(--telesom-gold-active);
+  transform: translateY(1px);
+}
+
+/* Current page indicator on top nav */
+.btn-nav-login.current-page,
+.btn-nav-signup.current-page {
+  outline: 2px solid #ffffff;
+  outline-offset: -3px;
+}
+
+/* Mobile Toggle Hamburger */
+.mobile-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #1e293b;
+  cursor: pointer;
+  padding: 0.4rem;
+}
+
+/* ── Mobile Drawer ── */
+.mobile-drawer {
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mobile-nav-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.mobile-nav-links a {
+  color: #334155;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.mobile-action-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.mobile-action-buttons a {
+  flex: 1;
+  text-align: center;
+}
+
+/* ── Responsive ── */
+@media (max-width: 960px) {
+  .nav-center {
+    display: none;
+  }
+  .btn-explore {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .telesom-navbar {
+    padding: 0.65rem 1rem;
+  }
+  .btn-nav-login,
+  .btn-nav-signup,
+  .cart-badge-wrapper,
+  .search-trigger {
+    display: none;
+  }
+  .mobile-toggle {
+    display: block;
+  }
+}
