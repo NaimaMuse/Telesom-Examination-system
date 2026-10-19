@@ -1,0 +1,291 @@
+import { useEffect, useState } from 'react';
+import api from '../../services/api';
+import './teacher.css';
+
+const assessmentKey = (assessment) => `${assessment.type}:${assessment._id}`;
+
+export default function TeacherResults() {
+  const [assessments, setAssessments] = useState([]);
+  const [selectedKey, setSelectedKey] = useState('');
+  const [assessment, setAssessment] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loadingAssessments, setLoadingAssessments] = useState(true);
+  const [loadingRoster, setLoadingRoster] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const loadAssessments = async () => {
+      setLoadingAssessments(true);
+      setError('');
+      try {
+        const response = await api.get('/teacher/results/assessments');
+        if (!active) return;
+        const rows = Array.isArray(response.data?.assessments) ? response.data.assessments : [];
+        setAssessments(rows);
+        if (rows.length) setSelectedKey(assessmentKey(rows[0]));
+      } catch (requestError) {
+        if (active) setError(requestError.response?.data?.message || 'Assessments could not be loaded.');
+      } finally {
+        if (active) setLoadingAssessments(false);
+      }
+    };
+    loadAssessments();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedKey) {
+      setAssessment(null);
+      setStudents([]);
+      return undefined;
+    }
+
+    let active = true;
+    const selected = assessments.find((item) => assessmentKey(item) === selectedKey);
+    if (!selected) return undefined;
+
+    const loadRoster = async () => {
+      setLoadingRoster(true);
+      setError('');
+      setNotice('');
+      try {
+        const response = await api.get(`/teacher/results/${selected.type}/${selected._id}`);
+        if (!active) return;
+        setAssessment(response.data?.assessment || null);
+        setStudents((response.data?.students || []).map((student) => ({
+          ...student,
+          marksObtained: student.marksObtained == null ? '' : String(student.marksObtained),
+          remarks: student.remarks || '',
+        })));
+      } catch (requestError) {
+        if (!active) return;
+        setError(requestError.response?.data?.message || 'The student roster could not be loaded.');
+        setAssessment(null);
+        setStudents([]);
+      } finally {
+        if (active) setLoadingRoster(false);
+      }
+    };
+    loadRoster();
+    return () => { active = false; };
+  }, [selectedKey, assessments]);
+
+  const updateStudent = (studentId, field, value) => {
+    setStudents((current) => current.map((student) => (
+      student._id === studentId ? { ...student, [field]: value } : student
+    )));
+    setError('');
+    setNotice('');
+  };
+
+  const visibleStudents = students.filter((student) => (
+    [student.name, student.studentId, student.email]
+      .some((value) => String(value || '').toLowerCase().includes(search.toLowerCase()))
+  ));
+  const enteredCount = students.filter((student) => student.marksObtained !== '').length;
+  const allEntered = students.length > 0 && enteredCount === students.length;
+  const passedCount = students.filter((student) => (
+    student.marksObtained !== '' && Number(student.marksObtained) >= (assessment?.passingMarks ?? Infinity)
+  )).length;
+  const completion = students.length ? Math.round((enteredCount / students.length) * 100) : 0;
+
+  const saveResults = async (event) => {
+    event.preventDefault();
+    if (!assessment || !allEntered) {
+      setError('Enter a mark for every enrolled student before saving.');
+      return;
+    }
+    const invalid = students.find((student) => {
+      const mark = Number(student.marksObtained);
+      return !Number.isFinite(mark) || mark < 0 || mark > assessment.totalMarks;
+    });
+    if (invalid) {
+      setError(`Check ${invalid.name}: marks must be between 0 and ${assessment.totalMarks}.`);
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await api.put(`/teacher/results/${assessment.type}/${assessment._id}`, {
+        results: students.map((student) => ({
+          studentId: student._id,
+          marksObtained: Number(student.marksObtained),
+          remarks: student.remarks,
+        })),
+      });
+      setNotice(`Saved results for ${response.data?.savedCount ?? students.length} students.`);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'Results could not be saved. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="teacher-scope teacher-results-page">
+      <section className="results-page-hero">
+        <span className="results-hero-icon" aria-hidden="true">▤</span>
+        <div className="results-hero-copy">
+          <span className="results-kicker">TEACHING WORKSPACE</span>
+          <h1>Results &amp; Marks</h1>
+          <p>Review student performance and submit class marks.</p>
+        </div>
+        {assessment && (
+          <div className="results-hero-progress" aria-live="polite">
+            <div><strong>{enteredCount}<span>/{students.length}</span></strong><small>marks entered</small></div>
+            <div className="results-progress-track" role="progressbar" aria-label="Marks entered" aria-valuemin="0" aria-valuemax={students.length} aria-valuenow={enteredCount}>
+              <span style={{ width: `${completion}%` }} />
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="results-toolbar card results-selection-panel" aria-label="Assessment selection">
+        <div className="results-select-heading">
+          <span className="results-kicker">GRADEBOOK</span>
+          <strong>Select an assessment</strong>
+        </div>
+        <div className="results-assessment-select">
+          <label className="form-label" htmlFor="results-assessment">Assessment</label>
+          <select
+            id="results-assessment"
+            className="form-control"
+            value={selectedKey}
+            disabled={loadingAssessments || assessments.length === 0}
+            onChange={(event) => setSelectedKey(event.target.value)}
+          >
+            <option value="">{loadingAssessments ? 'Loading assessments...' : 'Select an assessment'}</option>
+            {assessments.map((item) => (
+              <option key={assessmentKey(item)} value={assessmentKey(item)}>
+                {item.type === 'quiz' ? 'Quiz' : 'Exam'} · {item.title} · {item.totalMarks} marks
+              </option>
+            ))}
+          </select>
+        </div>
+        {assessment && (
+          <div className="results-assessment-meta">
+            <span className="results-assessment-type">{assessment.type === 'quiz' ? 'Quiz' : 'Exam'}</span>
+            <span>Pass mark <strong>{assessment.passingMarks}/{assessment.totalMarks}</strong></span>
+          </div>
+        )}
+      </section>
+
+      {assessment && (
+        <section className="results-summary-grid" aria-label="Class grading summary">
+          <article className="results-summary-item"><span className="results-summary-icon roster" aria-hidden="true">♙</span><div><strong>{students.length}</strong><span>Enrolled students</span></div></article>
+          <article className="results-summary-item"><span className="results-summary-icon entered" aria-hidden="true">✓</span><div><strong>{enteredCount}<small> / {students.length}</small></strong><span>Marks entered</span></div></article>
+          <article className="results-summary-item"><span className="results-summary-icon passing" aria-hidden="true">↗</span><div><strong>{passedCount}</strong><span>At or above pass mark</span></div></article>
+        </section>
+      )}
+
+      {error && <div className="results-message results-message-error" role="alert">{error}</div>}
+      {notice && <div className="results-message results-message-success" role="status">{notice}</div>}
+
+      <section className="card results-table-card">
+        <div className="card-header results-card-header">
+          <div>
+            <span className="results-kicker">CLASS GRADEBOOK</span>
+            <h2 className="card-title">{assessment?.title || 'Student marks'}</h2>
+            <p>{assessment ? `${students.length} enrolled students · Maximum ${assessment.totalMarks} marks` : 'Choose an assessment to load its enrolled students.'}</p>
+          </div>
+          <div className="search-input-wrap results-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              aria-label="Search students"
+              placeholder="Find a student..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              disabled={!students.length}
+            />
+          </div>
+        </div>
+
+        {loadingRoster ? (
+          <div className="results-state"><div className="spinner" /><span>Loading enrolled students...</span></div>
+        ) : !selectedKey ? (
+          <div className="results-state"><span className="results-state-icon">▤</span><strong>No assessments available</strong><span>Create an exam or quiz for your assigned course first.</span></div>
+        ) : students.length === 0 ? (
+          <div className="results-state"><span className="results-state-icon">♙</span><strong>No enrolled students</strong><span>This course currently has no active enrollments.</span></div>
+        ) : (
+          <form onSubmit={saveResults}>
+            <div className="table-responsive">
+              <table className="data-table results-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Student ID</th>
+                    <th>Mark / {assessment?.totalMarks}</th>
+                    <th>Result</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleStudents.length === 0 ? (
+                    <tr><td className="results-no-matches" colSpan="5">No students match “{search}”.</td></tr>
+                  ) : visibleStudents.map((student) => {
+                    const mark = student.marksObtained === '' ? null : Number(student.marksObtained);
+                    const passed = mark !== null && mark >= (assessment?.passingMarks ?? 0);
+                    return (
+                      <tr key={student._id}>
+                        <td>
+                          <div className="results-student-name">{student.name}</div>
+                          <div className="results-student-email">{student.email || ' '}</div>
+                        </td>
+                        <td><code>{student.studentId || '—'}</code></td>
+                        <td>
+                          <input
+                            className="form-control results-mark-input"
+                            type="number"
+                            min="0"
+                            max={assessment?.totalMarks}
+                            step="0.01"
+                            inputMode="decimal"
+                            required
+                            aria-label={`Marks for ${student.name}`}
+                            value={student.marksObtained}
+                            onChange={(event) => updateStudent(student._id, 'marksObtained', event.target.value)}
+                          />
+                        </td>
+                        <td>
+                          {mark === null ? <span className="results-ungraded">Not entered</span> : (
+                            <span className={`results-outcome ${passed ? 'is-pass' : 'is-fail'}`}>
+                              {passed ? 'Pass' : 'Needs review'}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <input
+                            className="form-control results-remarks-input"
+                            type="text"
+                            maxLength="250"
+                            aria-label={`Remarks for ${student.name}`}
+                            placeholder="Optional feedback"
+                            value={student.remarks}
+                            onChange={(event) => updateStudent(student._id, 'remarks', event.target.value)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="results-footer">
+              <span>{allEntered ? 'All enrolled students have marks entered.' : `Enter marks for ${students.length - enteredCount} more student${students.length - enteredCount === 1 ? '' : 's'}.`}</span>
+              <button type="submit" className="btn btn-primary" disabled={saving || !allEntered || !students.length}>
+                {saving ? 'Saving results...' : 'Save class results'}
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+    </div>
+  );
+}
