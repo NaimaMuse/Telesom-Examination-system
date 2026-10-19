@@ -1,28 +1,12 @@
 {
-  "name": "telesom-examination-system-backend",
+  "name": "telesom-examination-system",
   "version": "1.0.0",
-  "description": "Backend API for Telesom Academy Examination & Academic Management System",
-  "main": "server.js",
+  "description": "Telesom Academy Examination & Academic Management System",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
-  "keywords": [
-    "nodejs",
-    "express",
-    "mongodb",
-    "mongoose",
-    "telesom"
-  ],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "mongoose": "^8.9.5"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.9"
+    "start": "node -e \"console.log('Run npm run dev to start both frontend and backend')\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "seed": "npm --prefix backend run seed",
+    "test:backend": "npm --prefix backend test"
   }
 }

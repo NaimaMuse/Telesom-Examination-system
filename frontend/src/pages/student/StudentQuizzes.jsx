@@ -27,6 +27,13 @@ export default function StudentQuizzes() {
 
   return (
     <>
+<<<<<<< HEAD
+=======
+      <div className="page-header">
+        <div className="page-header-left"><h1>Quizzes</h1><p>View your quiz results</p></div>
+      </div>
+
+>>>>>>> origin/main
       <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
         <div className="stat-card"><div className="stat-icon blue">📊</div><div className="stat-info"><div className="stat-value">{avg}%</div><div className="stat-label">Quiz Average</div></div></div>
         <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><div className="stat-value">{graded.length}</div><div className="stat-label">Completed</div></div></div>

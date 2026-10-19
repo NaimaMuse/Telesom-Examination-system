@@ -10,6 +10,7 @@ const PLACEHOLDER_RECORDS = [
   { _id:'a6', date:'2026-11-04', course:'CS101',  status:'present' },
 ];
 
+<<<<<<< HEAD
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function parseAttendanceDate(value) {
@@ -44,16 +45,23 @@ function getCalendarDays(month) {
     return { date, key: getDateKey(date), inMonth: date.getMonth() === month.getMonth() };
   });
 }
+=======
+const STATUS_BADGE = { present:'success', absent:'danger', late:'warning', excused:'info' };
+>>>>>>> origin/main
 
 export default function StudentAttendance() {
   const [records, setRecords]     = useState(PLACEHOLDER_RECORDS);
   const [loading, setLoading]     = useState(false);
   const [selCourse, setSelCourse] = useState('All');
+<<<<<<< HEAD
   const [displayedMonth, setDisplayedMonth] = useState(() => getLatestRecordMonth(PLACEHOLDER_RECORDS));
+=======
+>>>>>>> origin/main
 
   useEffect(()=>{
     const fetch=async()=>{
       setLoading(true);
+<<<<<<< HEAD
       try{
         const res=await api.get('/student/attendance');
         if(res.data?.attendance) {
@@ -61,6 +69,9 @@ export default function StudentAttendance() {
           if (res.data.attendance.length) setDisplayedMonth(getLatestRecordMonth(res.data.attendance));
         }
       }catch{}finally{setLoading(false);}
+=======
+      try{const res=await api.get('/student/attendance');if(res.data?.attendance)setRecords(res.data.attendance);}catch{}finally{setLoading(false);}
+>>>>>>> origin/main
     };
     fetch();
   },[]);
@@ -73,6 +84,7 @@ export default function StudentAttendance() {
   const absent  = filtered.filter(r=>r.status==='absent').length;
   const late    = filtered.filter(r=>r.status==='late').length;
   const attPct  = total?Math.round((present/total)*100):0;
+<<<<<<< HEAD
   const recordsByDate = filtered.reduce((grouped, record) => {
     const date = parseAttendanceDate(record.date);
     if (!Number.isNaN(date.getTime())) {
@@ -89,6 +101,15 @@ export default function StudentAttendance() {
 
   return (
     <>
+=======
+
+  return (
+    <>
+      <div className="page-header">
+        <div className="page-header-left"><h1>My Attendance</h1><p>Track your attendance across all courses</p></div>
+      </div>
+
+>>>>>>> origin/main
       {/* Summary cards */}
       <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
         <div className="stat-card">
@@ -126,15 +147,23 @@ export default function StudentAttendance() {
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Attendance calendar */}
       <div className="card attendance-calendar-card">
         <div className="card-header attendance-calendar-header">
           <span className="card-title">Attendance Calendar</span>
+=======
+      {/* Records table */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Attendance Records ({filtered.length})</span>
+>>>>>>> origin/main
           <select className="form-control" style={{width:'auto'}} value={selCourse} onChange={e=>setSelCourse(e.target.value)}>
             {courses.map(c=><option key={c} value={c}>{c==='All'?'All Courses':c}</option>)}
           </select>
         </div>
 
+<<<<<<< HEAD
         <div className="attendance-calendar">
           <div className="attendance-calendar-toolbar">
             <button type="button" className="attendance-month-button" onClick={() => changeMonth(-1)} aria-label="Previous month">
@@ -196,6 +225,27 @@ export default function StudentAttendance() {
             {loading && <span className="attendance-calendar-loading">Updating attendance…</span>}
           </div>
         </div>
+=======
+        {loading?<div className="spinner-wrap"><div className="spinner"/></div>
+          :filtered.length===0?<div className="empty-state"><div className="empty-state-icon">📅</div><h3>No records found</h3></div>
+          :(
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead><tr><th>#</th><th>Date</th><th>Course</th><th>Status</th></tr></thead>
+              <tbody>
+                {filtered.map((r,i)=>(
+                  <tr key={r._id}>
+                    <td>{i+1}</td>
+                    <td>{r.date}</td>
+                    <td><span className="badge badge-info">{r.course}</span></td>
+                    <td><span className={`badge badge-${STATUS_BADGE[r.status]||'muted'}`}>{r.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+>>>>>>> origin/main
       </div>
     </>
   );

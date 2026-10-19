@@ -12,6 +12,10 @@ function gradeColor(g){ return g==='A'?'grade-A':g==='B'?'grade-B':g==='C'?'grad
 export default function StudentExams() {
   const [results, setResults] = useState(PLACEHOLDER_RESULTS);
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
+=======
+  const [search,  setSearch]  = useState('');
+>>>>>>> origin/main
 
   useEffect(()=>{
     const fetch=async()=>{
@@ -21,6 +25,7 @@ export default function StudentExams() {
     fetch();
   },[]);
 
+<<<<<<< HEAD
   const avg = results.length ? Math.round(results.reduce((a,r)=>a+(r.marks/r.totalMarks)*100,0)/results.length) : 0;
 
   return (
@@ -30,21 +35,54 @@ export default function StudentExams() {
         <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><div className="stat-value">{results.filter(r=>r.grade!=='F').length}</div><div className="stat-label">Passed Exams</div></div></div>
         <div className="stat-card"><div className="stat-icon red">❌</div><div className="stat-info"><div className="stat-value">{results.filter(r=>r.grade==='F').length}</div><div className="stat-label">Failed Exams</div></div></div>
         <div className="stat-card"><div className="stat-icon gold">🏆</div><div className="stat-info"><div className="stat-value">{results.filter(r=>r.grade==='A').length}</div><div className="stat-label">A Grades</div></div></div>
+=======
+  const filtered = results.filter(r=>!search||[r.course,r.exam].some(v=>v?.toLowerCase().includes(search.toLowerCase())));
+
+  const avg = filtered.length ? Math.round(filtered.reduce((a,r)=>a+(r.marks/r.totalMarks)*100,0)/filtered.length) : 0;
+
+  return (
+    <>
+      <div className="page-header">
+        <div className="page-header-left"><h1>Exams &amp; Results</h1><p>Your marks, grades, and academic results</p></div>
+      </div>
+
+      <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
+        <div className="stat-card"><div className="stat-icon blue">📊</div><div className="stat-info"><div className="stat-value">{avg}%</div><div className="stat-label">Average Score</div></div></div>
+        <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><div className="stat-value">{filtered.filter(r=>r.grade!=='F').length}</div><div className="stat-label">Passed Exams</div></div></div>
+        <div className="stat-card"><div className="stat-icon red">❌</div><div className="stat-info"><div className="stat-value">{filtered.filter(r=>r.grade==='F').length}</div><div className="stat-label">Failed Exams</div></div></div>
+        <div className="stat-card"><div className="stat-icon gold">🏆</div><div className="stat-info"><div className="stat-value">{filtered.filter(r=>r.grade==='A').length}</div><div className="stat-label">A Grades</div></div></div>
+>>>>>>> origin/main
       </div>
 
       <div className="card">
         <div className="card-header">
+<<<<<<< HEAD
           <span className="card-title">My Results ({results.length})</span>
         </div>
 
         {loading?<div className="spinner-wrap"><div className="spinner"/></div>
           :results.length===0?<div className="empty-state"><div className="empty-state-icon">📊</div><h3>No results available</h3><p>Your results will appear here once published.</p></div>
+=======
+          <span className="card-title">My Results ({filtered.length})</span>
+          <div className="search-input-wrap">
+            <span style={{color:'var(--text-muted)'}}>🔍</span>
+            <input placeholder="Search…" value={search} onChange={e=>setSearch(e.target.value)}/>
+          </div>
+        </div>
+
+        {loading?<div className="spinner-wrap"><div className="spinner"/></div>
+          :filtered.length===0?<div className="empty-state"><div className="empty-state-icon">📊</div><h3>No results available</h3><p>Your results will appear here once published.</p></div>
+>>>>>>> origin/main
           :(
           <div className="table-responsive">
             <table className="data-table">
               <thead><tr><th>#</th><th>Course</th><th>Exam / Assessment</th><th>Date</th><th>Marks</th><th>%</th><th>Grade</th><th>Progress</th><th>Status</th></tr></thead>
               <tbody>
+<<<<<<< HEAD
                 {results.map((r,i)=>{
+=======
+                {filtered.map((r,i)=>{
+>>>>>>> origin/main
                   const pct=r.totalMarks?Math.round((r.marks/r.totalMarks)*100):0;
                   return (
                     <tr key={r._id}>
