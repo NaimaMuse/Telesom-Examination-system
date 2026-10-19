@@ -1,14 +1,13 @@
 import { createContext, useContext, useState, useCallback } from 'react';
-import { loginUser } from '../services/authService';
+import { loginUser, signupUser } from '../services/authService';
 
 /**
- * AuthContext
+ * AuthContext — MERN Stack Authentication State Provider.
  *
- * Provides: { user, token, login, logout, isAuthenticated }
+ * Provides: { user, token, login, signup, logout, isAuthenticated }
  *
- * NOTE: Token storage in localStorage is convenient but not perfectly secure.
- * For this project it satisfies academic management needs. For high-security
- * production systems, httpOnly cookies should be considered.
+ * Persists token and user session in localStorage, attaching bearer tokens
+ * via Axios interceptors.
  */
 const AuthContext = createContext(null);
 
@@ -20,7 +19,6 @@ const loadStoredAuth = () => {
       return { token, user: JSON.parse(userJson) };
     }
   } catch {
-    // Corrupted data — clear it
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   }
@@ -39,12 +37,31 @@ export function AuthProvider({ children }) {
     const response = await loginUser(credentials);
     const { token: newToken, user: newUser } = response.data;
 
-    // The role comes from the backend — never trusted from the frontend selector
+    // Role comes from backend verification
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
     setAuth({ token: newToken, user: newUser });
 
     return newUser;
+  }, []);
+
+  /**
+   * signup()
+   * @param {Object} userData - registration details (name, email, studentId/phone, etc.)
+   * @returns {Object} registration response data
+   */
+  const signup = useCallback(async (userData) => {
+    const response = await signupUser(userData);
+
+    // If backend returns immediate login token on registration:
+    if (response.data?.token && response.data?.user) {
+      const { token: newToken, user: newUser } = response.data;
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('user', JSON.stringify(newUser));
+      setAuth({ token: newToken, user: newUser });
+    }
+
+    return response.data;
   }, []);
 
   const logout = useCallback(() => {
@@ -57,6 +74,7 @@ export function AuthProvider({ children }) {
     user,
     token,
     login,
+    signup,
     logout,
     isAuthenticated: Boolean(token && user),
   };

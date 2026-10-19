@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Student = require('../models/Student');
+const Teacher = require('../models/Teacher');
 const generateToken = require('../utils/generateToken');
 
 /**
@@ -40,8 +41,14 @@ const login = async (req, res, next) => {
 
       const normalizedStudentId = rawStudentId.toUpperCase();
 
-      // Find student record by normalized studentId
-      const student = await Student.findOne({ studentId: normalizedStudentId });
+      // Find student record by normalized studentId or phone
+      const student = await Student.findOne({
+        $or: [
+          { studentId: normalizedStudentId },
+          { phone: rawStudentId },
+          { phone: rawStudentId.replace(/\s+/g, '') },
+        ],
+      });
 
       if (!student || !student.user) {
         res.status(401);
@@ -109,6 +116,15 @@ const login = async (req, res, next) => {
     // Generate JWT token
     const token = generateToken(user._id);
 
+    let teacherProfile = null;
+    if (user.role === 'teacher') {
+      try {
+        teacherProfile = await Teacher.findOne({ user: user._id });
+      } catch {
+        teacherProfile = null;
+      }
+    }
+
     // Return safe user information (never expose password or password hash)
     res.status(200).json({
       success: true,
@@ -124,6 +140,15 @@ const login = async (req, res, next) => {
           ? {
               studentId: studentProfile.studentId,
               studentProfileId: studentProfile._id,
+              phone: studentProfile.phone,
+            }
+          : {}),
+        ...(teacherProfile
+          ? {
+              teacherId: teacherProfile.teacherId,
+              teacherProfileId: teacherProfile._id,
+              department: teacherProfile.department,
+              phone: teacherProfile.phone,
             }
           : {}),
       },
@@ -134,6 +159,101 @@ const login = async (req, res, next) => {
   }
 };
 
+/**
+ * Register a new user (Student, Teacher, or Admin).
+ * @route   POST /api/auth/register
+ * @access  Public
+ */
+const register = async (req, res, next) => {
+  try {
+    const { name, email, password, role = 'student', studentId, phone, department, gender = 'male' } = req.body;
+
+    if (!name || !email) {
+      res.status(400);
+      return next(new Error('Name and email are required'));
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      res.status(400);
+      return next(new Error('Email is already registered'));
+    }
+
+    let hashedPassword = undefined;
+    if (role !== 'student' || password) {
+      if (password && password.length < 6) {
+        res.status(400);
+        return next(new Error('Password must be at least 6 characters'));
+      }
+      hashedPassword = password ? await bcrypt.hash(password, 10) : await bcrypt.hash('password123', 10);
+    }
+
+    const user = await User.create({
+      name: String(name).trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      role,
+      isActive: true,
+    });
+
+    let extraProfile = {};
+    if (role === 'student') {
+      const generatedId = (studentId && String(studentId).trim())
+        ? String(studentId).trim().toUpperCase()
+        : 'STD-' + Math.floor(1000 + Math.random() * 9000);
+
+      const student = await Student.create({
+        user: user._id,
+        studentId: generatedId,
+        gender: gender || 'male',
+        phone: phone || '',
+      });
+
+      extraProfile = {
+        studentId: student.studentId,
+        studentProfileId: student._id,
+        phone: student.phone,
+      };
+    } else if (role === 'teacher') {
+      const teacher = await Teacher.create({
+        user: user._id,
+        teacherId: 'TCH-' + Math.floor(1000 + Math.random() * 9000),
+        gender: gender || 'male',
+        phone: phone || '',
+        department: department || 'General Academic',
+      });
+
+      extraProfile = {
+        teacherId: teacher.teacherId,
+        teacherProfileId: teacher._id,
+        department: teacher.department,
+        phone: teacher.phone,
+      };
+    }
+
+    const token = generateToken(user._id);
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        lastLogin: new Date(),
+        ...extraProfile,
+      },
+    });
+  } catch (error) {
+    res.status(500);
+    next(error);
+  }
+};
+
 module.exports = {
   login,
+  register,
 };

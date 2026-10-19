@@ -1,0 +1,9 @@
+// Barrel export for all reusable UI components
+export { default as StatsCard } from './StatsCard';
+export { default as DataTable } from './DataTable';
+export { default as Modal } from './Modal';
+export { default as Badge } from './Badge';
+export { default as EmptyState } from './EmptyState';
+export { default as LoadingSpinner } from './LoadingSpinner';
+export { default as ConfirmDialog } from './ConfirmDialog';
+export { default as SimpleChart } from './SimpleChart';

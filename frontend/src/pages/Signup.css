@@ -1,0 +1,186 @@
+/* ── Telesom Academy Signup Specific Styles ── */
+@import './Login.css';
+
+.signup-card-wrap {
+  max-width: 540px;
+}
+
+/* Two-column layout for input fields */
+.form-row-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 520px) {
+  .form-row-two-col {
+    grid-template-columns: 1fr;
+    gap: 1.15rem;
+  }
+}
+
+/* Auto-generate Student ID Button */
+.regenerate-id-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  color: var(--telesom-gold);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+
+.regenerate-id-btn:hover {
+  background-color: var(--telesom-gold-light);
+  color: var(--telesom-gold-hover);
+}
+
+/* Password Strength Meter */
+.password-strength-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: -0.45rem;
+  margin-bottom: 0.2rem;
+}
+
+.strength-bar-track {
+  flex: 1;
+  height: 6px;
+  background-color: #e2e8f0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.strength-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.strength-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Terms Checkbox */
+.terms-check {
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+.policy-link {
+  color: var(--telesom-gold);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.policy-link:hover {
+  color: var(--telesom-gold-hover);
+}
+
+/* Perks list on left hero column */
+.signup-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+.perk-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.perk-bullet {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+
+.perk-bullet.gold-bullet {
+  background-color: var(--telesom-gold);
+  box-shadow: 0 2px 6px rgba(214, 139, 41, 0.3);
+}
+
+.perk-bullet.green-bullet {
+  background-color: var(--telesom-green);
+  box-shadow: 0 2px 6px rgba(34, 153, 72, 0.3);
+}
+
+.perk-card h5 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--telesom-navy);
+  margin-bottom: 0.15rem;
+}
+
+.perk-card p {
+  font-size: 0.84rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+/* Success View inside card */
+.signup-success-view {
+  text-align: center;
+  padding: 1.5rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.success-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background-color: var(--telesom-green-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(34, 153, 72, 0.18);
+}
+
+.signup-success-view h3 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--telesom-navy);
+}
+
+.signup-success-view p {
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.student-id-callout {
+  display: inline-block;
+  background-color: var(--telesom-gold-light);
+  color: var(--telesom-gold-hover);
+  border: 1px solid var(--telesom-gold-border);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
+
+.success-actions {
+  width: 100%;
+  margin-top: 1rem;
+}

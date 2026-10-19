@@ -1,242 +1,580 @@
-/* ── Login Page ─────────────────────────────────────────────────── */
-.login-page {
+/* ── Telesom Academy Auth Design System ─────────────────────────────── */
+
+.auth-page-wrapper {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at 50% 20%, #f4f8f5 0%, #e8f0eb 100%);
+  padding: 2rem 1rem;
+}
+
+.auth-centered-container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: auto;
+}
+
+/* ── The Auth Card (matches uploaded screenshot exactly) ── */
+.auth-card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(220, 230, 224, 0.7);
+  box-shadow: 0 16px 40px -8px rgba(24, 13, 65, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+  padding: 2.25rem 2.25rem 2rem;
+  width: 100%;
+  position: relative;
+  transition: box-shadow var(--transition);
+}
+
+.auth-card:hover {
+  box-shadow: 0 20px 48px -10px rgba(24, 13, 65, 0.1), 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Card Header ── */
+.auth-card-header {
+  text-align: center;
+  margin-bottom: 1.4rem;
+}
+
+.header-brand-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+}
+
+.auth-card-header h2 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--telesom-navy);
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-card-header p {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* ── Pill Switcher: Log in vs Sign Up ── */
+.auth-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.25rem;
+  gap: 4px;
+}
+
+.switch-tab {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-gray-50);
-  padding: 1.5rem;
-}
-
-/* ── Card ── */
-.login-card {
-  background: var(--color-white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  width: 100%;
-  max-width: 440px;
-  overflow: hidden;
-}
-
-/* ── Header ── */
-.login-header {
-  background-color: var(--color-navy);
-  padding: 2.5rem 2rem 2rem;
-  text-align: center;
-}
-
-.login-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  background-color: var(--color-teal);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.55rem 0.5rem;
   border-radius: var(--radius-md);
-  margin-bottom: 1.25rem;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-white);
-  letter-spacing: -0.5px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition);
 }
 
-.login-header h1 {
-  color: var(--color-white);
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
+.switch-tab:hover {
+  color: var(--telesom-navy);
 }
 
-.login-header p {
-  color: var(--color-teal-light);
-  font-size: 0.85rem;
+/* Active Login tab: Vibrant Green */
+.switch-tab.active.green-tab {
+  background-color: var(--telesom-green);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(34, 153, 72, 0.25);
 }
 
-/* ── Body ── */
-.login-body {
-  padding: 2rem;
+/* Active Sign Up tab: Warm Gold */
+.switch-tab.active.gold-tab {
+  background-color: var(--telesom-gold);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(214, 139, 41, 0.25);
 }
 
-/* ── Role selector ── */
+/* ── Role Selector ── */
 .role-selector {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1.75rem;
-  border-radius: var(--radius-md);
-  background-color: var(--color-gray-100);
-  padding: 4px;
+  background: #ffffff;
+  margin-bottom: 1.25rem;
 }
 
 .role-btn {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   padding: 0.55rem 0.5rem;
-  font-size: 0.82rem;
-  font-weight: 500;
-  font-family: var(--font-family);
-  background: transparent;
-  border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
   cursor: pointer;
-  color: var(--color-gray-600);
-  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
-  line-height: 1.2;
+  transition: all var(--transition);
 }
 
 .role-btn:hover {
-  color: var(--color-navy);
+  border-color: #cbd5e1;
+  color: var(--telesom-navy);
 }
 
-.role-btn.active {
-  background: var(--color-white);
-  color: var(--color-navy);
-  box-shadow: var(--shadow-sm);
-  font-weight: 600;
+/* Active role in Login: Green accent */
+.role-btn.active.green-role {
+  background-color: #ffffff;
+  color: var(--telesom-green-hover);
+  border-color: var(--telesom-green);
+  box-shadow: 0 2px 6px rgba(34, 153, 72, 0.12);
 }
 
-/* ── Form ── */
-.login-form {
+/* Active role in Signup: Gold accent */
+.role-btn.active.gold-role {
+  background-color: #ffffff;
+  color: var(--telesom-gold-hover);
+  border-color: var(--telesom-gold);
+  box-shadow: 0 2px 6px rgba(214, 139, 41, 0.15);
+}
+
+/* ── Student Login Method Sub-tabs (Phone OTP vs ID) ── */
+.student-subtabs {
   display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.form-group label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-gray-800);
-}
-
-.form-group input {
-  padding: 0.65rem 0.9rem;
-  border: 1.5px solid var(--color-gray-200);
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+  padding: 3px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: var(--radius-md);
-  font-family: var(--font-family);
-  font-size: 0.95rem;
-  color: var(--color-gray-800);
-  background: var(--color-white);
-  transition: border-color var(--transition), box-shadow var(--transition);
-  outline: none;
-  width: 100%;
 }
 
-.form-group input:focus {
-  border-color: var(--color-teal);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
-}
-
-.form-group input::placeholder {
-  color: var(--color-gray-400);
-}
-
-.form-hint {
+.subtab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.3rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
   font-size: 0.78rem;
-  color: var(--color-gray-400);
-  margin-top: 0.15rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all var(--transition);
 }
 
-/* ── Error alert ── */
-.error-alert {
+.subtab-btn.active {
+  background: #ffffff;
+  color: var(--telesom-green-hover);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Demo Pills ── */
+.demo-pill-wrapper {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--telesom-green-light);
+  border: 1px dashed var(--telesom-green-border);
+  border-radius: var(--radius-md);
+}
+
+.demo-pill-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--telesom-green-hover);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.demo-pill {
+  background: #ffffff;
+  border: 1px solid var(--telesom-green-border);
+  color: var(--telesom-green-hover);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.demo-pill:hover {
+  background: var(--telesom-green);
+  color: #ffffff;
+}
+
+/* ── Alerts ── */
+.auth-alert {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
-  background-color: var(--color-error-bg);
-  border: 1px solid var(--color-error-border);
+  gap: 0.65rem;
+  padding: 0.7rem 0.9rem;
   border-radius: var(--radius-md);
-  color: var(--color-error);
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin-bottom: 1.15rem;
 }
 
-.error-alert svg {
+.auth-alert.error {
+  background-color: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error);
+}
+
+.auth-alert.info {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.auth-alert.success {
+  background-color: var(--telesom-green-light);
+  border: 1px solid var(--telesom-green-border);
+  color: var(--telesom-green-hover);
+}
+
+.auth-alert svg {
   flex-shrink: 0;
   margin-top: 1px;
 }
 
-/* ── Submit button ── */
-.btn-submit {
-  padding: 0.75rem 1.25rem;
-  background-color: var(--color-navy);
-  color: var(--color-white);
-  font-family: var(--font-family);
-  font-size: 0.95rem;
+/* ── Form Groups & Inputs ── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-field-group label {
+  font-size: 0.84rem;
   font-weight: 600;
+  color: #1e293b;
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forgot-link {
+  background: none;
+  border: none;
+  color: var(--telesom-green);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--transition);
+}
+
+.forgot-link:hover {
+  color: var(--telesom-green-hover);
+  text-decoration: underline;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.input-with-icon input,
+.input-with-icon select {
+  width: 100%;
+  padding: 0.65rem 0.85rem 0.65rem 2.45rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background-color: #ffffff;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  outline: none;
+}
+
+.input-with-icon input:focus,
+.input-with-icon select:focus {
+  border-color: var(--telesom-green);
+  box-shadow: 0 0 0 3px var(--telesom-green-glow);
+}
+
+.input-with-icon.gold-focus input:focus,
+.input-with-icon.gold-focus select:focus {
+  border-color: var(--telesom-gold);
+  box-shadow: 0 0 0 3px var(--telesom-gold-glow);
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  transition: color var(--transition);
+}
+
+.toggle-password-btn:hover {
+  color: var(--telesom-navy);
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+/* ── OTP Verification Section ── */
+.otp-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: #f8fafc;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid #e2e8f0;
+}
+
+.otp-header {
+  text-align: center;
+}
+
+.otp-header h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--telesom-navy);
+  margin-bottom: 0.2rem;
+}
+
+.otp-header p {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.otp-input-field {
+  text-align: center;
+  font-size: 1.4rem !important;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  padding: 0.65rem !important;
+}
+
+.otp-timer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.btn-resend-otp {
+  background: none;
+  border: none;
+  color: var(--telesom-green);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-resend-otp:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-change-number {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+/* Checkbox */
+.checkbox-row {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--telesom-green);
+  cursor: pointer;
+}
+
+/* ── Submit Buttons ── */
+.btn-auth-primary {
+  width: 100%;
+  padding: 0.75rem 1.25rem;
   border: none;
   border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #ffffff;
   cursor: pointer;
-  transition: background-color var(--transition);
-  margin-top: 0.25rem;
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   min-height: 46px;
+  transition: all var(--transition);
 }
 
-.btn-submit:hover:not(:disabled) {
-  background-color: var(--color-navy-light);
+/* Log in button: Telesom Green (#229948) */
+.btn-auth-primary.green-btn {
+  background-color: var(--telesom-green);
+  box-shadow: 0 3px 10px rgba(34, 153, 72, 0.25);
 }
 
-.btn-submit:disabled {
-  opacity: 0.65;
+.btn-auth-primary.green-btn:hover:not(:disabled) {
+  background-color: var(--telesom-green-hover);
+  box-shadow: 0 6px 14px rgba(34, 153, 72, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-auth-primary.green-btn:active:not(:disabled) {
+  background-color: var(--telesom-green-active);
+  transform: translateY(0);
+}
+
+/* Sign Up button: Telesom Gold (#D68B29) */
+.btn-auth-primary.gold-btn {
+  background-color: var(--telesom-gold);
+  box-shadow: 0 3px 10px rgba(214, 139, 41, 0.25);
+}
+
+.btn-auth-primary.gold-btn:hover:not(:disabled) {
+  background-color: var(--telesom-gold-hover);
+  box-shadow: 0 6px 14px rgba(214, 139, 41, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-auth-primary.gold-btn:active:not(:disabled) {
+  background-color: var(--telesom-gold-active);
+  transform: translateY(0);
+}
+
+.btn-auth-primary:disabled {
+  opacity: 0.7;
   cursor: not-allowed;
+  transform: none;
 }
 
-/* ── Spinner ── */
-.spinner {
+/* Spinner */
+.auth-spinner {
   width: 18px;
   height: 18px;
-  border: 2.5px solid rgba(255,255,255,0.4);
-  border-top-color: #fff;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  flex-shrink: 0;
+  animation: spin 0.65s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* ── Footer note ── */
-.login-footer {
-  padding: 1.25rem 2rem;
-  border-top: 1px solid var(--color-gray-100);
+/* ── Auth Card Footer ── */
+.auth-card-footer {
+  margin-top: 1.4rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid #f1f5f9;
+  text-align: center;
+  font-size: 0.84rem;
+  color: #64748b;
+}
+
+.link-to-signup {
+  color: var(--telesom-gold);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link-to-signup:hover {
+  color: var(--telesom-gold-hover);
+  text-decoration: underline;
+}
+
+.link-to-login {
+  color: var(--telesom-green);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link-to-login:hover {
+  color: var(--telesom-green-hover);
+  text-decoration: underline;
+}
+
+/* ── Minimal Bottom Tag ── */
+.auth-bottom-tag {
+  margin-top: 1.5rem;
   text-align: center;
   font-size: 0.78rem;
-  color: var(--color-gray-400);
+  color: #94a3b8;
 }
 
-/* ── Security notice ── */
-.security-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.76rem;
-  color: var(--color-gray-400);
-  margin-top: 0.5rem;
-  justify-content: center;
-}
-
-/* ── Responsive ── */
-@media (max-width: 480px) {
-  .login-header {
-    padding: 2rem 1.5rem 1.5rem;
+@media (max-width: 520px) {
+  .auth-page-wrapper {
+    padding: 1.25rem 0.75rem;
   }
-  .login-body {
-    padding: 1.5rem;
+  .auth-card {
+    padding: 1.5rem 1.25rem;
+    border-radius: 16px;
   }
-  .login-footer {
-    padding: 1rem 1.5rem;
-  }
-  .role-btn {
-    font-size: 0.78rem;
-    padding: 0.5rem 0.25rem;
+  .auth-card-header h2 {
+    font-size: 1.3rem;
   }
 }
