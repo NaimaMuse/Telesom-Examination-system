@@ -10,7 +10,6 @@ const PLACEHOLDER_RECORDS = [
   { _id:'a6', date:'2026-11-04', course:'CS101',  status:'present' },
 ];
 
-<<<<<<< HEAD
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function parseAttendanceDate(value) {
@@ -45,23 +44,15 @@ function getCalendarDays(month) {
     return { date, key: getDateKey(date), inMonth: date.getMonth() === month.getMonth() };
   });
 }
-=======
-const STATUS_BADGE = { present:'success', absent:'danger', late:'warning', excused:'info' };
->>>>>>> origin/main
-
 export default function StudentAttendance() {
   const [records, setRecords]     = useState(PLACEHOLDER_RECORDS);
   const [loading, setLoading]     = useState(false);
   const [selCourse, setSelCourse] = useState('All');
-<<<<<<< HEAD
   const [displayedMonth, setDisplayedMonth] = useState(() => getLatestRecordMonth(PLACEHOLDER_RECORDS));
-=======
->>>>>>> origin/main
 
   useEffect(()=>{
     const fetch=async()=>{
       setLoading(true);
-<<<<<<< HEAD
       try{
         const res=await api.get('/student/attendance');
         if(res.data?.attendance) {
@@ -69,9 +60,6 @@ export default function StudentAttendance() {
           if (res.data.attendance.length) setDisplayedMonth(getLatestRecordMonth(res.data.attendance));
         }
       }catch{}finally{setLoading(false);}
-=======
-      try{const res=await api.get('/student/attendance');if(res.data?.attendance)setRecords(res.data.attendance);}catch{}finally{setLoading(false);}
->>>>>>> origin/main
     };
     fetch();
   },[]);
@@ -83,8 +71,8 @@ export default function StudentAttendance() {
   const present = filtered.filter(r=>r.status==='present').length;
   const absent  = filtered.filter(r=>r.status==='absent').length;
   const late    = filtered.filter(r=>r.status==='late').length;
+  const excused = filtered.filter(r=>r.status==='excused').length;
   const attPct  = total?Math.round((present/total)*100):0;
-<<<<<<< HEAD
   const recordsByDate = filtered.reduce((grouped, record) => {
     const date = parseAttendanceDate(record.date);
     if (!Number.isNaN(date.getTime())) {
@@ -101,151 +89,120 @@ export default function StudentAttendance() {
 
   return (
     <>
-=======
-
-  return (
-    <>
-      <div className="page-header">
-        <div className="page-header-left"><h1>My Attendance</h1><p>Track your attendance across all courses</p></div>
-      </div>
-
->>>>>>> origin/main
-      {/* Summary cards */}
-      <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
-        <div className="stat-card">
-          <div className="stat-icon green">📅</div>
-          <div className="stat-info">
-            <div className="stat-value">{attPct}%</div>
-            <div className="stat-label">Attendance Rate</div>
-          </div>
-        </div>
-        <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><div className="stat-value">{present}</div><div className="stat-label">Present Days</div></div></div>
-        <div className="stat-card"><div className="stat-icon red">❌</div><div className="stat-info"><div className="stat-value">{absent}</div><div className="stat-label">Absent Days</div></div></div>
-        <div className="stat-card"><div className="stat-icon gold">⏰</div><div className="stat-info"><div className="stat-value">{late}</div><div className="stat-label">Late Days</div></div></div>
-      </div>
-
-      {/* Progress bar */}
-      <div className="card" style={{marginBottom:'1.5rem'}}>
-        <div className="card-body">
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.6rem'}}>
-            <span style={{fontWeight:700,fontSize:'0.9rem'}}>Overall Attendance</span>
-            <span style={{fontWeight:800,color:attPct>=80?'var(--primary)':attPct>=60?'var(--accent-gold)':'var(--accent-red)',fontSize:'1rem'}}>{attPct}%</span>
-          </div>
-          <div style={{background:'var(--border)',borderRadius:8,height:14,overflow:'hidden'}}>
-            <div style={{
-              width:`${attPct}%`,height:'100%',
-              background:attPct>=80?'var(--primary)':attPct>=60?'var(--accent-gold)':'var(--accent-red)',
-              borderRadius:8,
-              transition:'width 0.5s ease',
-            }}/>
-          </div>
-          {attPct < 75 && (
-            <div style={{marginTop:'0.6rem',fontSize:'0.8rem',color:'var(--accent-red)',fontWeight:600}}>
-              ⚠️ Your attendance is below 75%. Please attend regularly.
-            </div>
-          )}
-        </div>
-      </div>
-
-<<<<<<< HEAD
-      {/* Attendance calendar */}
+      {/* Attendance overview */}
       <div className="card attendance-calendar-card">
         <div className="card-header attendance-calendar-header">
           <span className="card-title">Attendance Calendar</span>
-=======
-      {/* Records table */}
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">Attendance Records ({filtered.length})</span>
->>>>>>> origin/main
           <select className="form-control" style={{width:'auto'}} value={selCourse} onChange={e=>setSelCourse(e.target.value)}>
             {courses.map(c=><option key={c} value={c}>{c==='All'?'All Courses':c}</option>)}
           </select>
         </div>
 
-<<<<<<< HEAD
-        <div className="attendance-calendar">
-          <div className="attendance-calendar-toolbar">
-            <button type="button" className="attendance-month-button" onClick={() => changeMonth(-1)} aria-label="Previous month">
-              ‹
-            </button>
-            <h3>{displayedMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3>
-            <button type="button" className="attendance-month-button" onClick={() => changeMonth(1)} aria-label="Next month">
-              ›
-            </button>
-          </div>
-
-          <div className="attendance-calendar-scroll">
-            <div className="attendance-calendar-grid" role="grid" aria-label="Attendance by date">
-              {WEEKDAYS.map(day => (
-                <div key={day} className="attendance-weekday" role="columnheader">{day}</div>
-              ))}
-              {calendarDays.map(({ date, key, inMonth }) => {
-                const dayRecords = recordsByDate[key] || [];
-                const dayStatus = dayRecords.some(record => record.status === 'absent')
-                  ? 'absent'
-                  : dayRecords.some(record => record.status === 'excused' || record.status === 'late')
-                    ? 'excused'
-                    : dayRecords.some(record => record.status === 'present')
-                      ? 'present'
-                      : '';
-
-                return (
-                  <div
-                    key={key}
-                    className={`attendance-day ${inMonth ? '' : 'attendance-day-outside'} ${dayStatus ? `attendance-day-${dayStatus}` : ''}`}
-                    role="gridcell"
-                    aria-label={`${date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}${dayRecords.length ? `: ${dayRecords.map(record => `${record.course} ${record.status}`).join(', ')}` : ''}`}
-                  >
-                    <span className="attendance-day-number">{date.getDate()}</span>
-                    <div className="attendance-day-records">
-                      {dayRecords.map((record, index) => (
-                        <span
-                          key={record._id || `${key}-${record.course}-${index}`}
-                          className={`attendance-day-record attendance-record-${record.status === 'present' ? 'present' : record.status === 'absent' ? 'absent' : record.status === 'excused' || record.status === 'late' ? 'excused' : 'other'}`}
-                          title={`${record.course}: ${record.status}`}
-                        >
-                          <span className="attendance-status-dot" />
-                          {record.course}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+        <div className="attendance-overview">
+          <section className="attendance-calendar">
+            <div className="attendance-calendar-toolbar">
+              <button type="button" className="attendance-month-button" onClick={() => changeMonth(-1)} aria-label="Previous month">
+                ‹
+              </button>
+              <h3>{displayedMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3>
+              <button type="button" className="attendance-month-button" onClick={() => changeMonth(1)} aria-label="Next month">
+                ›
+              </button>
             </div>
-          </div>
 
-          <div className="attendance-calendar-footer">
-            <div className="attendance-calendar-legend" aria-label="Attendance status legend">
-              <span><i className="attendance-status-dot attendance-dot-present" />Present</span>
-              <span><i className="attendance-status-dot attendance-dot-absent" />Absent</span>
-              <span><i className="attendance-status-dot attendance-dot-excused" />Permission / excused / late</span>
-            </div>
-            {loading && <span className="attendance-calendar-loading">Updating attendance…</span>}
-          </div>
-        </div>
-=======
-        {loading?<div className="spinner-wrap"><div className="spinner"/></div>
-          :filtered.length===0?<div className="empty-state"><div className="empty-state-icon">📅</div><h3>No records found</h3></div>
-          :(
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead><tr><th>#</th><th>Date</th><th>Course</th><th>Status</th></tr></thead>
-              <tbody>
-                {filtered.map((r,i)=>(
-                  <tr key={r._id}>
-                    <td>{i+1}</td>
-                    <td>{r.date}</td>
-                    <td><span className="badge badge-info">{r.course}</span></td>
-                    <td><span className={`badge badge-${STATUS_BADGE[r.status]||'muted'}`}>{r.status}</span></td>
-                  </tr>
+            <div className="attendance-calendar-scroll">
+              <div className="attendance-calendar-grid" role="grid" aria-label="Attendance by date">
+                {WEEKDAYS.map(day => (
+                  <div key={day} className="attendance-weekday" role="columnheader">{day}</div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
->>>>>>> origin/main
+                {calendarDays.map(({ date, key, inMonth }) => {
+                  const dayRecords = recordsByDate[key] || [];
+                  const dayStatus = dayRecords.some(record => record.status === 'absent')
+                    ? 'absent'
+                    : dayRecords.some(record => record.status === 'excused' || record.status === 'late')
+                      ? 'excused'
+                      : dayRecords.some(record => record.status === 'present')
+                        ? 'present'
+                        : '';
+
+                  return (
+                    <div
+                      key={key}
+                      className={`attendance-day ${inMonth ? '' : 'attendance-day-outside'} ${dayStatus ? `attendance-day-${dayStatus}` : ''}`}
+                      role="gridcell"
+                      aria-label={`${date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}${dayRecords.length ? `: ${dayRecords.map(record => `${record.course} ${record.status}`).join(', ')}` : ''}`}
+                    >
+                      <span className="attendance-day-number">{date.getDate()}</span>
+                      <div className="attendance-day-records">
+                        {dayRecords.map((record, index) => (
+                          <span
+                            key={record._id || `${key}-${record.course}-${index}`}
+                            className={`attendance-day-record attendance-record-${record.status === 'present' ? 'present' : record.status === 'absent' ? 'absent' : record.status === 'excused' || record.status === 'late' ? 'excused' : 'other'}`}
+                            title={`${record.course}: ${record.status}`}
+                          >
+                            <span className="attendance-status-dot" />
+                            {record.course}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="attendance-calendar-footer">
+              <div className="attendance-calendar-legend" aria-label="Attendance status legend">
+                <span><i className="attendance-status-dot attendance-dot-present" />Present</span>
+                <span><i className="attendance-status-dot attendance-dot-absent" />Absent</span>
+                <span><i className="attendance-status-dot attendance-dot-excused" />Permission / excused / late</span>
+              </div>
+              {loading && <span className="attendance-calendar-loading">Updating attendance…</span>}
+            </div>
+          </section>
+
+          <aside className="attendance-summary-panel" aria-label="Attendance summary">
+            <div className="attendance-summary-heading">
+              <span className="attendance-summary-eyebrow">Your overview</span>
+              <h3>Attendance summary</h3>
+            </div>
+
+            <div className="attendance-rate-card">
+              <div className="attendance-rate-value">{attPct}<span>%</span></div>
+              <div className="attendance-rate-label">Attendance rate</div>
+              <div className="attendance-rate-track" aria-label={`Attendance rate ${attPct}%`}>
+                <span style={{ width: `${attPct}%` }} />
+              </div>
+            </div>
+
+            <div className="attendance-summary-list">
+              <div className="attendance-summary-item summary-present">
+                <span className="attendance-summary-indicator" />
+                <span>Present</span>
+                <strong>{present}</strong>
+              </div>
+              <div className="attendance-summary-item summary-absent">
+                <span className="attendance-summary-indicator" />
+                <span>Absent</span>
+                <strong>{absent}</strong>
+              </div>
+              <div className="attendance-summary-item summary-excused">
+                <span className="attendance-summary-indicator" />
+                <span>Excused</span>
+                <strong>{excused}</strong>
+              </div>
+              <div className="attendance-summary-item summary-late">
+                <span className="attendance-summary-indicator" />
+                <span>Late</span>
+                <strong>{late}</strong>
+              </div>
+            </div>
+
+            {total === 0 && !loading && (
+              <p className="attendance-summary-empty">No attendance records for this course.</p>
+            )}
+          </aside>
+        </div>
       </div>
     </>
   );

@@ -50,21 +50,6 @@ export default function StudentDashboard() {
 
   return (
     <>
-<<<<<<< HEAD
-=======
-      <div className="page-header">
-        <div className="page-header-left">
-          <h1>Welcome, {user?.name?.split(' ')[0] || 'Student'}! 👋</h1>
-          <p>Track your courses, exams, results, and attendance</p>
-        </div>
-        {user?.studentId && (
-          <div style={{background:'var(--primary-light)',color:'var(--primary)',padding:'0.5rem 1rem',borderRadius:'var(--radius-sm)',fontSize:'0.85rem',fontWeight:700,border:'1px solid rgba(26,124,74,0.2)'}}>
-            ID: {user.studentId}
-          </div>
-        )}
-      </div>
-
->>>>>>> origin/main
       <div className="stats-grid">
         <div className="stat-card"><div className="stat-icon green">📚</div><div className="stat-info"><div className="stat-value">{courses.length}</div><div className="stat-label">Enrolled Courses</div></div></div>
         <div className="stat-card"><div className="stat-icon gold">📝</div><div className="stat-info"><div className="stat-value">{upcoming.length}</div><div className="stat-label">Upcoming Exams</div></div></div>

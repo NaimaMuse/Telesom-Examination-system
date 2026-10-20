@@ -160,17 +160,10 @@ const PAGE_META = {
   '/teacher/profile': { title: 'My Profile', hint: 'Your account and contact details.' },
   '/student': { title: 'Student Dashboard', hint: 'Courses, marks, and upcoming exams.' },
   '/student/courses': { title: 'My Courses', hint: 'Enrolled courses and materials.' },
-<<<<<<< HEAD
   '/student/exams': { title: 'Exams & Results', hint: 'Your marks, grades, and academic results.' },
   '/student/quizzes': { title: 'Quizzes', hint: 'Quiz scores and practice.' },
   '/student/notes': { title: 'Study Notes', hint: 'Notes shared by your teachers.' },
   '/student/attendance': { title: 'My Attendance', hint: 'Track your attendance across all courses.' },
-=======
-  '/student/exams': { title: 'Exams & Results', hint: 'Exam schedules and your grades.' },
-  '/student/quizzes': { title: 'Quizzes', hint: 'Quiz scores and practice.' },
-  '/student/notes': { title: 'Study Notes', hint: 'Notes shared by your teachers.' },
-  '/student/attendance': { title: 'Attendance', hint: 'Your attendance record by course.' },
->>>>>>> origin/main
   '/student/profile': { title: 'My Profile', hint: 'Personal info and student ID.' },
 };
 
@@ -200,15 +193,12 @@ export default function DashboardLayout({ role }) {
   const userRole = role.toUpperCase();
   const pageMeta = getPageMeta(location.pathname);
   const firstName = user?.name?.split(' ')[0] || 'User';
-<<<<<<< HEAD
   const isStudentCoursesPage = role === 'student' && location.pathname === '/student/courses';
   const isStudentExamsPage = role === 'student' && location.pathname === '/student/exams';
   const isStudentQuizzesPage = role === 'student' && location.pathname === '/student/quizzes';
   const isStudentNotesPage = role === 'student' && location.pathname === '/student/notes';
   const isStudentAttendancePage = role === 'student' && location.pathname === '/student/attendance';
   const isStudentAcademicPage = isStudentCoursesPage || isStudentExamsPage || isStudentQuizzesPage || isStudentNotesPage || isStudentAttendancePage;
-=======
->>>>>>> origin/main
   const profilePath = role === 'admin' ? '/admin' : `/${role}/profile`;
 
   const handleLogout = () => {
@@ -306,17 +296,12 @@ export default function DashboardLayout({ role }) {
               ☰
             </button>
             <div>
-<<<<<<< HEAD
               <div className={`topbar-page-title ${isStudentAcademicPage ? 'topbar-greeting' : ''}`}>
                 {isStudentAcademicPage ? `${greeting()}, ${firstName}` : pageMeta.title}
               </div>
               {!isStudentAcademicPage && (
                 <div className="topbar-page-subtitle">{pageMeta.hint}</div>
               )}
-=======
-              <div className="topbar-page-title">{pageMeta.title}</div>
-              <div className="topbar-page-subtitle">{pageMeta.hint}</div>
->>>>>>> origin/main
             </div>
           </div>
 
@@ -348,29 +333,17 @@ export default function DashboardLayout({ role }) {
         </header>
 
         {/* Page content */}
-<<<<<<< HEAD
         <main className={`dash-content ${isStudentCoursesPage ? 'student-courses-content' : ''} ${isStudentExamsPage ? 'student-exams-content' : ''} ${isStudentQuizzesPage ? 'student-quizzes-content' : ''} ${isStudentNotesPage ? 'student-notes-content' : ''} ${isStudentAttendancePage ? 'student-attendance-content' : ''} ${role === 'teacher' && location.pathname === '/teacher' ? 'teacher-home-content' : ''}`}>
-=======
-        <main className={`dash-content ${role === 'teacher' && location.pathname === '/teacher' ? 'teacher-home-content' : ''}`}>
->>>>>>> origin/main
           {!(role === 'teacher' && ['/teacher', '/teacher/my-course', '/teacher/exams', '/teacher/results', '/teacher/performance', '/teacher/profile'].includes(location.pathname)
             || role === 'admin' && ['/admin/students', '/admin/teachers', '/admin/courses'].includes(location.pathname)) && (
             <div className="dash-welcome" role="region" aria-label="Welcome">
               <div className="dash-welcome-text">
-<<<<<<< HEAD
                 <h2>{isStudentAcademicPage ? pageMeta.title : `${greeting()}, ${firstName}`}</h2>
                 <p>{pageMeta.hint}</p>
               </div>
               <div className="dash-welcome-meta">
                 {role === 'student' ? 'ID:' : 'Role:'}{' '}
                 <strong>{role === 'student' ? user?.studentId || '—' : userRole}</strong>
-=======
-                <h2>{greeting()}, {firstName}</h2>
-                <p>{pageMeta.hint}</p>
-              </div>
-              <div className="dash-welcome-meta">
-                Role: <strong>{userRole}</strong>
->>>>>>> origin/main
               </div>
             </div>
           )}
