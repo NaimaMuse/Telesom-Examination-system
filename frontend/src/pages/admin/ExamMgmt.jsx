@@ -163,15 +163,6 @@ function ExamDetailsModal({ exam, onClose }) {
 
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>
-                VENUE / ROOM
-              </label>
-              <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-                📍 {exam.room || 'Not Assigned'}
-              </div>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>
                 DATE &amp; TIME
               </label>
               <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
@@ -500,7 +491,6 @@ export default function ExamMgmt() {
                   <th>Date &amp; Time</th>
                   <th>Duration</th>
                   <th>Total Marks</th>
-                  <th>Venue</th>
                   <th>Status</th>
                   <th style={{ width: 80, textAlign: 'center' }}>Details</th>
                 </tr>
@@ -583,7 +573,6 @@ export default function ExamMgmt() {
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Pass: {e.passingMarks}</div>
                         )}
                       </td>
-                      <td>{e.room || '—'}</td>
                       <td>
                         <span
                           className="badge"

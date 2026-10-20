@@ -13,6 +13,11 @@ const {
   getTeacherAssessmentResults,
   saveTeacherAssessmentResults,
 } = require('../controllers/teacherDashboardController');
+const {
+  createExam,
+  updateExam,
+  deleteExam,
+} = require('../controllers/examController');
 
 const router = express.Router();
 
@@ -25,6 +30,10 @@ router.get('/courses', getTeacherMyCourse);
 router.get('/upcoming-exams', getTeacherDashboard);
 router.get('/students', getTeacherStudents);
 router.get('/exams', getTeacherExams);
+router.post('/exams', createExam);
+router.put('/exams/:id', updateExam);
+router.patch('/exams/:id', updateExam);
+router.delete('/exams/:id', deleteExam);
 router.get('/performance', getTeacherPerformance);
 router.get('/profile', getTeacherProfile);
 router.put('/profile', updateTeacherProfile);

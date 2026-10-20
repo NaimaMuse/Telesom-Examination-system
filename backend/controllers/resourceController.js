@@ -51,6 +51,7 @@ const createResourceController = (Model, options) => {
     defaultSort = '-createdAt',
     sortFields = ['createdAt', 'updatedAt'],
     beforeCreate,
+    beforeUpdate,
   } = options;
 
   const list = asyncHandler(async (req, res) => {
@@ -144,6 +145,9 @@ const createResourceController = (Model, options) => {
       throw new Error('Invalid resource ID');
     }
     const data = pick(req.body, fields);
+    if (beforeUpdate) {
+      Object.assign(data, beforeUpdate(req));
+    }
     const record = await Model.findByIdAndUpdate(req.params.id, data, {
       new: true,
       runValidators: true,

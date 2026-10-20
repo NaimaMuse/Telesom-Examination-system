@@ -12,13 +12,13 @@ const mongoose = require('mongoose');
 
 const getTeacherAssignment = async (userId) => {
   const teacher = await Teacher.findOne({ user: userId }).lean();
-  if (!teacher) return { teacher: null, assignment: null };
+  if (!teacher) return { teacher: null, assignment: null, assignments: [] };
 
-  const assignment = await CourseTeacher.findOne({ teacher: teacher._id, status: 'active' })
+  const assignments = await CourseTeacher.find({ teacher: teacher._id, status: 'active' })
     .populate('course')
     .lean();
 
-  return { teacher, assignment };
+  return { teacher, assignment: assignments[0] || null, assignments };
 };
 
 const formatCourse = (course) => {
@@ -100,16 +100,21 @@ const getTeacherDashboard = async (req, res, next) => {
 
 const getTeacherMyCourse = async (req, res, next) => {
   try {
-    const { teacher, assignment } = await getTeacherAssignment(req.user._id);
+    const { teacher, assignment, assignments } = await getTeacherAssignment(req.user._id);
 
     if (!teacher) {
       return res.status(404).json({ success: false, message: 'Teacher profile not found.' });
     }
 
+    const assignedCourses = (assignments && assignments.length > 0)
+      ? assignments.map((a) => a.course).filter(Boolean).map(formatCourse)
+      : (await Course.find({ isActive: true }).lean()).map(formatCourse);
+
     if (!assignment || !assignment.course) {
       return res.status(200).json({
         success: true,
-        course: null,
+        course: assignedCourses[0] || null,
+        courses: assignedCourses,
         students: [],
         upcomingExams: [],
         notes: [],
@@ -148,6 +153,7 @@ const getTeacherMyCourse = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       course: formatCourse(assignment.course),
+      courses: assignedCourses,
       students: formattedStudents,
       upcomingExams: upcomingExams.map((exam) => ({
         _id: exam._id,
@@ -210,20 +216,26 @@ const getTeacherStudents = async (req, res, next) => {
 
 const getTeacherExams = async (req, res, next) => {
   try {
-    const { assignment } = await getTeacherAssignment(req.user._id);
-    if (!assignment || !assignment.course) {
-      return res.status(200).json({ success: true, exams: [], quizzes: [] });
-    }
+    const { assignments } = await getTeacherAssignment(req.user._id);
+    const assignedCourseIds = (assignments || []).map((a) => a.course?._id || a.course).filter(Boolean);
 
-    const [exams, quizzes] = await Promise.all([
-      Exam.find({ course: assignment.course._id }).sort({ examDate: 1 }).lean(),
-      Quiz.find({ course: assignment.course._id }).sort({ quizDate: 1 }).lean(),
-    ]);
+    const query = {
+      $or: [
+        { createdBy: req.user._id },
+        ...(assignedCourseIds.length > 0 ? [{ course: { $in: assignedCourseIds } }] : []),
+      ],
+    };
+
+    const exams = await Exam.find(query)
+      .populate('course', 'courseCode title name')
+      .populate('createdBy', 'name email role')
+      .sort({ examDate: 1, createdAt: -1 })
+      .lean();
 
     return res.status(200).json({
       success: true,
+      data: exams,
       exams,
-      quizzes,
     });
   } catch (error) {
     next(error);

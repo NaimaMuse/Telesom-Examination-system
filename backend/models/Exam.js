@@ -20,7 +20,7 @@ const examSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: {
-        values: ['midterm', 'final', 'practical', 'supplementary', 'quiz', 'assignment', 'exam'],
+        values: ['midterm', 'final', 'practical', 'supplementary', 'quiz', 'assignment', 'assessment', 'exam'],
         message: '{VALUE} is not a valid exam type',
       },
       default: 'final',

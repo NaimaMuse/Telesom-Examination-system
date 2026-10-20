@@ -1162,6 +1162,7 @@
 .assessment-title-cell small { color: var(--text-muted); font-size: 0.64rem; }
 .assessment-type-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 6px; background: #eaf5ed; color: var(--primary-dark); font-size: 0.75rem; font-weight: 850; }
 .assessment-type-mark.quizzes { background: #fff2dc; color: #97620d; }
+.assessment-type-mark.assessments { background: #ede9fe; color: #6d28d9; }
 .assessment-course-code { display: inline-block; padding: 0.24rem 0.45rem; border: 1px solid var(--border-soft); border-radius: 4px; background: #f7fbf8; color: var(--primary-dark); font-size: 0.67rem; font-weight: 750; }
 .assessment-status { text-transform: capitalize; white-space: nowrap; }
 .assessment-row-actions { display: flex; justify-content: flex-end; gap: 0.35rem; }
