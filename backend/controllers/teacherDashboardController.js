@@ -293,6 +293,68 @@ const getTeacherProfile = async (req, res, next) => {
   }
 };
 
+const updateTeacherProfile = async (req, res, next) => {
+  try {
+    const { teacher } = await getTeacherAssignment(req.user._id);
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: 'Teacher profile not found.' });
+    }
+
+    const { name, email, phone, department, specialization, qualification } = req.body;
+    if (!name || !email) {
+      return res.status(400).json({ success: false, message: 'Full name and email are required.' });
+    }
+
+    const normalizedName = String(name).trim();
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (normalizedName.length < 2 || normalizedName.length > 100) {
+      return res.status(400).json({ success: false, message: 'Name must be between 2 and 100 characters.' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser && String(existingUser._id) !== String(req.user._id)) {
+      return res.status(409).json({ success: false, message: 'Email is already registered.' });
+    }
+
+    const [user, teacherProfile] = await Promise.all([
+      User.findById(req.user._id),
+      Teacher.findById(teacher._id),
+    ]);
+    if (!user || !teacherProfile) {
+      return res.status(404).json({ success: false, message: 'Teacher account not found.' });
+    }
+
+    user.name = normalizedName;
+    user.email = normalizedEmail;
+    teacherProfile.phone = String(phone || '').trim();
+    teacherProfile.department = String(department || '').trim();
+    teacherProfile.specialization = String(specialization || '').trim();
+    teacherProfile.qualification = String(qualification || '').trim();
+    await Promise.all([user.save(), teacherProfile.save()]);
+
+    const { assignment } = await getTeacherAssignment(req.user._id);
+    return res.status(200).json({
+      success: true,
+      teacher: {
+        _id: teacherProfile._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: teacherProfile.department,
+        specialization: teacherProfile.specialization,
+        qualification: teacherProfile.qualification,
+        phone: teacherProfile.phone,
+        assignedCourse: assignment?.course ? formatCourse(assignment.course) : null,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getTeacherAssessments = async (req, res, next) => {
   try {
     const { assignment } = await getTeacherAssignment(req.user._id);
@@ -473,6 +535,7 @@ module.exports = {
   getTeacherExams,
   getTeacherPerformance,
   getTeacherProfile,
+  updateTeacherProfile,
   getTeacherAssessments,
   getTeacherAssessmentResults,
   saveTeacherAssessmentResults,

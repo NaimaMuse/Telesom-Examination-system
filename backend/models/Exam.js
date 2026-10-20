@@ -9,8 +9,6 @@ const examSchema = new mongoose.Schema(
     },
     examCode: {
       type: String,
-      required: [true, 'Exam code is required'],
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -22,7 +20,7 @@ const examSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: {
-        values: ['midterm', 'final', 'practical', 'supplementary'],
+        values: ['midterm', 'final', 'practical', 'supplementary', 'quiz', 'assignment', 'exam'],
         message: '{VALUE} is not a valid exam type',
       },
       default: 'final',
@@ -35,7 +33,6 @@ const examSchema = new mongoose.Schema(
     },
     passingMarks: {
       type: Number,
-      required: [true, 'Passing marks are required'],
       min: [0, 'Passing marks cannot be negative'],
       default: 50,
     },
@@ -48,32 +45,37 @@ const examSchema = new mongoose.Schema(
     examDate: {
       type: Date,
       required: [true, 'Exam date is required'],
+      default: Date.now,
     },
     startTime: {
       type: String,
       trim: true,
+      default: '09:00 AM',
     },
     durationMinutes: {
       type: Number,
-      required: [true, 'Exam duration in minutes is required'],
       min: [1, 'Duration must be at least 1 minute'],
+      default: 60,
     },
     room: {
       type: String,
       trim: true,
+      default: 'Hall A',
     },
     academicYear: {
       type: String,
       trim: true,
+      default: '2025-2026',
     },
     semester: {
       type: String,
       trim: true,
+      default: 'Semester 1',
     },
     status: {
       type: String,
       enum: {
-        values: ['scheduled', 'ongoing', 'completed', 'cancelled'],
+        values: ['scheduled', 'upcoming', 'ongoing', 'completed', 'cancelled'],
         message: '{VALUE} is not a valid exam status',
       },
       default: 'scheduled',
@@ -87,6 +89,14 @@ const examSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+examSchema.pre('validate', function (next) {
+  if (!this.examCode) {
+    const prefix = (this.type || 'EXAM').slice(0, 3).toUpperCase();
+    this.examCode = `EX-${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+  next();
+});
 
 // Indexes
 examSchema.index({ course: 1, examDate: 1 });

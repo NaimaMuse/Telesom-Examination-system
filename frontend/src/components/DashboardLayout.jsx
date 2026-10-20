@@ -8,7 +8,6 @@ import AdminDashboard    from '../pages/admin/AdminDashboard';
 import StudentMgmt       from '../pages/admin/StudentMgmt';
 import TeacherMgmt       from '../pages/admin/TeacherMgmt';
 import CourseMgmt        from '../pages/admin/CourseMgmt';
-import EnrollmentMgmt    from '../pages/admin/EnrollmentMgmt';
 import ExamMgmt          from '../pages/admin/ExamMgmt';
 import MarksMgmt         from '../pages/admin/MarksMgmt';
 import AttendanceMgmt    from '../pages/admin/AttendanceMgmt';
@@ -46,7 +45,6 @@ const NAV = {
         { to: '/admin/students',   label: 'Student Management', icon: '🎓' },
         { to: '/admin/teachers',   label: 'Teacher Management', icon: '👨‍🏫' },
         { to: '/admin/courses',    label: 'Course Management',  icon: '📚' },
-        { to: '/admin/enrollment', label: 'Student Enrollment', icon: '📋' },
       ],
     },
     {
@@ -105,7 +103,6 @@ const ROLE_ROUTES = {
       <Route path="students"  element={<StudentMgmt />} />
       <Route path="teachers"  element={<TeacherMgmt />} />
       <Route path="courses"   element={<CourseMgmt />} />
-      <Route path="enrollment"element={<EnrollmentMgmt />} />
       <Route path="exams"     element={<ExamMgmt />} />
       <Route path="marks"     element={<MarksMgmt />} />
       <Route path="attendance"element={<AttendanceMgmt />} />
@@ -147,7 +144,6 @@ const PAGE_META = {
   '/admin/students': { title: 'Student Management', hint: 'Add, edit, and manage student records.' },
   '/admin/teachers': { title: 'Teacher Management', hint: 'Manage faculty accounts and assignments.' },
   '/admin/courses': { title: 'Course Management', hint: 'Create and organize academic courses.' },
-  '/admin/enrollment': { title: 'Student Enrollment', hint: 'Enroll students in courses and sections.' },
   '/admin/exams': { title: 'Exam & Quiz Management', hint: 'Schedule and configure assessments.' },
   '/admin/marks': { title: 'Marks & Results', hint: 'Enter grades and publish results.' },
   '/admin/attendance': { title: 'Attendance', hint: 'Track and review class attendance.' },
@@ -325,7 +321,7 @@ export default function DashboardLayout({ role }) {
         {/* Page content */}
         <main className={`dash-content ${role === 'teacher' && location.pathname === '/teacher' ? 'teacher-home-content' : ''}`}>
           {!(role === 'teacher' && ['/teacher', '/teacher/my-course', '/teacher/exams', '/teacher/results', '/teacher/performance', '/teacher/profile'].includes(location.pathname)
-            || role === 'admin' && ['/admin/students', '/admin/teachers', '/admin/courses'].includes(location.pathname)) && (
+            || (role === 'admin' && location.pathname !== '/admin')) && (
             <div className="dash-welcome" role="region" aria-label="Welcome">
               <div className="dash-welcome-text">
                 <h2>{greeting()}, {firstName}</h2>

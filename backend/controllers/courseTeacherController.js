@@ -15,7 +15,7 @@ const controller = createResourceController(CourseTeacher, {
   filterFields: ['teacher', 'course', 'academicYear', 'semester', 'role', 'status'],
   populate: [
     { path: 'teacher', populate: { path: 'user', select: 'name email' } },
-    { path: 'course', select: 'courseCode title' },
+    { path: 'course', select: 'courseCode title name description' },
   ],
   sortFields: ['createdAt', 'updatedAt', 'assignedDate'],
 });

@@ -126,12 +126,10 @@ const createStudent = async (req, res, next) => {
       email,
       studentId,
       gender,
-      dateOfBirth,
       phone,
       address,
-      guardianName,
-      guardianPhone,
       academicYear,
+      status,
     } = req.body;
 
     if (!name || !email || !studentId || !gender) {
@@ -186,12 +184,10 @@ const createStudent = async (req, res, next) => {
       profileData: {
         studentId: normalizedStudentId,
         gender: normalizedGender,
-        dateOfBirth,
         phone,
         address,
-        guardianName,
-        guardianPhone,
         academicYear,
+        status: status || 'active',
       },
     });
 

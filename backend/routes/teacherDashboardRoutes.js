@@ -8,6 +8,7 @@ const {
   getTeacherExams,
   getTeacherPerformance,
   getTeacherProfile,
+  updateTeacherProfile,
   getTeacherAssessments,
   getTeacherAssessmentResults,
   saveTeacherAssessmentResults,
@@ -26,6 +27,8 @@ router.get('/students', getTeacherStudents);
 router.get('/exams', getTeacherExams);
 router.get('/performance', getTeacherPerformance);
 router.get('/profile', getTeacherProfile);
+router.put('/profile', updateTeacherProfile);
+router.patch('/profile', updateTeacherProfile);
 router.get('/results/assessments', getTeacherAssessments);
 router.get('/results/:assessmentType/:assessmentId', getTeacherAssessmentResults);
 router.put('/results/:assessmentType/:assessmentId', saveTeacherAssessmentResults);

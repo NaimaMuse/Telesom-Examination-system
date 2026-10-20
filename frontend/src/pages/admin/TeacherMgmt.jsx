@@ -1,16 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../services/api';
 
 const TEACHER_FIELDS = [
   { key: 'name', label: 'Full Name', type: 'text', required: true },
   { key: 'email', label: 'Email', type: 'email', required: true },
   { key: 'phone', label: 'Phone', type: 'tel' },
-];
-
-const PLACEHOLDER_TEACHERS = [
-  { _id:'t1', name:'Dr. Abdullahi Said',   email:'abdullahi@telesom.edu', phone:'+252 61 000 1001', department:'Computer Science', subjects:'Algorithms, Data Structures', status:'active' },
-  { _id:'t2', name:'Ms. Farhia Adan',      email:'farhia@telesom.edu',    phone:'+252 61 000 1002', department:'Business',         subjects:'Economics, Finance',          status:'active' },
-  { _id:'t3', name:'Mr. Hassan Mohamud',   email:'hassan@telesom.edu',    phone:'+252 61 000 1003', department:'Engineering',      subjects:'Mathematics, Physics',         status:'active' },
 ];
 
 function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, onClose }) {
@@ -52,6 +46,46 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function TeacherDetailsModal({ teacher, courseAssignment, loading, error, onClose }) {
+  const course = courseAssignment?.course;
+  const details = [
+    ['Full name', teacher.name],
+    ['Work email', teacher.email],
+    ['Phone', teacher.phone],
+    ['Course', teacher.department],
+    ['Specialization', teacher.specialization || teacher.subjects],
+    ['Qualification', teacher.qualification],
+  ];
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <section className="modal-box teacher-details-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-details-title" onClick={(event) => event.stopPropagation()}>
+        <header className="modal-header teacher-details-header">
+          <div className="teacher-details-avatar" aria-hidden="true">{(teacher.name || 'T').split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</div>
+          <div className="teacher-details-heading"><span className="teacher-directory-kicker">FACULTY PROFILE</span><h2 className="modal-title" id="teacher-details-title">{teacher.name || 'Teacher details'}</h2><p>{teacher.email || 'Email not provided'}</p></div>
+          <button type="button" className="modal-close" aria-label="Close teacher details" onClick={onClose}>×</button>
+        </header>
+        <div className="modal-body teacher-details-body">
+          {loading ? (
+            <div className="teacher-details-loading"><div className="spinner" /><span>Loading teacher profile…</span></div>
+          ) : error ? (
+            <div className="teacher-details-error" role="alert">{error}</div>
+          ) : <>
+          <section className="teacher-details-course">
+            <span className="teacher-details-course-icon" aria-hidden="true">▤</span>
+            <div><small>ASSIGNED COURSE</small><strong>{course?.title || course?.name || 'No course assigned'}</strong><p>{course?.description || 'No course description available.'}</p></div>
+          </section>
+          <dl className="teacher-details-grid">
+            {details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>)}
+          </dl>
+          </>}
+        </div>
+        <footer className="modal-footer"><button type="button" className="btn btn-primary" onClick={onClose}>Done</button></footer>
+      </section>
     </div>
   );
 }
@@ -137,7 +171,8 @@ function TeacherCredentialsModal({ credentials, onClose }) {
 const PAGE_SIZE = 8;
 
 export default function TeacherMgmt() {
-  const [teachers, setTeachers] = useState(PLACEHOLDER_TEACHERS);
+  const [teachers, setTeachers] = useState([]);
+  const [courseAssignments, setCourseAssignments] = useState([]);
   const [courses, setCourses] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState(null);
@@ -145,6 +180,11 @@ export default function TeacherMgmt() {
   const [page, setPage]         = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [teacherDetailsLoading, setTeacherDetailsLoading] = useState(false);
+  const [teacherDetailsError, setTeacherDetailsError] = useState('');
+  const teacherDetailsRequest = useRef(0);
+  const [showDirectoryDetails, setShowDirectoryDetails] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -159,10 +199,22 @@ export default function TeacherMgmt() {
         email: record.user?.email || record.email || '',
         subjects: record.specialization || record.subjects || '',
       })));
-    } catch { } finally { setLoading(false); }
+    } catch { setTeachers([]); } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchTeachers(); }, [fetchTeachers]);
+
+  const fetchCourseAssignments = useCallback(async () => {
+    try {
+      const response = await api.get('/course-teachers', { params: { limit: 100, status: 'active' } });
+      const rows = response.data?.data || [];
+      setCourseAssignments(Array.isArray(rows) ? rows : []);
+    } catch {
+      setCourseAssignments([]);
+    }
+  }, []);
+
+  useEffect(() => { fetchCourseAssignments(); }, [fetchCourseAssignments]);
 
   const fetchCourses = useCallback(async () => {
     setCoursesLoading(true);
@@ -182,15 +234,43 @@ export default function TeacherMgmt() {
   const filtered   = teachers;
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+  const activeTeachers = teachers.filter((teacher) => (teacher.status || 'active') === 'active').length;
+  const assignedTeachers = new Set(courseAssignments.map((assignment) => String(assignment.teacher?._id || assignment.teacher))).size;
+  const getTeacherAssignment = (teacher) => courseAssignments.find((assignment) => String(assignment.teacher?._id || assignment.teacher) === String(teacher._id));
+
+  const viewTeacherDetails = async (teacher) => {
+    const requestId = teacherDetailsRequest.current + 1;
+    teacherDetailsRequest.current = requestId;
+    setSelectedTeacher(teacher);
+    setTeacherDetailsLoading(true);
+    setTeacherDetailsError('');
+    try {
+      const response = await api.get(`/teachers/${teacher._id}/details`);
+      if (requestId !== teacherDetailsRequest.current) return;
+      const record = response.data?.data || response.data?.teacher;
+      if (!record) throw new Error('Teacher profile could not be found.');
+      setSelectedTeacher({
+        ...record,
+        name: record.user?.name || record.name || teacher.name,
+        email: record.user?.email || record.email || teacher.email,
+      });
+    } catch (error) {
+      if (requestId === teacherDetailsRequest.current) {
+        setTeacherDetailsError(error.response?.data?.message || error.message || 'Could not load this teacher profile.');
+      }
+    } finally {
+      if (requestId === teacherDetailsRequest.current) setTeacherDetailsLoading(false);
+    }
+  };
 
   const handleSave = async (form) => {
     if (editTarget && !String(editTarget._id).startsWith('t')) {
       await api.put(`/teachers/${editTarget._id}`, {
+        name: form.name,
+        email: form.email,
         phone: form.phone,
-        department: editTarget.department,
-        specialization: editTarget.subjects,
       });
-      await fetchTeachers();
+      await Promise.all([fetchTeachers(), fetchCourseAssignments()]);
       setShowModal(false);
       setEditTarget(null);
       return;
@@ -225,7 +305,7 @@ export default function TeacherMgmt() {
     }
 
     setCreatedCredentials({ name: form.name, email: form.email, teacherId, temporaryPassword, course: course.title || course.name, warning: assignmentWarning });
-    await fetchTeachers();
+    await Promise.all([fetchTeachers(), fetchCourseAssignments()]);
     setShowModal(false);
     setEditTarget(null);
   };
@@ -238,54 +318,94 @@ export default function TeacherMgmt() {
   };
 
   return (
-    <>
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">All Teachers ({filtered.length})</span>
-          <div className="teacher-list-tools">
-            <button type="button" className="btn btn-primary" onClick={()=>{setEditTarget(null);setShowModal(true);}}>+ Add Teacher</button>
+    <div className="teacher-directory-page">
+      <section className="teacher-directory-overview">
+        <div className="teacher-directory-intro">
+          <span className="teacher-directory-kicker">ACADEMIC STAFF <i aria-hidden="true" /></span>
+          <h1>Faculty directory</h1>
+          <p>Manage faculty accounts, course assignments, and teaching information.</p>
+        </div>
+        <div className="teacher-directory-overview-right">
+          <div className="teacher-directory-stats" aria-label="Teacher totals">
+            <div><span className="teacher-stat-label">TOTAL FACULTY</span><strong>{teachers.length}</strong><small>Registered teachers</small></div>
+            <div><span className="teacher-stat-label">ACTIVE</span><strong>{activeTeachers}</strong><small>Active accounts</small></div>
+            <div><span className="teacher-stat-label">ASSIGNED</span><strong>{assignedTeachers}</strong><small>With a course</small></div>
           </div>
         </div>
+      </section>
 
-        {loading ? <div className="spinner-wrap"><div className="spinner"/></div>
-          : paginated.length===0 ? <div className="empty-state"><div className="empty-state-icon">👨‍🏫</div><h3>No teachers yet</h3><p>Add a teacher to get started.</p></div>
-          : (
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Department</th><th>Subjects</th><th>Status</th><th>Actions</th></tr></thead>
+      <section className="teacher-directory-panel">
+        <header className="teacher-directory-panel-header">
+          <div>
+            <span className="teacher-directory-kicker">STAFF RECORDS</span>
+            <h2>Teachers <span>{filtered.length}</span></h2>
+          </div>
+          <div className="teacher-directory-header-actions">
+          <button type="button" className="teacher-directory-details-toggle" aria-pressed={showDirectoryDetails} onClick={() => setShowDirectoryDetails((current) => !current)}>
+            {showDirectoryDetails ? 'Hide details' : 'View details'}
+          </button>
+          <button type="button" className="teacher-directory-add" onClick={() => { setEditTarget(null); setShowModal(true); }}>
+            <span aria-hidden="true">+</span> Add teacher
+          </button>
+          </div>
+        </header>
+
+        {loading ? (
+          <div className="teacher-directory-loading"><div className="spinner" /><span>Loading faculty records…</span></div>
+        ) : paginated.length === 0 ? (
+          <div className="teacher-directory-empty">
+            <span aria-hidden="true">T</span><h3>No teachers yet</h3><p>Add a teacher to begin building the faculty directory.</p>
+            <button type="button" className="teacher-directory-add" onClick={() => { setEditTarget(null); setShowModal(true); }}>+ Add first teacher</button>
+          </div>
+        ) : (
+          <div className="table-responsive teacher-directory-table-wrap">
+            <table className="data-table teacher-directory-table">
+              <thead><tr><th>Faculty member</th><th>Course</th><th>Phone</th><th>Status</th>{showDirectoryDetails && <><th>Teacher ID</th><th>Course description</th></>}<th><span className="visually-hidden">Actions</span></th></tr></thead>
               <tbody>
-                {paginated.map((t,i)=>(
-                  <tr key={t._id}>
-                    <td>{(page-1)*PAGE_SIZE+i+1}</td>
-                    <td style={{fontWeight:600}}>{t.name}</td>
-                    <td>{t.email}</td>
-                    <td>{t.department||'—'}</td>
-                    <td style={{fontSize:'0.8rem',color:'var(--text-secondary)'}}>{t.subjects||'—'}</td>
-                    <td><span className={`badge badge-${t.status==='active'?'success':'muted'}`}>{t.status||'active'}</span></td>
+                {paginated.map((teacher) => {
+                  const assignment = getTeacherAssignment(teacher);
+                  const assignedCourse = assignment?.course;
+                  return (
+                  <tr key={teacher._id}>
                     <td>
-                      <div style={{display:'flex',gap:'6px'}}>
-                        <button className="btn btn-sm btn-secondary" onClick={()=>{setEditTarget(t);setShowModal(true);}}>✏️ Edit</button>
-                        <button className="btn btn-sm btn-danger" onClick={()=>setDeleteTarget(t)}>🗑️</button>
+                      <div className="teacher-directory-person">
+                        <span className="teacher-directory-avatar" aria-hidden="true">{(teacher.name || 'T').split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span>
+                        <span><strong>{teacher.name || 'Teacher'}</strong><small>{teacher.email || 'Email not provided'}</small></span>
+                      </div>
+                    </td>
+                    <td><span className="teacher-department-tag">{assignedCourse ? `${assignedCourse.courseCode ? `${assignedCourse.courseCode} · ` : ''}${assignedCourse.title || assignedCourse.name || 'Course'}` : 'Not assigned'}</span></td>
+                    <td>{teacher.phone || '—'}</td>
+                    <td><span className={`teacher-account-status ${teacher.status === 'active' || !teacher.status ? 'is-active' : ''}`}><i aria-hidden="true" />{teacher.status || 'active'}</span></td>
+                    {showDirectoryDetails && <><td><code>{teacher.teacherId || '—'}</code></td><td><span className="teacher-subjects-text">{assignedCourse?.description || 'No course description'}</span></td></>}
+                    <td>
+                      <div className="teacher-directory-actions">
+                        <button type="button" className="teacher-directory-edit" onClick={() => viewTeacherDetails(teacher)}>View</button>
+                        <button type="button" className="teacher-directory-edit" onClick={() => { setEditTarget(teacher); setShowModal(true); }}>Edit</button>
+                        <button type="button" className="teacher-directory-delete" aria-label={`Delete ${teacher.name || 'teacher'}`} title="Delete teacher" onClick={() => setDeleteTarget(teacher)}>×</button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
 
-        <div className="pagination">
-          <span className="page-info">Showing {Math.min((page-1)*PAGE_SIZE+1,filtered.length)}–{Math.min(page*PAGE_SIZE,filtered.length)} of {filtered.length}</span>
-          <button className="page-btn" disabled={page===1} onClick={()=>setPage(p=>p-1)}>‹</button>
-          {Array.from({length:totalPages},(_,i)=><button key={i} className={`page-btn ${page===i+1?'active':''}`} onClick={()=>setPage(i+1)}>{i+1}</button>)}
-          <button className="page-btn" disabled={page===totalPages} onClick={()=>setPage(p=>p+1)}>›</button>
-        </div>
-      </div>
+        <footer className="teacher-directory-pagination">
+          <span>Showing {Math.min((page-1)*PAGE_SIZE+1,filtered.length)}–{Math.min(page*PAGE_SIZE,filtered.length)} of {filtered.length} faculty</span>
+          <div>
+            <button type="button" className="page-btn" aria-label="Previous page" disabled={page===1} onClick={() => setPage(current => current-1)}>‹</button>
+            {Array.from({length:totalPages},(_,index)=><button type="button" key={index} className={`page-btn ${page===index+1?'active':''}`} aria-current={page===index+1?'page':undefined} onClick={() => setPage(index+1)}>{index+1}</button>)}
+            <button type="button" className="page-btn" aria-label="Next page" disabled={page===totalPages} onClick={() => setPage(current => current+1)}>›</button>
+          </div>
+        </footer>
+      </section>
 
       {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_FIELDS : [...TEACHER_FIELDS, { key: 'course', label: 'Course', type: 'course', required: true }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
       {deleteTarget && <ConfirmModal message={`Delete "${deleteTarget.name}"?`} onConfirm={handleDelete} onCancel={()=>setDeleteTarget(null)} loading={deleting} />}
       {createdCredentials && <TeacherCredentialsModal credentials={createdCredentials} onClose={() => setCreatedCredentials(null)} />}
-    </>
+      {selectedTeacher && <TeacherDetailsModal teacher={selectedTeacher} courseAssignment={selectedTeacher.assignedCourse || null} loading={teacherDetailsLoading} error={teacherDetailsError} onClose={() => { teacherDetailsRequest.current += 1; setSelectedTeacher(null); setTeacherDetailsError(''); }} />}
+    </div>
   );
 }

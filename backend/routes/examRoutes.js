@@ -14,9 +14,9 @@ router.use(protect);
 
 router.get('/', authorizeRoles('admin', 'teacher'), listExams);
 router.get('/:id', authorizeRoles('admin', 'teacher'), getExamById);
-router.post('/', authorizeRoles('admin', 'teacher'), createExam);
-router.put('/:id', authorizeRoles('admin', 'teacher'), updateExam);
-router.patch('/:id', authorizeRoles('admin', 'teacher'), updateExam);
-router.delete('/:id', authorizeRoles('admin'), deleteExam);
+router.post('/', authorizeRoles('teacher'), createExam);
+router.put('/:id', authorizeRoles('teacher'), updateExam);
+router.patch('/:id', authorizeRoles('teacher'), updateExam);
+router.delete('/:id', authorizeRoles('teacher'), deleteExam);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Teacher = require('../models/Teacher');
+const CourseTeacher = require('../models/CourseTeacher');
 const User = require('../models/User');
 const {
   asyncHandler,
@@ -20,6 +21,95 @@ const controller = createResourceController(Teacher, {
   filterFields: ['user', 'teacherId', 'gender', 'department', 'status'],
   populate: [{ path: 'user', select: 'name email role isActive' }],
   sortFields: ['createdAt', 'updatedAt', 'teacherId'],
+});
+
+const updateTeacherProfile = asyncHandler(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid teacher ID');
+  }
+
+  const teacher = await Teacher.findById(req.params.id);
+  if (!teacher) {
+    res.status(404);
+    throw new Error('Teacher not found');
+  }
+
+  const { name, email, phone } = req.body;
+  if (!name || !email) {
+    res.status(400);
+    throw new Error('Full name and email are required');
+  }
+
+  const normalizedName = String(name).trim();
+  const normalizedEmail = String(email).trim().toLowerCase();
+  if (normalizedName.length < 2 || normalizedName.length > 100) {
+    res.status(400);
+    throw new Error('Name must be between 2 and 100 characters');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    res.status(400);
+    throw new Error('Please provide a valid email address');
+  }
+
+  const existingUser = await User.findOne({ email: normalizedEmail });
+  if (existingUser && String(existingUser._id) !== String(teacher.user)) {
+    res.status(409);
+    throw new Error('Email is already registered');
+  }
+
+  const user = await User.findById(teacher.user);
+  if (!user) {
+    res.status(404);
+    throw new Error('Teacher account not found');
+  }
+
+  user.name = normalizedName;
+  user.email = normalizedEmail;
+  await user.save();
+  teacher.phone = phone ? String(phone).trim() : '';
+  await teacher.save();
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      ...teacher.toObject(),
+      name: user.name,
+      email: user.email,
+    },
+  });
+});
+
+const getTeacherDetails = asyncHandler(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid teacher ID');
+  }
+
+  const teacher = await Teacher.findById(req.params.id)
+    .populate('user', 'name email role isActive')
+    .lean();
+  if (!teacher) {
+    res.status(404);
+    throw new Error('Teacher not found');
+  }
+
+  const assignments = await CourseTeacher.find({ teacher: teacher._id, status: 'active' })
+    .populate('course', 'courseCode title name description credits')
+    .sort({ isPrimary: -1, assignedDate: -1 })
+    .lean();
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      ...teacher,
+      name: teacher.user?.name || '',
+      email: teacher.user?.email || '',
+      assignments,
+      assignedCourse: assignments[0] || null,
+    },
+  });
 });
 
 const deactivateTeacher = asyncHandler(async (req, res) => {
@@ -45,9 +135,10 @@ const deactivateTeacher = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getTeacherDetails,
   listTeachers: controller.list,
   getTeacherById: controller.getById,
   createTeacher,
-  updateTeacher: controller.update,
+  updateTeacher: updateTeacherProfile,
   deleteTeacher: deactivateTeacher,
 };

@@ -94,13 +94,13 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Department breakdown */}
+      {/* Course breakdown */}
       <div className="card">
-        <div className="card-header"><span className="card-title">Department Performance</span></div>
+        <div className="card-header"><span className="card-title">Course Performance</span></div>
         <div className="table-responsive">
           <table className="data-table">
             <thead>
-              <tr><th>#</th><th>Department</th><th>Students</th><th>Avg Grade (%)</th><th>Performance Bar</th></tr>
+              <tr><th>#</th><th>Course</th><th>Students</th><th>Avg Grade (%)</th><th>Performance Bar</th></tr>
             </thead>
             <tbody>
               {DEPARTMENTS.map((d,i)=>(

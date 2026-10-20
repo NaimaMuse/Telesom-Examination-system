@@ -17,6 +17,7 @@ const protectedPaths = [
   '/api/dashboard',
   '/api/reports',
   '/api/profile',
+  '/api/teacher/profile',
 ];
 
 const run = async () => {
@@ -30,6 +31,12 @@ const run = async () => {
       const response = await fetch(baseUrl + path);
       assert.strictEqual(response.status, 401, `${path} must require auth`);
     }
+    const teacherProfileUpdate = await fetch(`${baseUrl}/api/teacher/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Teacher', email: 'teacher@example.com' }),
+    });
+    assert.strictEqual(teacherProfileUpdate.status, 401, 'teacher profile update must require auth');
     for (const path of ['/api/users/students', '/api/users/teachers']) {
       const response = await fetch(baseUrl + path, { method: 'POST' });
       assert.strictEqual(response.status, 401, `${path} must require auth`);

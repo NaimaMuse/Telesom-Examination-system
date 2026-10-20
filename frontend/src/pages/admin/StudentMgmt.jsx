@@ -11,29 +11,27 @@ const STUDENT_FIELDS = [
   { key: 'studentId', label: 'Student ID',  type: 'text',     required: true },
   { key: 'email',     label: 'Email',       type: 'email',    required: true },
   { key: 'gender',    label: 'Gender',      type: 'select', options: ['male', 'female'], required: true },
-  { key: 'phone',     label: 'Phone',       type: 'tel'  },
-  { key: 'program',   label: 'Program',     type: 'text' },
-  { key: 'year',      label: 'Year / Level',type: 'text' },
+  { key: 'phone',     label: 'Phone',       type: 'tel' },
+  { key: 'course',    label: 'Course',      type: 'course', required: true },
+  { key: 'address',   label: 'Address',     type: 'text' },
+  { key: 'academicYear', label: 'Batch / Year', type: 'text' },
   { key: 'status',    label: 'Status',      type: 'select', options: ['active','inactive','graduated','suspended'] },
 ];
 
-const PLACEHOLDER_STUDENTS = [
-  { _id:'s1', name:'Ahmed Ali Hassan',     studentId:'STU-001', email:'ahmed@telesom.edu',    phone:'+252 61 000 0001', program:'Computer Science', year:'Year 2', status:'active' },
-  { _id:'s2', name:'Faadumo Abdi Warsame',studentId:'STU-002', email:'faadumo@telesom.edu',  phone:'+252 61 000 0002', program:'Business Admin',  year:'Year 1', status:'active' },
-  { _id:'s3', name:'Mohamed Osman Jama',  studentId:'STU-003', email:'mohamed@telesom.edu',  phone:'+252 61 000 0003', program:'Engineering',     year:'Year 3', status:'active' },
-  { _id:'s4', name:'Hodan Yusuf Ibrahim', studentId:'STU-004', email:'hodan@telesom.edu',    phone:'+252 61 000 0004', program:'Nursing',         year:'Year 2', status:'inactive' },
-];
-
-function CrudModal({ title, fields, initial, onSave, onClose }) {
+function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, onClose }) {
   const [form, setForm] = useState(initial || {});
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    try { await onSave(form); } finally { setSaving(false); }
+    setError('');
+    try { await onSave(form); }
+    catch (saveError) { setError(saveError.message || 'Student could not be saved.'); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -49,7 +47,12 @@ function CrudModal({ title, fields, initial, onSave, onClose }) {
               {fields.map(f => (
                 <div className="form-group" key={f.key}>
                   <label className="form-label">{f.label}{f.required && ' *'}</label>
-                  {f.type === 'select' ? (
+                  {f.type === 'course' ? (
+                    <select className="form-control" required={f.required} value={form.course || ''} disabled={coursesLoading || courses.length === 0} onChange={e => handleChange(f.key, e.target.value)}>
+                      <option value="">{coursesLoading ? 'Loading courses…' : courses.length ? 'Select a course' : 'No courses available'}</option>
+                      {courses.map(course => <option key={course._id} value={course._id}>{course.courseCode ? `${course.courseCode} · ` : ''}{course.title || course.name}</option>)}
+                    </select>
+                  ) : f.type === 'select' ? (
                     <select className="form-control" value={form[f.key] || ''} onChange={e => handleChange(f.key, e.target.value)}>
                       <option value="">Select…</option>
                       {f.options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -67,9 +70,10 @@ function CrudModal({ title, fields, initial, onSave, onClose }) {
               ))}
             </div>
           </div>
+          {error && <div className="student-form-error" role="alert">{error}</div>}
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
+            <button type="submit" className="btn btn-primary" disabled={saving || coursesLoading || (fields.some(field => field.type === 'course') && courses.length === 0)}>
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
@@ -102,8 +106,7 @@ function ConfirmModal({ message, onConfirm, onCancel, loading }) {
 const PAGE_SIZE = 8;
 
 const STUDENT_TEMPLATE_COLUMNS = [
-  'Full Name', 'Email', 'Student ID', 'Gender', 'Phone', 'Date of Birth',
-  'Address', 'Guardian Name', 'Guardian Phone', 'Academic Year',
+  'Full Name', 'Email', 'Student ID', 'Gender', 'Phone', 'Course', 'Address', 'Batch / Year',
 ];
 
 const normalizeHeader = (value) => String(value || '')
@@ -122,13 +125,14 @@ const STUDENT_COLUMN_MAP = {
   sex: 'gender',
   phone: 'phone',
   phonenumber: 'phone',
-  dateofbirth: 'dateOfBirth',
-  dob: 'dateOfBirth',
   address: 'address',
-  guardianname: 'guardianName',
-  guardianphone: 'guardianPhone',
+  batchyear: 'academicYear',
+  batch: 'academicYear',
   academicyear: 'academicYear',
   year: 'academicYear',
+  course: 'course',
+  courseid: 'course',
+  coursecode: 'course',
 };
 
 function mapStudentRows(rows) {
@@ -141,14 +145,14 @@ function mapStudentRows(rows) {
 
 function downloadStudentTemplate() {
   return import('xlsx').then((XLSX) => {
-  const worksheet = XLSX.utils.aoa_to_sheet([
-    STUDENT_TEMPLATE_COLUMNS,
-    ['Amina Hassan', 'amina@example.com', 'STU-2026-001', 'female', '+252 61 1234567', '2005-04-12', 'Hargeisa', 'Hassan Ali', '+252 61 7654321', '2026'],
-  ]);
-  worksheet['!cols'] = STUDENT_TEMPLATE_COLUMNS.map((column) => ({ wch: Math.max(column.length + 4, 18) }));
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
-  XLSX.writeFile(workbook, 'student-upload-template.xlsx');
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      STUDENT_TEMPLATE_COLUMNS,
+      ['Amina Hassan', 'amina@example.com', 'STU-2026-001', 'female', '+252 61 1234567', 'CS101', 'Hargeisa', '2026'],
+    ]);
+    worksheet['!cols'] = STUDENT_TEMPLATE_COLUMNS.map((column) => ({ wch: Math.max(column.length + 4, 18) }));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+    XLSX.writeFile(workbook, 'student-upload-template.xlsx');
   });
 }
 
@@ -197,7 +201,7 @@ function ImportStudentsModal({ onClose, onImport, importing, report }) {
             <small>.xlsx, .xls, or .csv</small>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} />
           </label>
-          <div className="student-import-requirements"><strong>Required columns</strong><span>Full Name · Email · Student ID · Gender (male or female)</span></div>
+          <div className="student-import-requirements"><strong>Required columns</strong><span>Full Name · Email · Student ID · Gender · Course</span></div>
           {rows.length > 0 && !report && <div className="student-import-preview" role="status">{rows.length} student {rows.length === 1 ? 'row' : 'rows'} ready to import.</div>}
           {parseError && <div className="student-import-error" role="alert">{parseError}</div>}
           {report && (
@@ -218,10 +222,15 @@ function ImportStudentsModal({ onClose, onImport, importing, report }) {
 }
 
 export default function StudentMgmt() {
-  const [students, setStudents]     = useState(PLACEHOLDER_STUDENTS);
+  const [students, setStudents]     = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const [loading, setLoading]       = useState(false);
   const [search, setSearch]         = useState('');
   const [filterStatus, setFilter]   = useState('');
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterAcademicYear, setFilterAcademicYear] = useState('');
   const [page, setPage]             = useState(1);
   const [showModal, setShowModal]   = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -230,6 +239,30 @@ export default function StudentMgmt() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importReport, setImportReport] = useState(null);
+  const [showAllDetails, setShowAllDetails] = useState(false);
+
+  const fetchCourses = useCallback(async () => {
+    setCoursesLoading(true);
+    try {
+      const response = await api.get('/courses', { params: { limit: 100 } });
+      const records = response.data?.data || response.data?.courses || response.data;
+      if (Array.isArray(records)) setCourses(records.filter(course => course.status !== 'inactive' && course.status !== 'archived' && course.isActive !== false));
+    } catch {
+      setCourses([]);
+    } finally {
+      setCoursesLoading(false);
+    }
+  }, []);
+
+  const fetchEnrollments = useCallback(async () => {
+    try {
+      const response = await api.get('/enrollments', { params: { limit: 100 } });
+      const records = response.data?.data || [];
+      setEnrollments(Array.isArray(records) ? records : []);
+    } catch {
+      setEnrollments([]);
+    }
+  }, []);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -241,43 +274,82 @@ export default function StudentMgmt() {
           ...record,
           name: record.user?.name || record.name || '',
           email: record.user?.email || record.email || '',
-          year: record.academicYear || record.year || '',
+          academicYear: record.academicYear || '',
         })));
       }
     } catch {
-      // keep placeholder
+      setStudents([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchStudents(); }, [fetchStudents]);
+  useEffect(() => {
+    fetchStudents();
+    fetchCourses();
+    fetchEnrollments();
+  }, [fetchStudents, fetchCourses, fetchEnrollments]);
+
+  const getStudentEnrollment = (student) => enrollments.find((enrollment) => {
+    const enrolledStudentId = enrollment.student?._id || enrollment.student;
+    return String(enrolledStudentId) === String(student._id) && enrollment.status !== 'dropped';
+  });
+
+  const getStudentAcademicYear = (student) => student.academicYear || getStudentEnrollment(student)?.academicYear || '';
+  const academicYears = [...new Set([
+    ...students.map(getStudentAcademicYear),
+    ...enrollments.map((enrollment) => enrollment.academicYear),
+  ].filter(Boolean))].sort((left, right) => String(right).localeCompare(String(left), undefined, { numeric: true }));
+
+  const getStudentCourseName = (student) => {
+    const enrollment = getStudentEnrollment(student);
+    const course = enrollment?.course;
+    return typeof course === 'object' && course
+      ? `${course.courseCode ? `${course.courseCode} · ` : ''}${course.title || course.name || 'Course'}`
+      : courses.find((item) => String(item._id) === String(course))?.title || student.courseName || student.program || '—';
+  };
 
   const filtered = students.filter(s => {
     const matchSearch = !search || [s.name, s.studentId, s.email].some(v => v?.toLowerCase().includes(search.toLowerCase()));
     const matchStatus = !filterStatus || s.status === filterStatus;
-    return matchSearch && matchStatus;
+    const enrollment = getStudentEnrollment(s);
+    const enrolledCourseId = enrollment?.course?._id || enrollment?.course || '';
+    const enrolledYear = getStudentAcademicYear(s);
+    const matchCourse = !filterCourse || String(enrolledCourseId) === String(filterCourse);
+    const matchAcademicYear = !filterAcademicYear || String(enrolledYear) === String(filterAcademicYear);
+    return matchSearch && matchStatus && matchCourse && matchAcademicYear;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleSave = async (form) => {
-    try {
-      if (editTarget?._id && !editTarget._id.startsWith('s')) {
-        await api.put(`/students/${editTarget._id}`, form);
-      } else {
-        await api.post('/users/students', form);
-      }
-      await fetchStudents();
-    } catch {
-      // optimistic local update for placeholder mode
-      if (editTarget) {
-        setStudents(prev => prev.map(s => s._id === editTarget._id ? { ...s, ...form } : s));
-      } else {
-        setStudents(prev => [...prev, { ...form, _id: `s${Date.now()}` }]);
-      }
+    const selectedCourse = courses.find(course => String(course._id) === String(form.course));
+    const academicYear = form.academicYear || selectedCourse?.academicYear || String(new Date().getFullYear());
+    const { course: courseId, ...studentFields } = form;
+    studentFields.academicYear = academicYear;
+    let studentId = editTarget?._id;
+
+    if (editTarget?._id && !String(editTarget._id).startsWith('s')) {
+      await api.put(`/students/${editTarget._id}`, studentFields);
+    } else {
+      const response = await api.post('/users/students', studentFields);
+      studentId = response.data?.data?.student?._id || response.data?.student?._id;
+      if (!studentId) throw new Error('Student was created, but the server did not return a student ID.');
     }
+
+    const existingEnrollment = enrollments.find((enrollment) => String(enrollment.student?._id || enrollment.student) === String(studentId) && enrollment.status !== 'dropped');
+    const enrollmentPayload = {
+      student: studentId,
+      course: courseId,
+      academicYear,
+      semester: selectedCourse?.semester || '',
+      status: 'enrolled',
+    };
+    if (existingEnrollment?._id) await api.put(`/enrollments/${existingEnrollment._id}`, enrollmentPayload);
+    else await api.post('/enrollments', enrollmentPayload);
+
+    await Promise.all([fetchStudents(), fetchEnrollments()]);
     setShowModal(false);
     setEditTarget(null);
   };
@@ -289,7 +361,7 @@ export default function StudentMgmt() {
     try {
       for (const student of rows) {
         const { _rowNumber: row, ...payload } = student;
-        const missing = ['name', 'email', 'studentId', 'gender'].filter((field) => !String(payload[field] || '').trim());
+        const missing = ['name', 'email', 'studentId', 'gender', 'course'].filter((field) => !String(payload[field] || '').trim());
         if (missing.length) {
           errors.push({ row, message: `Missing ${missing.join(', ')}.` });
           continue;
@@ -300,16 +372,31 @@ export default function StudentMgmt() {
           continue;
         }
         try {
-          await api.post('/users/students', payload);
+          const selectedCourse = courses.find(course => [course._id, course.courseCode, course.title, course.name].some(value => String(value || '').trim().toLowerCase() === String(payload.course).trim().toLowerCase()));
+          if (!selectedCourse) {
+            errors.push({ row, message: `Course "${payload.course}" was not found. Use a course code or name from the course list.` });
+            continue;
+          }
+          const { course: ignoredCourse, ...studentPayload } = payload;
+          const response = await api.post('/users/students', studentPayload);
+          const createdStudentId = response.data?.data?.student?._id || response.data?.student?._id;
+          if (!createdStudentId) throw new Error('Student was created, but the server did not return its ID.');
+          await api.post('/enrollments', {
+            student: createdStudentId,
+            course: selectedCourse._id,
+            academicYear: studentPayload.academicYear || selectedCourse.academicYear || String(new Date().getFullYear()),
+            semester: selectedCourse.semester || '',
+            status: 'enrolled',
+          });
           successCount += 1;
         } catch (error) {
-          errors.push({ row, message: error.response?.data?.message || 'Student could not be created.' });
+          errors.push({ row, message: error.response?.data?.message || error.message || 'Student could not be created.' });
         }
       }
       setImportReport({ total: rows.length, successCount, errors });
       if (successCount) {
         setPage(1);
-        await fetchStudents();
+        await Promise.all([fetchStudents(), fetchEnrollments()]);
       }
     } finally {
       setImporting(false);
@@ -319,7 +406,7 @@ export default function StudentMgmt() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await api.delete(`/admin/students/${deleteTarget._id}`);
+      await api.delete(`/students/${deleteTarget._id}`);
       await fetchStudents();
     } catch {
       setStudents(prev => prev.filter(s => s._id !== deleteTarget._id));
@@ -331,12 +418,11 @@ export default function StudentMgmt() {
 
   return (
     <>
-      <div className="page-header">
-        <div className="page-header-left">
-          <h1>Student Management</h1>
-          <p>Add, edit, and manage student records</p>
-        </div>
+      <div className="page-header student-management-header">
         <div className="student-management-actions">
+        <button type="button" className="btn btn-sm btn-secondary student-view-toggle" aria-pressed={showAllDetails} onClick={() => setShowAllDetails(current => !current)}>
+          {showAllDetails ? 'Show less' : 'View all details'}
+        </button>
         <button type="button" className="btn btn-secondary student-upload-trigger" onClick={() => { setImportReport(null); setShowImportModal(true); }}>
           <span aria-hidden="true">↑</span> Upload Excel
         </button>
@@ -346,20 +432,27 @@ export default function StudentMgmt() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card student-management-panel">
         <div className="card-header">
-          <span className="card-title">All Students ({filtered.length})</span>
+          <div className="student-list-heading">
+            <span className="student-section-kicker">STUDENT RECORDS</span>
+            <span className="card-title">Students <span className="student-total-count">{filtered.length}</span></span>
+          </div>
           <div className="filter-bar" style={{ marginBottom: 0 }}>
-            <div className="search-input-wrap">
-              <span style={{ color: 'var(--text-muted)' }}>🔍</span>
-              <input placeholder="Search students…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
-            </div>
-            <select className="form-control" style={{ width: 'auto' }} value={filterStatus} onChange={e => { setFilter(e.target.value); setPage(1); }}>
-              <option value="">All Status</option>
+            <select aria-label="Filter students by course" className="form-control student-filter-select" value={filterCourse} onChange={event => { setFilterCourse(event.target.value); setPage(1); }}>
+              <option value="">All courses</option>
+              {courses.map(course => <option key={course._id} value={course._id}>{course.courseCode ? `${course.courseCode} · ` : ''}{course.title || course.name}</option>)}
+            </select>
+            <select aria-label="Filter students by status" className="form-control student-filter-select" value={filterStatus} onChange={event => { setFilter(event.target.value); setPage(1); }}>
+              <option value="">All statuses</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="graduated">Graduated</option>
               <option value="suspended">Suspended</option>
+            </select>
+            <select aria-label="Filter students by academic year" className="form-control student-filter-select" value={filterAcademicYear} onChange={event => { setFilterAcademicYear(event.target.value); setPage(1); }}>
+              <option value="">All academic years</option>
+              {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
             </select>
           </div>
         </div>
@@ -374,16 +467,16 @@ export default function StudentMgmt() {
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="data-table">
+            <table className="data-table student-management-table">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Name</th>
-                  <th>Student ID</th>
-                  <th>Email</th>
-                  <th>Program</th>
-                  <th>Year</th>
+                  <th>Student</th>
+                  <th>Phone</th>
+                  <th>Course</th>
+                  <th>Batch / Year</th>
                   <th>Status</th>
+                  {showAllDetails && <><th>Student ID</th><th>Email</th><th>Gender</th><th>Address</th><th>Semester</th></>}
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -391,20 +484,20 @@ export default function StudentMgmt() {
                 {paginated.map((s, i) => (
                   <tr key={s._id}>
                     <td>{(page - 1) * PAGE_SIZE + i + 1}</td>
-                    <td style={{ fontWeight: 600 }}>{s.name}</td>
-                    <td><code>{s.studentId}</code></td>
-                    <td>{s.email}</td>
-                    <td>{s.program || '—'}</td>
-                    <td>{s.year || '—'}</td>
+                    <td><div className="student-record-person"><span aria-hidden="true">{(s.name || 'S').split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span><strong>{s.name || 'Student'}</strong></div></td>
+                    <td>{s.phone || '—'}</td>
+                    <td><span className="student-course-tag">{getStudentCourseName(s)}</span></td>
+                    <td>{getStudentAcademicYear(s) || '—'}</td>
                     <td>
-                      <span className={`badge badge-${s.status === 'active' ? 'success' : s.status === 'graduated' ? 'info' : 'muted'}`}>
+                      <span className={`student-record-status ${s.status === 'active' ? 'is-active' : ''}`}><i aria-hidden="true" />
                         {s.status || 'active'}
                       </span>
                     </td>
+                    {showAllDetails && <><td><code>{s.studentId || '—'}</code></td><td>{s.email || '—'}</td><td>{s.gender || '—'}</td><td>{s.address || '—'}</td><td>{getStudentEnrollment(s)?.semester || '—'}</td></>}
                     <td>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <button type="button" className="btn btn-sm btn-secondary" onClick={() => { setEditTarget(s); setShowModal(true); }}>✏️ Edit</button>
-                        <button type="button" className="btn btn-sm btn-danger" onClick={() => setDeleteTarget(s)}>🗑️</button>
+                        <button type="button" className="student-row-edit" onClick={() => { const enrollment = getStudentEnrollment(s); setEditTarget({ ...s, course: enrollment?.course?._id || enrollment?.course || '' }); setShowModal(true); }}>Edit</button>
+                        <button type="button" className="student-row-delete" aria-label={`Delete ${s.name || 'student'}`} onClick={() => setDeleteTarget(s)}>×</button>
                       </div>
                     </td>
                   </tr>
@@ -431,6 +524,8 @@ export default function StudentMgmt() {
           title={editTarget ? 'Edit Student' : 'Add New Student'}
           fields={STUDENT_FIELDS}
           initial={editTarget || {}}
+          courses={courses}
+          coursesLoading={coursesLoading}
           onSave={handleSave}
           onClose={() => { setShowModal(false); setEditTarget(null); }}
         />

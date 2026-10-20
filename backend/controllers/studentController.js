@@ -11,11 +11,8 @@ const controller = createResourceController(Student, {
   fields: [
     'studentId',
     'gender',
-    'dateOfBirth',
     'phone',
     'address',
-    'guardianName',
-    'guardianPhone',
     'academicYear',
     'status',
   ],

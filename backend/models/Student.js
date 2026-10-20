@@ -23,22 +23,11 @@ const studentSchema = new mongoose.Schema(
       },
       required: [true, 'Gender is required'],
     },
-    dateOfBirth: {
-      type: Date,
-    },
     phone: {
       type: String,
       trim: true,
     },
     address: {
-      type: String,
-      trim: true,
-    },
-    guardianName: {
-      type: String,
-      trim: true,
-    },
-    guardianPhone: {
       type: String,
       trim: true,
     },

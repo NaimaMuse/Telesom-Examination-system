@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+  getTeacherDetails,
   listTeachers,
   getTeacherById,
   createTeacher,
@@ -13,6 +14,7 @@ const router = express.Router();
 router.use(protect, authorizeRoles('admin'));
 
 router.route('/').get(listTeachers).post(createTeacher);
+router.get('/:id/details', getTeacherDetails);
 router
   .route('/:id')
   .get(getTeacherById)

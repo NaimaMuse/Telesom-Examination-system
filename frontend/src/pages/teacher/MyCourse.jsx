@@ -161,7 +161,7 @@ export default function MyCourse() {
                 <h3>{course.title || course.name || 'Course title unavailable'}</h3>
                 <p>{course.description || 'No course description has been added yet.'}</p>
                 <dl className="course-facts">
-                  <div><dt>Department</dt><dd>{course.department || 'Not specified'}</dd></div>
+                  <div><dt>Course</dt><dd>{course.department || 'Not specified'}</dd></div>
                   <div><dt>Semester</dt><dd>{course.semester || 'Not specified'}</dd></div>
                   <div><dt>Credits</dt><dd>{course.credits ?? '—'}</dd></div>
                 </dl>
