@@ -12,7 +12,6 @@ const PLACEHOLDER_COURSES = ['All','CS101','BUS101'];
 export default function StudentNotes() {
   const [notes, setNotes]     = useState(PLACEHOLDER_NOTES);
   const [loading, setLoading] = useState(false);
-  const [search,  setSearch]  = useState('');
   const [selCourse, setSelCourse] = useState('All');
 
   useEffect(()=>{
@@ -24,22 +23,12 @@ export default function StudentNotes() {
   },[]);
 
   const filtered = notes.filter(n=>{
-    const matchCourse = selCourse==='All'||n.course===selCourse;
-    const matchSearch = !search||n.title?.toLowerCase().includes(search.toLowerCase());
-    return matchCourse&&matchSearch;
+    return selCourse==='All'||n.course===selCourse;
   });
 
   return (
     <>
-      <div className="page-header">
-        <div className="page-header-left"><h1>Study Notes</h1><p>Download notes and materials uploaded by your teachers</p></div>
-      </div>
-
       <div className="filter-bar">
-        <div className="search-input-wrap">
-          <span style={{color:'var(--text-muted)'}}>🔍</span>
-          <input placeholder="Search notes…" value={search} onChange={e=>setSearch(e.target.value)}/>
-        </div>
         <select className="form-control" style={{width:'auto'}} value={selCourse} onChange={e=>setSelCourse(e.target.value)}>
           {PLACEHOLDER_COURSES.map(c=><option key={c} value={c}>{c==='All'?'All Courses':c}</option>)}
         </select>

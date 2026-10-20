@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "rollup": "npm:@rollup/wasm-node@4.64.5",
     "vite": "^6.0.7"
   }
 }

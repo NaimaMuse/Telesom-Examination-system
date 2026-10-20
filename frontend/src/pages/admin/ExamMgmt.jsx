@@ -216,8 +216,8 @@ export default function ExamMgmt() {
   const [page, setPage] = useState(1);
   const [selectedExam, setSelectedExam] = useState(null);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
+  const fetchItems = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     try {
       const res = await api.get('/exams');
       const data = res.data?.data || res.data?.exams || res.data;
@@ -227,12 +227,20 @@ export default function ExamMgmt() {
     } catch (err) {
       console.warn('[ExamMgmt] Using placeholder data:', err.message);
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchItems();
+    // Initial fetch with spinner
+    fetchItems(true);
+
+    // Auto-refresh in background every 5 seconds without needing button click
+    const timer = setInterval(() => {
+      fetchItems(false);
+    }, 5000);
+
+    return () => clearInterval(timer);
   }, [fetchItems]);
 
   const filtered = items.filter((e) => {
@@ -285,7 +293,7 @@ export default function ExamMgmt() {
 
   return (
     <div className="exam-mgmt-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* ── Top Header Bar (Clean, Read-Only Notice) ── */}
+      {/* ── Top Header Bar (Clean, Auto-Refreshing Live Registry) ── */}
       <div
         style={{
           display: 'flex',
@@ -313,39 +321,28 @@ export default function ExamMgmt() {
             >
               🔒 READ-ONLY AUDIT
             </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.72rem',
+                color: '#16a34a',
+                fontWeight: 600,
+                background: '#f0fdf4',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                border: '1px solid #bbf7d0',
+              }}
+              title="Automatically polling for updates every 5 seconds"
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />
+              Live Syncing
+            </span>
           </div>
           <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            Administrative monitoring of assessments created and scheduled by course instructors
+            Real-time monitoring of assessments authored and scheduled by faculty instructors
           </span>
-        </div>
-
-        <button
-          className="btn btn-secondary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
-          onClick={fetchItems}
-          disabled={loading}
-          title="Refresh assessments from server"
-        >
-          <span>🔄</span> Refresh Data
-        </button>
-      </div>
-
-      {/* ── Notice Banner Explaining Role Separation ── */}
-      <div
-        style={{
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderLeft: '4px solid #229948',
-          borderRadius: '8px',
-          padding: '0.75rem 1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-        }}
-      >
-        <span style={{ fontSize: '1.2rem' }}>👨‍🏫</span>
-        <div style={{ fontSize: '0.82rem', color: '#334155', lineHeight: 1.4 }}>
-          <strong>Faculty-Managed Assessments:</strong> Exams and quizzes are authored and scheduled by course teachers in their respective portal. Administrators have comprehensive read-only oversight to review dates, venues, and status.
         </div>
       </div>
 
