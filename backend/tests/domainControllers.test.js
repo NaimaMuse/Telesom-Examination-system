@@ -33,6 +33,12 @@ const createContext = ({ body = {}, params = {}, query = {}, user } = {}) => {
 
 const run = async () => {
   const originals = {
+    courseLock: Course.findOneAndUpdate,
+    courseUnlock: Course.updateOne,
+    enrollmentDistinct: require('../models/Enrollment').distinct,
+    resultFind: ExamResult.find,
+    examUpdate: Exam.updateOne,
+    enrollmentExists: require('../models/Enrollment').exists,
     courseCreate: Course.create,
     examFindById: Exam.findById,
     examResultCreate: ExamResult.create,
@@ -40,6 +46,9 @@ const run = async () => {
   };
 
   try {
+    Course.findOneAndUpdate = async () => ({});
+    Course.updateOne = async () => ({});
+    require('../models/Enrollment').exists = async () => true;
     let createdCourse;
     Course.create = async (data) => {
       createdCourse = data;
@@ -64,8 +73,12 @@ const run = async () => {
     const examId = new mongoose.Types.ObjectId();
     const studentId = new mongoose.Types.ObjectId();
     let createdResult;
+    require('../models/Enrollment').distinct = async () => [studentId];
+    ExamResult.find = () => ({ select: () => ({ lean: async () => createdResult ? [createdResult] : [] }) });
+    Exam.updateOne = async () => ({ modifiedCount: 1 });
     Exam.findById = async () => ({
       _id: examId,
+      course: new mongoose.Types.ObjectId(),
       totalMarks: 100,
       passingMarks: 50,
     });
@@ -74,6 +87,7 @@ const run = async () => {
       return data;
     };
     const resultContext = createContext({
+      user: { role: 'admin', _id: new mongoose.Types.ObjectId() },
       body: { exam: examId, student: studentId, marksObtained: 75 },
     });
     await createExamResult(
@@ -86,6 +100,7 @@ const run = async () => {
     assert.strictEqual(createdResult.isPassed, true);
 
     const invalidMarksContext = createContext({
+      user: { role: 'admin', _id: new mongoose.Types.ObjectId() },
       body: { exam: examId, student: studentId, marksObtained: 101 },
     });
     await createExamResult(
@@ -114,6 +129,12 @@ const run = async () => {
     assert.strictEqual(noteContext.statusCode, 201);
     assert.strictEqual(String(createdNote.createdBy), String(authorId));
   } finally {
+    require('../models/Enrollment').distinct = originals.enrollmentDistinct;
+    ExamResult.find = originals.resultFind;
+    Exam.updateOne = originals.examUpdate;
+    Course.findOneAndUpdate = originals.courseLock;
+    Course.updateOne = originals.courseUnlock;
+    require('../models/Enrollment').exists = originals.enrollmentExists;
     Course.create = originals.courseCreate;
     Exam.findById = originals.examFindById;
     ExamResult.create = originals.examResultCreate;

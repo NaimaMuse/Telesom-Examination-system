@@ -1,3 +1,4 @@
+import { usePageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 
@@ -28,7 +29,7 @@ export default function TeacherNotes() {
   const [uploading, setUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting]   = useState(false);
-  const [search, setSearch]       = useState('');
+  const [search, setSearch] = usePageSearch();
 
   const fetchNotes = useCallback(async()=>{
     setLoading(true);

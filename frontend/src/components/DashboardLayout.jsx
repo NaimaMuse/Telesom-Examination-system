@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './dashboard.css';
+import { PageSearchContext } from '../context/PageSearchContext';
 
 // ─── Admin Pages ───────────────────────────────────────────────
 import AdminDashboard    from '../pages/admin/AdminDashboard';
@@ -145,7 +146,7 @@ const PAGE_META = {
   '/admin/teachers': { title: 'Teacher Management', hint: 'Manage faculty accounts and assignments.' },
   '/admin/courses': { title: 'Course Management', hint: 'Create and organize academic courses.' },
   '/admin/exams': { title: 'Exam & Quiz Management', hint: 'Schedule and configure assessments.' },
-  '/admin/marks': { title: 'Marks & Results', hint: 'Enter grades and publish results.' },
+  '/admin/marks': { title: 'Marks & Results', hint: 'Review student marks and course results.' },
   '/admin/attendance': { title: 'Attendance', hint: 'Track and review class attendance.' },
   '/admin/analytics': { title: 'Analytics & Reports', hint: 'Insights and performance summaries.' },
   '/teacher': { title: 'Teacher Dashboard', hint: 'Your courses, exams, and class at a glance.' },
@@ -183,7 +184,9 @@ export default function DashboardLayout({ role }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [pageSearch, setPageSearch] = useState({ path: location.pathname, query: '' });
+  const search = pageSearch.path === location.pathname ? pageSearch.query : '';
+  const setSearch = query => setPageSearch({ path: location.pathname, query });
 
   const navSections = NAV[role] || [];
   const userRole = role.toUpperCase();
@@ -306,7 +309,8 @@ export default function DashboardLayout({ role }) {
               <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>🔍</span>
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={`Search ${pageMeta.title.toLowerCase()}…`}
+                aria-label={`Search ${pageMeta.title}`}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -343,7 +347,7 @@ export default function DashboardLayout({ role }) {
               </div>
             </div>
           )}
-          {ROLE_ROUTES[role]}
+          <PageSearchContext.Provider key={user?._id || user?.id || 'anonymous'} value={[search, setSearch]}>{ROLE_ROUTES[role]}</PageSearchContext.Provider>
         </main>
       </div>
     </div>

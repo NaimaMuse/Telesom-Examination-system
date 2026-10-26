@@ -28,13 +28,14 @@ const examSchema = new mongoose.Schema(
     totalMarks: {
       type: Number,
       required: [true, 'Total marks are required'],
-      min: [0, 'Total marks cannot be negative'],
+      min: [0.01, 'Total marks must be positive'],
+      max: [100, 'Assessment maximum cannot exceed 100 marks'],
       default: 100,
     },
     passingMarks: {
       type: Number,
       min: [0, 'Passing marks cannot be negative'],
-      default: 50,
+      default: function () { return Math.round(this.totalMarks * 50) / 100; },
     },
     weightage: {
       type: Number,
@@ -91,6 +92,7 @@ const examSchema = new mongoose.Schema(
 );
 
 examSchema.pre('validate', function (next) {
+  if (this.passingMarks > this.totalMarks) this.invalidate('passingMarks', 'Passing marks cannot exceed total marks.');
   if (!this.examCode) {
     const prefix = (this.type || 'EXAM').slice(0, 3).toUpperCase();
     this.examCode = `EX-${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;

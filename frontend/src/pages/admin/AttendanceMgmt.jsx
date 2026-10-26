@@ -1,144 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';
+import AttendanceHistory from './AttendanceHistory';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
 import api from '../../services/api';
-
-const PLACEHOLDER_RECORDS = [
-  { _id:'a1', student:'Ahmed Ali',    studentId:'STU-001', course:'CS101', date:'2026-11-10', status:'present' },
-  { _id:'a2', student:'Faadumo Abdi', studentId:'STU-002', course:'BUS101', date:'2026-11-10', status:'present' },
-  { _id:'a3', student:'Mohamed Osman',studentId:'STU-003', course:'CS201', date:'2026-11-10', status:'absent' },
-  { _id:'a4', student:'Hodan Yusuf',  studentId:'STU-004', course:'ENG101', date:'2026-11-10', status:'late' },
-];
-
-function MarkModal({ onSave, onClose }) {
-  const [form, setForm] = useState({ studentId:'', course:'', date:new Date().toISOString().split('T')[0], status:'present' });
-  const [saving, setSaving] = useState(false);
-  const handleSubmit=async(e)=>{e.preventDefault();setSaving(true);try{await onSave(form);}finally{setSaving(false);}};
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e=>e.stopPropagation()}>
-        <div className="modal-header"><span className="modal-title">Mark Attendance</span><button className="modal-close" onClick={onClose}>✕</button></div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            <div className="form-group"><label className="form-label">Student ID *</label><input className="form-control" required value={form.studentId} onChange={e=>setForm(p=>({...p,studentId:e.target.value}))}/></div>
-            <div className="form-group"><label className="form-label">Course *</label><input className="form-control" required value={form.course} onChange={e=>setForm(p=>({...p,course:e.target.value}))}/></div>
-            <div className="form-group"><label className="form-label">Date *</label><input className="form-control" type="date" required value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))}/></div>
-            <div className="form-group">
-              <label className="form-label">Status *</label>
-              <select className="form-control" value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>
-                <option value="present">Present</option>
-                <option value="absent">Absent</option>
-                <option value="late">Late</option>
-                <option value="excused">Excused</option>
-              </select>
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving?'Saving…':'Save'}</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-const PAGE_SIZE = 10;
-const STATUS_BADGE = { present:'success', absent:'danger', late:'warning', excused:'info' };
-
-export default function AttendanceMgmt() {
-  const [records, setRecords]     = useState(PLACEHOLDER_RECORDS);
-  const [loading, setLoading]     = useState(false);
-  const [search, setSearch]       = useState('');
-  const [filterStatus, setFilter] = useState('');
-  const [page, setPage]           = useState(1);
-  const [showModal, setShowModal] = useState(false);
-
-  const fetchRecords = useCallback(async()=>{
-    setLoading(true);
-    try{const res=await api.get('/admin/attendance');if(res.data?.attendance)setRecords(res.data.attendance);}catch{}finally{setLoading(false);}
-  },[]);
-
-  useEffect(()=>{fetchRecords();},[fetchRecords]);
-
-  const filtered = records.filter(r=>{
-    const matchSearch = !search||[r.student,r.studentId,r.course].some(v=>v?.toLowerCase().includes(search.toLowerCase()));
-    const matchStatus = !filterStatus||r.status===filterStatus;
-    return matchSearch&&matchStatus;
-  });
-  const totalPages = Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
-  const paginated  = filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
-
-  const summary = records.reduce((a,r)=>{ a[r.status]=(a[r.status]||0)+1; return a; }, {});
-
-  const handleSave = async(form)=>{
-    try{await api.post('/admin/attendance',form);await fetchRecords();}
-    catch{setRecords(prev=>[...prev,{...form,_id:`a${Date.now()}`,student:form.studentId}]);}
-    setShowModal(false);
-  };
-
-  return (
-    <>
-      <div className="page-header">
-        <div className="page-header-left"><h1>Attendance Management</h1><p>Track and manage student attendance</p></div>
-        <button className="btn btn-primary" onClick={()=>setShowModal(true)}>+ Mark Attendance</button>
-      </div>
-
-      {/* Summary */}
-      <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
-        <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><div className="stat-value">{summary.present||0}</div><div className="stat-label">Present</div></div></div>
-        <div className="stat-card"><div className="stat-icon red">❌</div><div className="stat-info"><div className="stat-value">{summary.absent||0}</div><div className="stat-label">Absent</div></div></div>
-        <div className="stat-card"><div className="stat-icon gold">⏰</div><div className="stat-info"><div className="stat-value">{summary.late||0}</div><div className="stat-label">Late</div></div></div>
-        <div className="stat-card"><div className="stat-icon blue">📋</div><div className="stat-info"><div className="stat-value">{summary.excused||0}</div><div className="stat-label">Excused</div></div></div>
-      </div>
-
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">Attendance Records ({filtered.length})</span>
-          <div className="filter-bar" style={{marginBottom:0}}>
-            <div className="search-input-wrap">
-              <span style={{color:'var(--text-muted)'}}>🔍</span>
-              <input placeholder="Search…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
-            </div>
-            <select className="form-control" style={{width:'auto'}} value={filterStatus} onChange={e=>{setFilter(e.target.value);setPage(1);}}>
-              <option value="">All Status</option>
-              <option value="present">Present</option>
-              <option value="absent">Absent</option>
-              <option value="late">Late</option>
-              <option value="excused">Excused</option>
-            </select>
-          </div>
-        </div>
-
-        {loading?<div className="spinner-wrap"><div className="spinner"/></div>
-          :paginated.length===0?<div className="empty-state"><div className="empty-state-icon">📅</div><h3>No records found</h3></div>
-          :(
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead><tr><th>#</th><th>Student</th><th>Student ID</th><th>Course</th><th>Date</th><th>Status</th></tr></thead>
-              <tbody>
-                {paginated.map((r,i)=>(
-                  <tr key={r._id}>
-                    <td>{(page-1)*PAGE_SIZE+i+1}</td>
-                    <td style={{fontWeight:600}}>{r.student}</td>
-                    <td><code>{r.studentId}</code></td>
-                    <td><span className="badge badge-info">{r.course}</span></td>
-                    <td>{r.date}</td>
-                    <td><span className={`badge badge-${STATUS_BADGE[r.status]||'muted'}`}>{r.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="pagination">
-          <span className="page-info">Showing {Math.min((page-1)*PAGE_SIZE+1,filtered.length)}–{Math.min(page*PAGE_SIZE,filtered.length)} of {filtered.length}</span>
-          <button className="page-btn" disabled={page===1} onClick={()=>setPage(p=>p-1)}>‹</button>
-          {Array.from({length:totalPages},(_,i)=><button key={i} className={`page-btn ${page===i+1?'active':''}`} onClick={()=>setPage(i+1)}>{i+1}</button>)}
-          <button className="page-btn" disabled={page===totalPages} onClick={()=>setPage(p=>p+1)}>›</button>
-        </div>
-      </div>
-
-      {showModal&&<MarkModal onSave={handleSave} onClose={()=>setShowModal(false)}/>}
-    </>
-  );
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
+import './AssessmentOverview.css';
+import './MarksOverview.css';
+import './AttendanceRegister.css';
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Nairobi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const statuses=['present','absent','late','excused'];
+const label=value=>value?value[0].toUpperCase()+value.slice(1):'Not recorded';
+export default function AttendanceMgmt(){
+  const [mode,setMode]=useState('register'),[course,setCourse]=useState(''),[batch,setBatch]=useState(''),[date,setDate]=useState(today),[from,setFrom]=useState(()=>today().slice(0,8)+'01'),[to,setTo]=useState(today);
+  const [courses,setCourses]=useState([]),[batches,setBatches]=useState([]),[students,setStudents]=useState([]),[report,setReport]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[dirty,setDirty]=useState(false),[saving,setSaving]=useState(false),[revision,setRevision]=useState(0),[page,setPage]=useState(1);
+  const [historyId,setHistoryId]=useState(null);
+  const closeHistory=useCallback(()=>setHistoryId(null),[]);
+  const historyStudent=report.find(student=>student._id===historyId);
+  const [search]=usePageSearch();const editRef=useRef(false),saveRef=useRef(false);
+  useEffect(()=>{let active=true,busy=false;const controller=new AbortController();setLoading(true);setError('');setStudents([]);setReport([]);setHistoryId(null);const load=async()=>{if(busy||editRef.current||saveRef.current)return;busy=true;try{const {data}=await api.get('/attendance/register',{params:{course:course||undefined,batch,date},signal:controller.signal});if(!active||editRef.current)return;setCourses(data.courses||[]);setBatches(data.batches||[]);if(!course&&data.courseId){setCourse(String(data.courseId));return;}setStudents((data.students||[]).map(s=>({...s,savedStatus:s.status})));if(mode==='report'&&data.courseId){const result=await api.get('/attendance/report',{params:{course:data.courseId,batch,from,to},signal:controller.signal});if(active)setReport(result.data.students||[]);}if(active)setError('');}catch(err){if(active)setError(err.response?.data?.message||'Attendance could not load. Retrying automatically.');}finally{busy=false;if(active)setLoading(false);}};load();const refresh=()=>{if(!document.hidden)load();};const timer=setInterval(refresh,5000);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);return()=>{active=false;controller.abort();clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);};},[course,batch,date,mode,from,to,revision]);
+  const edit=(id,field,value)=>{editRef.current=true;setDirty(true);setNotice('');setStudents(rows=>rows.map(s=>s._id===id?{...s,[field]:value}:s));};
+  const discard=()=>{editRef.current=false;setDirty(false);setNotice('');setRevision(v=>v+1);};
+  const save=async()=>{const marked=students.filter(s=>s.status);if(!marked.length)return;saveRef.current=true;setSaving(true);setError('');setNotice('');try{const {data}=await api.put('/attendance/register',{course,batch,date,records:marked.map(s=>({student:s._id,status:s.status,remarks:s.remarks}))});editRef.current=false;setDirty(false);setNotice('Attendance saved for '+data.savedCount+' students.');setRevision(v=>v+1);}catch(err){setError(err.response?.data?.message||'Attendance could not be saved. Your changes are still here.');}finally{saveRef.current=false;setSaving(false);}};
+  const visible=(mode==='register'?students:report).filter(s=>matchesPageSearch(search,s.name,s.studentId,s.batches));
+  const counts=students.reduce((sum,s)=>{if(s.status)sum[s.status]++;else sum.unrecorded++;return sum;},{present:0,absent:0,late:0,excused:0,unrecorded:0});
+  const denominator=counts.present+counts.absent+counts.late,rate=denominator?Math.round((counts.present+counts.late)/denominator*100):null;
+  const pages=Math.max(1,Math.ceil(visible.length/15)),safePage=Math.min(page,pages);
+  const selection=setter=>e=>{setter(e.target.value);setPage(1);setNotice('');};
+  const exportExcel=()=>{try{const title=courses.find(c=>c._id===course)?.title||'';const rows=mode==='register'?[['Student name','Student ID','Course','Year / Batch','Date','Status','Remarks'],...visible.map(s=>[s.name,s.studentId,title,s.batches.join(', '),date,label(s.status),s.remarks])]:[['Student name','Student ID','Course','Year / Batch','From','To','Present','Absent','Late','Excused','Recorded days','Attendance %'],...visible.map(s=>[s.name,s.studentId,title,s.batches.join(', '),from,to,s.present,s.absent,s.late,s.excused,s.recordedDays,s.attendanceRate])];const sheet=XLSX.utils.aoa_to_sheet(rows);sheet['!cols']=rows[0].map((_,i)=>({wch:i===0?30:i===2?42:20}));sheet['!autofilter']={ref:sheet['!ref']};const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,sheet,mode==='register'?'Daily attendance':'Attendance report');if(mode==='report'){const history=XLSX.utils.aoa_to_sheet([['Student','Student ID','Date','Status','Recorded by','Remarks'],...visible.flatMap(s=>s.history.map(h=>[s.name,s.studentId,h.date,label(h.status),h.recordedBy,h.remarks]))]);history['!cols']=[{wch:30},{wch:20},{wch:18},{wch:16},{wch:30},{wch:40}];XLSX.utils.book_append_sheet(book,history,'Daily history');}const url=URL.createObjectURL(new Blob([XLSX.write(book,{type:'array',bookType:'xlsx'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=url;a.download='Attendance-'+(mode==='register'?date:from+'-to-'+to)+'.xlsx';document.body.appendChild(a);try{a.click();}finally{a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),60000);}}catch{setError('Excel could not be downloaded. Try again.');}};
+  return <div className="ao-page attendance-register"><div className="marks-heading"><div><h1>Attendance</h1><p>Record daily attendance and review student history.</p></div><button className="marks-export" onClick={exportExcel} disabled={loading||!visible.length}>↓ Download Excel</button></div><div className="attendance-tabs">{['register','report'].map(item=><button key={item} disabled={dirty||saving} className={mode===item?'active':''} onClick={()=>{setMode(item);setPage(1);}}>{item==='register'?'Daily register':'Attendance report'}</button>)}</div>{error&&<div className="ao-error" role="alert">{error} <button onClick={()=>setRevision(v=>v+1)}>Retry</button></div>}{notice&&<div className="attendance-notice" role="status">{notice}</div>}<section className="ao-panel"><div className="ao-filters attendance-filters"><label>Course<select disabled={dirty||saving} value={course} onChange={e=>{setCourse(e.target.value);setBatch('');setPage(1);setNotice('');}}>{!courses.length&&<option value="">No courses available</option>}{courses.map(c=><option key={c._id} value={c._id}>{c.courseCode} · {c.title}</option>)}</select></label><label>Year / Batch<select disabled={dirty||saving} value={batch} onChange={selection(setBatch)}><option value="">All batches</option>{batches.map(b=><option key={b}>{b}</option>)}</select></label>{mode==='register'?<label>Date<input type="date" required value={date} disabled={dirty||saving} onChange={selection(setDate)}/></label>:<><label>From<input type="date" required value={from} onChange={selection(setFrom)}/></label><label>To<input type="date" required min={from} value={to} onChange={selection(setTo)}/></label></>}</div>{mode==='register'&&<div className="attendance-summary"><span><strong>{students.length}</strong> enrolled</span>{statuses.map(s=><span key={s}><strong>{counts[s]}</strong> {label(s)}</span>)}<span><strong>{counts.unrecorded}</strong> Not recorded</span><span><strong>{rate==null?'—':rate+'%'}</strong> attendance</span></div>}<div className="ao-list-heading"><h2>{mode==='register'?'Student register':'Student attendance report'} <span>{visible.length}</span></h2>{mode==='register'&&<button className="ao-view" disabled={loading||saving||!students.length} onClick={()=>{editRef.current=true;setDirty(true);setNotice('');setStudents(rows=>rows.map(s=>({...s,status:'present'})));}}>Mark all Present</button>}</div>{loading?<div className="ao-empty" role="status">Loading attendance…</div>:!visible.length?<div className="ao-empty">No enrolled students match this course, batch or search.</div>:<div className="ao-table-wrap"><table><thead><tr><th>Student</th><th>Student ID</th><th>Year / Batch</th>{mode==='register'?<><th>Status</th><th>Remarks</th></>:<><th>Present</th><th>Absent</th><th>Late</th><th>Excused</th><th>Attendance</th><th>History</th></>}</tr></thead><tbody>{visible.slice((safePage-1)*15,safePage*15).map(s=><tr key={s._id}><td><strong>{s.name}</strong></td><td>{s.studentId}</td><td>{s.batches.join(', ')||'—'}</td>{mode==='register'?<><td><select aria-label={'Attendance for '+s.name} value={s.status} disabled={saving} onChange={e=>edit(s._id,'status',e.target.value)}><option value="" disabled={!!s.savedStatus}>Not recorded</option>{statuses.map(value=><option key={value} value={value}>{label(value)}</option>)}</select></td><td><input className="attendance-remarks" aria-label={'Remarks for '+s.name} placeholder="Optional remarks" maxLength={250} disabled={saving} value={s.remarks} onChange={e=>edit(s._id,'remarks',e.target.value)}/></td></>:<><td>{s.present}</td><td>{s.absent}</td><td>{s.late}</td><td>{s.excused}</td><td><strong>{s.attendanceRate==null?'—':s.attendanceRate+'%'}</strong><small>{s.recordedDays} recorded days</small></td><td><button className="ao-view" aria-label={'View attendance history for '+s.name} onClick={()=>setHistoryId(s._id)}>View history ↗</button></td></>}</tr>)}</tbody></table></div>}<footer className="ao-pagination"><span>{visible.length?(safePage-1)*15+1:0}–{Math.min(safePage*15,visible.length)} of {visible.length} students</span><div><button disabled={safePage===1} onClick={()=>setPage(safePage-1)}>‹</button><span>{safePage} / {pages}</span><button disabled={safePage===pages} onClick={()=>setPage(safePage+1)}>›</button></div></footer>{mode==='register'?<div className="attendance-save"><span>{dirty?'Unsaved changes. Save or discard before changing course or date.':'Unmarked students remain Not recorded.'}</span><div>{dirty&&<button className="ao-view" disabled={saving} onClick={discard}>Discard changes</button>}<button className="marks-export" onClick={save} disabled={loading||saving||!dirty||!students.some(s=>s.status)}>{saving?'Saving…':'Save Attendance'}</button></div></div>:<p className="attendance-rate-note">Attendance % = (Present + Late) ÷ (Present + Late + Absent). Excused and unrecorded days are excluded.</p>}</section>{historyStudent&&<AttendanceHistory student={historyStudent} course={courses.find(c=>c._id===course)} from={from} to={to} onClose={closeHistory}/>}</div>;
 }

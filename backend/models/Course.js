@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const courseSchema = new mongoose.Schema(
   {
+    performanceWriteLock: { token: String, expiresAt: Date },
     courseCode: {
       type: String,
       trim: true,

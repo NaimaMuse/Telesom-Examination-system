@@ -1,0 +1,10 @@
+const assert=require('assert/strict');
+const {buildAnalytics}=require('../services/adminAnalyticsService');
+const students=[{_id:'s1',courseId:'c1',teacherIds:['t1'],batches:['2026'],hasMarks:true,totalMarks:90,finalized:true,isPassed:true},{_id:'s1',courseId:'c2',teacherIds:['t2'],batches:['2026'],hasMarks:true,totalMarks:20,finalized:false,isPassed:null},{_id:'s2',courseId:'c1',teacherIds:['t1'],batches:['2025'],hasMarks:true,totalMarks:0,finalized:false,isPassed:null}];
+const data={students,courses:[{_id:'c1',title:'One'},{_id:'c2',title:'Two'}]};
+const records=[{student:'s1',course:'c1',date:'2026-10-01',status:'present'},{student:'s1',course:'c1',date:'2026-10-01',status:'late'},{student:'s1',course:'c1',date:'2026-10-02',status:'absent'},{student:'s1',course:'c1',date:'2026-10-03',status:'excused'},{student:'outsider',course:'c1',date:'2026-10-01',status:'present'}];
+let report=buildAnalytics(data,records);assert.equal(report.summary.enrolledStudents,2);assert.equal(report.summary.courseRecords,3);assert.equal(report.summary.average,36.67);assert.equal(report.summary.attendanceRate,50);assert.equal(report.summary.attendanceRecords,3);assert.equal(report.summary.finalized,1);assert.equal(report.distribution.find(g=>g.grade==='A').count,1);assert.equal(report.distribution.find(g=>g.grade==='F').count,0,'Provisional zero score excluded from final grades');
+report=buildAnalytics(data,records,{course:'c1',batch:'2025'});assert.equal(report.summary.recorded,1);assert.equal(report.summary.average,0);assert.equal(report.summary.attendanceRate,null);
+report=buildAnalytics(data,records,{teacher:'t2'});assert.equal(report.summary.average,20);assert.equal(report.courses.length,1);
+report=buildAnalytics(data,records,{from:'2026-10-02',to:'2026-10-03'});assert.equal(report.summary.attendanceRate,0);assert.equal(report.monthly.length,1);
+console.log('Admin analytics tests passed: unique students, course totals, final grades, attendance deduplication, zero scores and filters.');

@@ -1,3 +1,4 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 
@@ -44,14 +45,15 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.course) {
-      setError('Please select an assigned course');
+    const finalCourse = form.course || (assignedCourses.length === 1 ? assignedCourses[0]?._id : '');
+    if (!finalCourse) {
+      setError('Please select your assigned course');
       return;
     }
     setSaving(true);
     setError('');
     try {
-      await onSave(form);
+      await onSave({ ...form, course: finalCourse });
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to save');
     } finally {
@@ -88,23 +90,50 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
 
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                 <label className="form-label">Assigned Course *</label>
-                <select
-                  className="form-control"
-                  required
-                  value={form.course || ''}
-                  onChange={(e) => setForm((p) => ({ ...p, course: e.target.value }))}
-                >
-                  <option value="">Select assigned course…</option>
-                  {assignedCourses.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.courseCode || c.code} — {c.title || c.name}
-                    </option>
-                  ))}
-                </select>
-                {assignedCourses.length === 0 && (
-                  <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', display: 'block', marginTop: 4 }}>
-                    Loading assigned courses or none configured.
-                  </small>
+                {assignedCourses.length === 1 ? (
+                  <>
+                    <select
+                      className="form-control"
+                      value={form.course || assignedCourses[0]._id}
+                      disabled
+                      style={{ background: '#f8fafc', color: '#0f172a', fontWeight: 600, cursor: 'not-allowed' }}
+                    >
+                      <option value={assignedCourses[0]._id}>
+                        {assignedCourses[0].courseCode || assignedCourses[0].code} — {assignedCourses[0].title || assignedCourses[0].name}
+                      </option>
+                    </select>
+                    <small style={{ color: 'var(--primary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontWeight: 600 }}>
+                      ✓ Your assigned course ({assignedCourses[0].courseCode || assignedCourses[0].code}) is automatically locked.
+                    </small>
+                  </>
+                ) : assignedCourses.length > 1 ? (
+                  <>
+                    <select
+                      className="form-control"
+                      required
+                      value={form.course || ''}
+                      onChange={(e) => setForm((p) => ({ ...p, course: e.target.value }))}
+                    >
+                      <option value="">Select your assigned course…</option>
+                      {assignedCourses.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.courseCode || c.code} — {c.title || c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', display: 'block', marginTop: 4 }}>
+                      Only courses assigned to you are listed.
+                    </small>
+                  </>
+                ) : (
+                  <>
+                    <select className="form-control" disabled value="">
+                      <option value="">No course assigned to your account</option>
+                    </select>
+                    <small style={{ color: '#dc2626', fontSize: '0.75rem', display: 'block', marginTop: 4, fontWeight: 600 }}>
+                      ⚠️ No course is assigned to your teacher account. Contact administration.
+                    </small>
+                  </>
                 )}
               </div>
 
@@ -196,6 +225,7 @@ function ConfirmModal({ message, onConfirm, onCancel, loading }) {
 }
 
 export default function TeacherExams() {
+  const [search] = usePageSearch();
   const [tab, setTab] = useState('exams'); // 'exams' | 'quizzes' | 'assessments'
   const [items, setItems] = useState([]);
   const [assignedCourses, setAssignedCourses] = useState([]);
@@ -205,23 +235,17 @@ export default function TeacherExams() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch teacher's assigned courses
+  // Fetch teacher's assigned courses (strictly assigned to this teacher)
   const fetchAssignedCourses = useCallback(async () => {
     try {
       const res = await api.get('/teacher/courses');
       const courses = res.data?.courses || (res.data?.course ? [res.data.course] : []);
-      if (Array.isArray(courses) && courses.length > 0) {
+      if (Array.isArray(courses)) {
         setAssignedCourses(courses);
-        return;
-      }
-      // Fallback if no CourseTeacher mapping exists
-      const fallbackRes = await api.get('/courses');
-      const fallbackList = fallbackRes.data?.data || fallbackRes.data?.courses || fallbackRes.data || [];
-      if (Array.isArray(fallbackList)) {
-        setAssignedCourses(fallbackList);
       }
     } catch (err) {
       console.warn('[TeacherExams] Could not fetch assigned courses:', err.message);
+      setAssignedCourses([]);
     }
   }, []);
 
@@ -262,7 +286,7 @@ export default function TeacherExams() {
     ['assessment', 'assignment'].includes(item.type)
   );
 
-  const data = tab === 'exams' ? exams : tab === 'quizzes' ? quizzes : assessments;
+  const data = (tab === 'exams' ? exams : tab === 'quizzes' ? quizzes : assessments).filter(item => matchesPageSearch(search, item.title, item.type, item.status, item.course?.title, item.course?.courseCode, item.examDate, item.date));
   const typeVal = tab === 'exams' ? 'exam' : tab === 'quizzes' ? 'quiz' : 'assessment';
 
   const scheduledCount = items.filter((a) =>
@@ -280,7 +304,7 @@ export default function TeacherExams() {
       durationMinutes: form.duration ? Number(form.duration) : 60,
       duration: form.duration ? Number(form.duration) : 60,
       totalMarks: form.totalMarks ? Number(form.totalMarks) : (typeVal === 'quiz' ? 20 : 100),
-      passingMarks: form.passingMarks ? Number(form.passingMarks) : (typeVal === 'quiz' ? 10 : 50),
+      ...(editTarget && editTarget.totalMarks > 0 ? { passingMarks: Math.round((editTarget.passingMarks / editTarget.totalMarks) * Number(form.totalMarks) * 100) / 100 } : {}),
       status: form.status || 'upcoming',
     };
 

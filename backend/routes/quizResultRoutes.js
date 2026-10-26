@@ -21,6 +21,6 @@ router
   .get(getQuizResultById)
   .put(updateQuizResult)
   .patch(updateQuizResult)
-  .delete(authorizeRoles('admin'), deleteQuizResult);
+  .delete(authorizeRoles('admin', 'teacher'), deleteQuizResult);
 
 module.exports = router;

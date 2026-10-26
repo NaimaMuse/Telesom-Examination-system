@@ -38,8 +38,9 @@ async function safeDelete(endpoint, fallback = { success: false, message: 'Featu
   }
 }
 
-export async function getTeacherDashboardData() {
-  const data = await safeGet('/teacher/dashboard');
+export async function getTeacherDashboardData(signal) {
+  const response = await api.get('/teacher/dashboard', { signal });
+  const data = response.data?.data ?? response.data;
 
   return {
     summary: data?.summary ?? null,

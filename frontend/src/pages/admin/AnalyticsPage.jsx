@@ -1,128 +1,22 @@
-// Analytics & Reports Page — charts and summary tables
-// 📌 Connect to real backend endpoints for live data
-
-const DEPARTMENTS = [
-  { name: 'Computer Science', students: 120, avgGrade: 76 },
-  { name: 'Business Admin',   students: 95,  avgGrade: 72 },
-  { name: 'Engineering',      students: 80,  avgGrade: 78 },
-  { name: 'Nursing',          students: 60,  avgGrade: 74 },
-];
-
-const MONTHLY_ATTENDANCE = [
-  { label:'Aug', value:88 },
-  { label:'Sep', value:82 },
-  { label:'Oct', value:79 },
-  { label:'Nov', value:91 },
-  { label:'Dec', value:85 },
-];
-
-const GRADE_DIST = [
-  { label:'A', value:22, color:'#1a7c4a' },
-  { label:'B', value:35, color:'#2563eb' },
-  { label:'C', value:25, color:'#d4a017' },
-  { label:'D', value:12, color:'#f97316' },
-  { label:'F', value:6,  color:'#dc2626' },
-];
-
-function BarChart({ data, maxH = 100 }) {
-  const max = Math.max(...data.map(d => d.value), 1);
-  return (
-    <div style={{ display:'flex', alignItems:'flex-end', gap:'8px', height:`${maxH}px`, padding:'0 4px' }}>
-      {data.map((d, i) => (
-        <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'4px' }}>
-          <span style={{ fontSize:'0.65rem', color:'var(--text-secondary)', fontWeight:600 }}>{d.value}{d.label2||''}</span>
-          <div style={{
-            width:'100%',
-            height:`${(d.value/max)*(maxH-24)}px`,
-            background: d.color || 'var(--primary)',
-            borderRadius:'4px 4px 0 0',
-            minHeight:'4px',
-            transition:'height 0.4s ease',
-          }}/>
-          <span style={{ fontSize:'0.65rem', color:'var(--text-muted)', textAlign:'center' }}>{d.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export default function AnalyticsPage() {
-  return (
-    <>
-      <div className="page-header">
-        <div className="page-header-left">
-          <h1>Analytics &amp; Reports</h1>
-          <p>Academic performance and attendance overview</p>
-        </div>
-        <div style={{ display:'flex', gap:'0.5rem' }}>
-          <button className="btn btn-secondary">📥 Export PDF</button>
-          <button className="btn btn-secondary">📊 Export CSV</button>
-        </div>
-      </div>
-
-      {/* KPI row */}
-      <div className="stats-grid">
-        <div className="stat-card"><div className="stat-icon green">🎓</div><div className="stat-info"><div className="stat-value">355</div><div className="stat-label">Total Students</div></div></div>
-        <div className="stat-card"><div className="stat-icon blue">📊</div><div className="stat-info"><div className="stat-value">75%</div><div className="stat-label">Avg Academic Score</div></div></div>
-        <div className="stat-card"><div className="stat-icon gold">📅</div><div className="stat-info"><div className="stat-value">85%</div><div className="stat-label">Avg Attendance</div></div></div>
-        <div className="stat-card"><div className="stat-icon purple">🏆</div><div className="stat-info"><div className="stat-value">22%</div><div className="stat-label">A-Grade Students</div></div></div>
-      </div>
-
-      <div className="grid-2">
-        {/* Grade distribution */}
-        <div className="card">
-          <div className="card-header"><span className="card-title">Grade Distribution</span><span className="badge badge-info">All Courses</span></div>
-          <div className="card-body">
-            <BarChart data={GRADE_DIST} maxH={120} />
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem', marginTop:'1rem' }}>
-              {GRADE_DIST.map(g=>(
-                <div key={g.label} style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'0.78rem' }}>
-                  <div style={{ width:10, height:10, borderRadius:'50%', background:g.color }}/>
-                  Grade {g.label}: {g.value}%
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly attendance */}
-        <div className="card">
-          <div className="card-header"><span className="card-title">Monthly Attendance (%)</span></div>
-          <div className="card-body">
-            <BarChart data={MONTHLY_ATTENDANCE.map(d=>({...d,label2:'%'}))} maxH={120} />
-          </div>
-        </div>
-      </div>
-
-      {/* Course breakdown */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Course Performance</span></div>
-        <div className="table-responsive">
-          <table className="data-table">
-            <thead>
-              <tr><th>#</th><th>Course</th><th>Students</th><th>Avg Grade (%)</th><th>Performance Bar</th></tr>
-            </thead>
-            <tbody>
-              {DEPARTMENTS.map((d,i)=>(
-                <tr key={d.name}>
-                  <td>{i+1}</td>
-                  <td style={{fontWeight:600}}>{d.name}</td>
-                  <td>{d.students}</td>
-                  <td><strong>{d.avgGrade}%</strong></td>
-                  <td style={{width:'200px'}}>
-                    <div style={{ background:'var(--border)', borderRadius:4, height:10, overflow:'hidden' }}>
-                      <div style={{ width:`${d.avgGrade}%`, height:'100%', background:'var(--primary)', borderRadius:4, transition:'width 0.4s' }}/>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div style={{ padding:'0.75rem 1.4rem', fontSize:'0.75rem', color:'var(--text-muted)' }}>
-          📌 Placeholder data — connect <code>GET /api/admin/analytics</code> to load real statistics.
-        </div>
-      </div>
-    </>
-  );
+import {useEffect,useState} from 'react';
+import * as XLSX from 'xlsx';
+import api from '../../services/api';
+import {usePageSearch,matchesPageSearch} from '../../context/PageSearchContext';
+import './AssessmentOverview.css';
+import './MarksOverview.css';
+import './AdminAnalytics.css';
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Nairobi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const score=value=>value==null?'—':value;
+export default function AnalyticsPage(){
+  const [data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
+  const [course,setCourse]=useState(''),[teacher,setTeacher]=useState(''),[batch,setBatch]=useState(''),[from,setFrom]=useState(()=>today().slice(0,4)+'-01-01'),[to,setTo]=useState(today);
+  const [search]=usePageSearch();
+  useEffect(()=>{let active=true,busy=false;const controller=new AbortController();setLoading(true);setData(null);const load=async()=>{if(busy)return;busy=true;try{const result=await api.get('/reports/analytics',{params:{course,teacher,batch,from,to},signal:controller.signal});if(active){setData(result.data);setError('');}}catch(error){if(active)setError(error.response?.data?.message||'Analytics could not refresh. Retrying automatically.');}finally{busy=false;if(active)setLoading(false);}};load();const refresh=()=>{if(!document.hidden)load();};const timer=setInterval(refresh,10000);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);return()=>{active=false;controller.abort();clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);};},[course,teacher,batch,from,to,revision]);
+  const [options,setOptions]=useState({courses:[],teachers:[],batches:[]});
+  useEffect(()=>{if(data?.options)setOptions(data.options);},[data]);
+  const courses=(data?.courses||[]).filter(c=>matchesPageSearch(search,c.title,c.courseCode));
+  const summary=data?.summary;
+  const download=()=>{try{const book=XLSX.utils.book_new();const sheets=[['Course summary',[['Course','Code','Enrolled','With marks','Average /100','Final results','Passed','Attendance %','Attendance records'],...courses.map(c=>[c.title,c.courseCode,c.enrolled,c.recorded,c.average,c.finalized,c.passed,c.attendanceRate,c.attendanceRecords])]],['Attendance by month',[['Month','Present','Absent','Late','Excused','Attendance %'],...(data.monthly||[]).map(m=>[m.month,m.present,m.absent,m.late,m.excused,m.rate])]],['Final course grades',[['Grade','Course results'],...data.distribution.map(g=>[g.grade,g.count])]]];for(const [name,rows] of sheets){const sheet=XLSX.utils.aoa_to_sheet(rows);sheet['!cols']=rows[0].map((_,i)=>({wch:i===0?40:23}));sheet['!autofilter']={ref:sheet['!ref']};XLSX.utils.book_append_sheet(book,sheet,name);}const url=URL.createObjectURL(new Blob([XLSX.write(book,{type:'array',bookType:'xlsx'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const link=document.createElement('a');link.href=url;link.download='Academic-Analytics.xlsx';document.body.appendChild(link);try{link.click();}finally{link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),60000);}}catch{setError('Excel export failed. Please retry.');}};
+  const stats=[['Enrolled students',summary?.enrolledStudents,'Unique students across selected courses'],['Average course score',summary?.average==null?'—':summary.average+'/100',summary?.provisional?'Includes marks recorded so far':'Saved course results'],['Attendance rate',summary?.attendanceRate==null?'—':summary.attendanceRate+'%',(summary?.attendanceRecords||0)+' attendance records'],['Final results passed',summary?summary.passed+' / '+summary.finalized:'—','Completed course results only']];
+  return <div className="ao-page analytics-page"><div className="marks-heading"><div><h1>Analytics & Reports</h1><p>Academic results and attendance across your courses.</p></div><button className="marks-export" disabled={!data||loading} onClick={download}>↓ Download Excel</button></div>{error&&<div className="ao-error" role="alert">{error}<button onClick={()=>setRevision(v=>v+1)}>Retry</button></div>}<section className="ao-panel analytics-filters"><div className="ao-filters"><label>Course<select value={course} onChange={e=>setCourse(e.target.value)}><option value="">All courses</option>{options.courses.map(c=><option key={c._id} value={c._id}>{c.courseCode} · {c.title}</option>)}</select></label><label>Teacher<select value={teacher} onChange={e=>setTeacher(e.target.value)}><option value="">All teachers</option>{options.teachers.map(t=><option key={t._id} value={t._id}>{t.name}</option>)}</select></label><label>Year / Batch<select value={batch} onChange={e=>setBatch(e.target.value)}><option value="">All batches</option>{options.batches.map(b=><option key={b}>{b}</option>)}</select></label><label>Attendance from<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Attendance to<input type="date" min={from} value={to} onChange={e=>setTo(e.target.value)}/></label></div></section><section className="analytics-stats">{stats.map(([label,value,note])=><div key={label}><span>{label}</span><strong>{loading?'—':value??'—'}</strong><small>{note}</small></div>)}</section><div className="analytics-charts"><section className="ao-panel analytics-chart"><header><h2>Final course grades</h2><span>{summary?.finalized||0} results</span></header>{loading?<div className="ao-empty">Loading grades…</div>:!summary?.finalized?<div className="ao-empty">No final course results yet.</div>:<div className="analytics-grade-bars">{data.distribution.map(g=><div key={g.grade}><span className="analytics-grade">{g.grade}</span><div><span style={{width:(summary.finalized?g.count/summary.finalized*100:0)+'%'}}/></div><strong>{g.count}</strong><small>{Math.round(g.count/summary.finalized*100)}%</small></div>)}</div>}<footer>Grades use finalized course totals out of 100.</footer></section><section className="ao-panel analytics-chart"><header><h2>Monthly attendance</h2><span>Present + Late</span></header>{loading?<div className="ao-empty">Loading attendance…</div>:!data?.monthly.length?<div className="ao-empty">No attendance records in this date range.</div>:<div className="analytics-monthly">{data.monthly.map(m=><div key={m.month}><span>{new Date(m.month+'-01T12:00:00').toLocaleDateString('en',{month:'short',year:'2-digit'})}</span><div><span style={{width:(m.rate||0)+'%'}}/></div><strong>{m.rate==null?'—':m.rate+'%'}</strong></div>)}</div>}<footer>Excused and unrecorded days are excluded.</footer></section></div><section className="ao-panel"><div className="ao-list-heading"><h2>Course performance <span>{courses.length}</span></h2><span className="analytics-note">Marks reflect all saved results; dates filter attendance.</span></div>{loading?<div className="ao-empty" role="status">Loading course performance…</div>:!courses.length?<div className="ao-empty">No courses match the selected filters.</div>:<div className="ao-table-wrap"><table><thead><tr><th>Course</th><th>Enrolled</th><th>With marks</th><th>Average /100</th><th>Final results</th><th>Passed</th><th>Attendance</th></tr></thead><tbody>{courses.map(c=><tr key={c._id}><td className="ao-course"><strong>{c.title}</strong><small>{c.courseCode}</small></td><td>{c.enrolled}</td><td>{c.recorded}</td><td><strong>{score(c.average)}</strong><div className="analytics-score-track"><span style={{width:Math.max(0,Math.min(100,c.average||0))+'%'}}/></div></td><td>{c.finalized}</td><td>{c.passed}</td><td><strong>{c.attendanceRate==null?'—':c.attendanceRate+'%'}</strong><small>{c.attendanceRecords} records</small></td></tr>)}</tbody></table></div>}</section></div>;
 }

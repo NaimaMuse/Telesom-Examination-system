@@ -1805,3 +1805,21 @@ select.form-control { cursor: pointer; }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }
+/* Compact faculty directory overview. */
+.teacher-directory-page .teacher-directory-overview{padding:.75rem 1rem;gap:1rem;margin-bottom:.8rem;min-height:0}
+.teacher-directory-page .teacher-directory-kicker{font-size:.55rem;margin-bottom:.2rem}
+.teacher-directory-page .teacher-directory-intro h1{font-size:1.15rem;line-height:1.2}
+.teacher-directory-page .teacher-directory-intro p{font-size:.68rem;line-height:1.4;margin-top:.2rem;max-width:520px}
+.teacher-directory-page .teacher-directory-stats{min-height:0}
+.teacher-directory-page .teacher-directory-stats>div{min-width:92px;padding:.4rem .65rem;gap:.1rem}
+.teacher-directory-page .teacher-directory-stats strong{font-size:1rem;line-height:1.1}
+.teacher-directory-page .teacher-directory-stats .teacher-stat-label{font-size:.52rem}
+.teacher-directory-page .teacher-directory-stats small{font-size:.56rem;line-height:1.3}
+@media(max-width:650px){.teacher-directory-page .teacher-directory-overview{padding:.7rem .8rem;gap:.65rem}.teacher-directory-page .teacher-directory-stats>div{min-width:0;flex:1}}
+/* Compact assessment registry summary cards. */
+.exam-mgmt-container>.stats-grid{gap:12px}
+.exam-mgmt-container>.stats-grid>.stat-card{padding:13px 16px;gap:12px;border-radius:10px;min-height:0}
+.exam-mgmt-container>.stats-grid .stat-icon{width:36px;height:36px;min-width:36px;border-radius:9px;font-size:17px!important}
+.exam-mgmt-container>.stats-grid .stat-value{font-size:21px!important;line-height:1.15}
+.exam-mgmt-container>.stats-grid .stat-label{font-size:11px!important;line-height:1.4;margin-top:4px}
+@media(max-width:650px){.exam-mgmt-container>.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.exam-mgmt-container>.stats-grid>.stat-card{padding:11px;gap:9px}.exam-mgmt-container>.stats-grid .stat-icon{width:30px;height:30px;min-width:30px;font-size:15px!important}.exam-mgmt-container>.stats-grid .stat-value{font-size:19px!important}}
