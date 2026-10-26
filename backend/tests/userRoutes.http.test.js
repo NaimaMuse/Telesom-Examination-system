@@ -23,7 +23,7 @@ const stamp = Date.now();
 const adminEmail = `userctrl.admin.${stamp}@telesom.local`;
 const studentEmail = `userctrl.student.${stamp}@telesom.local`;
 const teacherEmail = `userctrl.teacher.${stamp}@telesom.local`;
-const studentId = `TST-${stamp}`;
+let studentId;
 const teacherId = `TCH-${stamp}`;
 
 const createdIds = {
@@ -192,10 +192,11 @@ const run = async () => {
   });
   createdIds.studentUser = createdStudent.json?.data?.user?._id;
   createdIds.studentProfile = createdStudent.json?.data?.student?._id;
+  studentId = createdStudent.json?.data?.student?.studentId;
   assert(
     createdStudent.status === 201 &&
       createdStudent.json?.data?.user?.role === 'student' &&
-      createdStudent.json?.data?.student?.studentId === studentId &&
+      /^TL-\d{4}-\d{2,}$/.test(studentId) &&
       createdStudent.json?.data?.user?.password === undefined,
     'Admin can create a student account'
   );

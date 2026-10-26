@@ -4,6 +4,8 @@ const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 
+const studentIds = require('../services/studentIdService');
+
 const VALID_GENDERS = ['male', 'female'];
 
 const isDuplicateKeyError = (error) => error && error.code === 11000;
@@ -124,7 +126,6 @@ const createStudent = async (req, res, next) => {
     const {
       name,
       email,
-      studentId,
       gender,
       phone,
       address,
@@ -132,21 +133,20 @@ const createStudent = async (req, res, next) => {
       status,
     } = req.body;
 
-    if (!name || !email || !studentId || !gender) {
+    if (!name || !email || !gender) {
       res.status(400);
       return next(
-        new Error('Name, email, student ID, and gender are required')
+        new Error('Name, email, and gender are required')
       );
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const normalizedStudentId = String(studentId).trim().toUpperCase();
     const normalizedGender = normalizeGender(gender);
 
-    if (!normalizedEmail || !normalizedStudentId) {
+    if (!normalizedEmail) {
       res.status(400);
       return next(
-        new Error('Name, email, student ID, and gender are required')
+        new Error('Name, email, and gender are required')
       );
     }
 
@@ -161,13 +161,7 @@ const createStudent = async (req, res, next) => {
       return next(new Error('Email is already registered'));
     }
 
-    const existingStudent = await Student.findOne({
-      studentId: normalizedStudentId,
-    });
-    if (existingStudent) {
-      res.status(409);
-      return next(new Error('Student ID already exists'));
-    }
+    const normalizedStudentId = await studentIds.nextStudentId();
 
     // SECURITY: Student accounts have no password because login uses Student ID only.
     // Anyone who knows a Student ID can access that student's records until extra

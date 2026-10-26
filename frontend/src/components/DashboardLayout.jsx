@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import NotificationBell from './NotificationBell';
+import TelesomLogo from './TelesomLogo';
+import { useState, useEffect } from 'react';
 import { NavLink, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './dashboard.css';
@@ -136,10 +138,6 @@ const ROLE_ROUTES = {
   ),
 };
 
-function initials(name = '') {
-  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
-}
-
 const PAGE_META = {
   '/admin': { title: 'Admin Dashboard', hint: 'Overview of students, courses, exams, and reports.' },
   '/admin/students': { title: 'Student Management', hint: 'Add, edit, and manage student records.' },
@@ -184,6 +182,13 @@ export default function DashboardLayout({ role }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
+  const [showGreeting, setShowGreeting] = useState(true);
+  useEffect(() => {
+    setShowGreeting(true);
+    const timer = setTimeout(() => setShowGreeting(false), 5000);
+    return () => clearTimeout(timer);
+  }, [user?._id]);
   const [pageSearch, setPageSearch] = useState({ path: location.pathname, query: '' });
   const search = pageSearch.path === location.pathname ? pageSearch.query : '';
   const setSearch = query => setPageSearch({ path: location.pathname, query });
@@ -197,7 +202,6 @@ export default function DashboardLayout({ role }) {
   const isStudentQuizzesPage = role === 'student' && location.pathname === '/student/quizzes';
   const isStudentNotesPage = role === 'student' && location.pathname === '/student/notes';
   const isStudentAttendancePage = role === 'student' && location.pathname === '/student/attendance';
-  const isStudentAcademicPage = isStudentCoursesPage || isStudentExamsPage || isStudentQuizzesPage || isStudentNotesPage || isStudentAttendancePage;
   const profilePath = role === 'admin' ? '/admin' : `/${role}/profile`;
 
   const handleLogout = () => {
@@ -207,6 +211,11 @@ export default function DashboardLayout({ role }) {
 
   return (
     <div className={`dash-shell ${role === 'teacher' ? 'teacher-shell' : ''}`}>
+      {showGreeting && <div className="dashboard-greeting-popup" role="status">
+        <span className="dashboard-greeting-mark" aria-hidden="true">☀</span>
+        <div><strong>{greeting()}, {firstName}</strong><p>Welcome to your {role} dashboard.</p></div>
+        <button type="button" aria-label="Dismiss greeting" onClick={() => setShowGreeting(false)}>×</button>
+      </div>}
       {/* Sidebar overlay for mobile */}
       <div
         className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
@@ -217,7 +226,7 @@ export default function DashboardLayout({ role }) {
       <aside className={`dash-sidebar ${role === 'teacher' ? 'teacher-sidebar' : ''} ${sidebarOpen ? 'open' : ''}`}>
         {/* Brand */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-icon">🎓</div>
+          <TelesomLogo size="lg" showText={false} />
           <div className="sidebar-brand-text">
             <strong>Telesom</strong>
             <span>Academy Portal</span>
@@ -267,15 +276,6 @@ export default function DashboardLayout({ role }) {
 
         {/* Footer */}
         <div className="sidebar-footer">
-          {role !== 'teacher' && (
-            <div className="sidebar-user">
-              <div className="sidebar-avatar">{initials(user?.name)}</div>
-              <div className="sidebar-user-info">
-                <div className="sidebar-user-name">{user?.name || '—'}</div>
-                <div className="sidebar-user-email">{user?.email || user?.studentId || ''}</div>
-              </div>
-            </div>
-          )}
           <button className="btn-logout" onClick={handleLogout}>
             <span>🚪</span> Sign Out
           </button>
@@ -295,12 +295,10 @@ export default function DashboardLayout({ role }) {
               ☰
             </button>
             <div>
-              <div className={`topbar-page-title ${isStudentAcademicPage ? 'topbar-greeting' : ''}`}>
-                {isStudentAcademicPage ? `${greeting()}, ${firstName}` : pageMeta.title}
+              <div className="topbar-page-title">
+                {pageMeta.title}
               </div>
-              {!isStudentAcademicPage && (
-                <div className="topbar-page-subtitle">{pageMeta.hint}</div>
-              )}
+              <div className="topbar-page-subtitle">{pageMeta.hint}</div>
             </div>
           </div>
 
@@ -316,38 +314,22 @@ export default function DashboardLayout({ role }) {
               />
             </div>
 
-            <button className="topbar-icon-btn" title="Notifications">
-              🔔
-              <span className="notif-dot" />
-            </button>
+            <NotificationBell key={user?._id || user?.id} userId={user?._id || user?.id} onNavigate={() => setDataVersion(value => value + 1)} />
 
             <NavLink
               to={profilePath}
               className="topbar-profile"
+              aria-label="My profile"
               style={{ textDecoration: 'none' }}
             >
-              <div className="topbar-avatar">{initials(user?.name)}</div>
-              <span className="topbar-profile-name">{user?.name?.split(' ')[0] || 'User'}</span>
+              <span className="topbar-profile-name" style={{ display: 'inline' }}>{userRole}</span>
             </NavLink>
           </div>
         </header>
 
         {/* Page content */}
         <main className={`dash-content ${isStudentCoursesPage ? 'student-courses-content' : ''} ${isStudentExamsPage ? 'student-exams-content' : ''} ${isStudentQuizzesPage ? 'student-quizzes-content' : ''} ${isStudentNotesPage ? 'student-notes-content' : ''} ${isStudentAttendancePage ? 'student-attendance-content' : ''} ${role === 'teacher' && location.pathname === '/teacher' ? 'teacher-home-content' : ''}`}>
-          {!(role === 'teacher' && ['/teacher', '/teacher/my-course', '/teacher/exams', '/teacher/results', '/teacher/performance', '/teacher/profile'].includes(location.pathname)
-            || (role === 'admin' && location.pathname !== '/admin')) && (
-            <div className="dash-welcome" role="region" aria-label="Welcome">
-              <div className="dash-welcome-text">
-                <h2>{isStudentAcademicPage ? pageMeta.title : `${greeting()}, ${firstName}`}</h2>
-                <p>{pageMeta.hint}</p>
-              </div>
-              <div className="dash-welcome-meta">
-                {role === 'student' ? 'ID:' : 'Role:'}{' '}
-                <strong>{role === 'student' ? user?.studentId || '—' : userRole}</strong>
-              </div>
-            </div>
-          )}
-          <PageSearchContext.Provider key={user?._id || user?.id || 'anonymous'} value={[search, setSearch]}>{ROLE_ROUTES[role]}</PageSearchContext.Provider>
+          <PageSearchContext.Provider key={`${user?._id || user?.id || 'anonymous'}:${dataVersion}`} value={[search, setSearch]}>{ROLE_ROUTES[role]}</PageSearchContext.Provider>
         </main>
       </div>
     </div>

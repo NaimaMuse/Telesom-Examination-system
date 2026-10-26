@@ -1,3 +1,4 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../services/api';
 
@@ -171,6 +172,7 @@ function TeacherCredentialsModal({ credentials, onClose }) {
 const PAGE_SIZE = 8;
 
 export default function TeacherMgmt() {
+  const [search] = usePageSearch();
   const [teachers, setTeachers] = useState([]);
   const [courseAssignments, setCourseAssignments] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -178,6 +180,7 @@ export default function TeacherMgmt() {
   const [createdCredentials, setCreatedCredentials] = useState(null);
   const [loading, setLoading]   = useState(false);
   const [page, setPage]         = useState(1);
+  useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
@@ -231,7 +234,7 @@ export default function TeacherMgmt() {
 
   useEffect(() => { fetchCourses(); }, [fetchCourses]);
 
-  const filtered   = teachers;
+  const filtered = teachers.filter(teacher => matchesPageSearch(search, teacher.name, teacher.email, teacher.phone, teacher.teacherId, teacher.department, teacher.subjects, courseAssignments.filter(a => String(a.teacher?._id || a.teacher) === String(teacher._id)).map(a => [a.course?.title, a.course?.name, a.course?.courseCode])));
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
   const activeTeachers = teachers.filter((teacher) => (teacher.status || 'active') === 'active').length;

@@ -4,6 +4,8 @@ const { createStudent, createTeacher } = require('../controllers/userController'
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
+const studentIds = require('../services/studentIdService');
+studentIds.nextStudentId = async () => 'TL-2026-01';
 
 const runTests = async () => {
   let passed = 0;
@@ -101,7 +103,7 @@ const runTests = async () => {
     assert(
       result.statusCode === 400 &&
         result.nextCalled &&
-        /student ID/i.test(result.nextError.message),
+        /gender/i.test(result.nextError.message),
       'Student creation rejects missing required fields'
     );
   }
@@ -141,24 +143,6 @@ const runTests = async () => {
   }
 
   {
-    Student.findOne = () => Promise.resolve({ studentId: 'STD-2001' });
-    const { req, res, next, getResult } = createMock({
-      name: 'Amina Student',
-      email: 'amina@student.telesom.com',
-      studentId: 'std-2001',
-      gender: 'female',
-    });
-    await createStudent(req, res, next);
-    const result = getResult();
-    assert(
-      result.statusCode === 409 &&
-        result.nextError.message === 'Student ID already exists',
-      'Student creation rejects duplicate Student ID'
-    );
-    Student.findOne = () => Promise.resolve(null);
-  }
-
-  {
     let createdUserPayload = null;
     User.create = async (docs) => {
       const payload = Array.isArray(docs) ? docs[0] : docs;
@@ -185,10 +169,10 @@ const runTests = async () => {
         result.responseBody?.success === true &&
         result.responseBody?.data?.user?.role === 'student' &&
         result.responseBody?.data?.user?.email === 'amina@student.telesom.com' &&
-        result.responseBody?.data?.student?.studentId === 'STD-2001' &&
+        result.responseBody?.data?.student?.studentId === 'TL-2026-01' &&
         createdUserPayload.password === undefined &&
         result.responseBody?.data?.user?.password === undefined,
-      'Student account is created without a password and returns safe data'
+      'Student account ignores manual ID, assigns a server ID and returns safe data'
     );
   }
 

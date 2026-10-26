@@ -1,3 +1,4 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../../services/api';
 
@@ -76,11 +77,13 @@ function ConfirmModal({ course, onConfirm, onCancel, loading }) {
 }
 
 export default function CourseMgmt() {
+  const [search] = usePageSearch();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -111,8 +114,8 @@ export default function CourseMgmt() {
   const inactiveCount = courses.filter((course) => course.status === 'inactive').length;
   const averageCredits = courses.length ? (courses.reduce((sum, course) => sum + (Number(course.credits) || 0), 0) / courses.length).toFixed(1) : '0';
   const filtered = useMemo(() => courses.filter((course) => (
-    statusFilter === 'all' || course.status === statusFilter
-  )), [courses, statusFilter]);
+    (statusFilter === 'all' || course.status === statusFilter) && matchesPageSearch(search, course.title, course.name, course.courseCode, course.description, course.academicYear)
+  )), [courses, statusFilter, search]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 

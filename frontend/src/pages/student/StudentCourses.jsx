@@ -1,30 +1,32 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 
-const PLACEHOLDER_COURSES = [
-  { _id:'c1', code:'CS101', name:'Introduction to Programming', teacher:'Dr. Abdullahi Said', schedule:'Mon/Wed 9:00–10:30', semester:'Semester 1', credits:3, description:'Fundamentals of programming using Python.' },
-  { _id:'c2', code:'BUS101',name:'Principles of Business',      teacher:'Ms. Farhia Adan',    schedule:'Tue/Thu 11:00–12:30',semester:'Semester 1', credits:3, description:'Introduction to business management and economics.' },
-];
 
 export default function StudentCourses() {
-  const [courses, setCourses] = useState(PLACEHOLDER_COURSES);
-  const [loading, setLoading] = useState(false);
+  const [search] = usePageSearch();
+  const [error, setError] = useState('');
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(()=>{
     const fetch=async()=>{
       setLoading(true);
-      try{const res=await api.get('/student/courses');if(res.data?.courses)setCourses(res.data.courses);}catch{}finally{setLoading(false);}
+      try{const res=await api.get('/student/courses');if(res.data?.courses)setCourses(res.data.courses);}catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
     };
     fetch();
   },[]);
 
+  const visibleCourses = courses.filter(c => matchesPageSearch(search, c.name, c.code, c.teacher, c.semester, c.description));
+
   return (
     <>
+      {error && <div className="card card-body" role="alert">{error}</div>}
       {loading?<div className="spinner-wrap"><div className="spinner"/></div>
-        :courses.length===0?<div className="card"><div className="empty-state"><div className="empty-state-icon">📚</div><h3>No courses enrolled</h3><p>Contact the admin to enroll in courses.</p></div></div>
+        :visibleCourses.length===0?<div className="card"><div className="empty-state"><div className="empty-state-icon">📚</div><h3>{search ? 'No matching courses' : 'No courses enrolled'}</h3><p>{search ? 'Try another course name, teacher or semester.' : 'Contact the admin to enroll in courses.'}</p></div></div>
         :(
         <div className="grid-2">
-          {courses.map(c=>(
+          {visibleCourses.map(c=>(
             <div key={c._id} className="card student-course-card">
               <div className="card-body">
                 <div style={{display:'flex',alignItems:'flex-start',gap:'14px'}}>

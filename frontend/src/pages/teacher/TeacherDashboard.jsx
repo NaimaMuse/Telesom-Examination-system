@@ -1,3 +1,4 @@
+import TelesomLogo from '../../components/TelesomLogo';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -129,7 +130,7 @@ export default function TeacherDashboard() {
     <div className="teacher-scope">
       <section className="teacher-dashboard-welcome">
         <div className="teacher-hero-mark" aria-hidden="true">
-          <span>🎓</span>
+          <TelesomLogo size="sm" showText={false} />
         </div>
         <div className="page-header-left">
           <h1>{greeting()}, {user?.name?.split(' ')[0] || 'Teacher'}! <span aria-hidden="true">☀️</span></h1>

@@ -2,7 +2,13 @@ const assert = require('assert');
 const { app } = require('../server');
 
 const protectedPaths = [
+  '/api/notifications',
   '/api/students',
+  '/api/student/courses',
+  '/api/student/results',
+  '/api/student/quizzes',
+  '/api/student/notes',
+  '/api/student/attendance',
   '/api/teachers',
   '/api/courses',
   '/api/enrollments',

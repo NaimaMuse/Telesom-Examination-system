@@ -1,32 +1,31 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 
-const PLACEHOLDER_QUIZZES = [
-  { _id:'q1', course:'CS101', quiz:'Quiz 1 – Variables', date:'2026-10-20', marks:9,  totalMarks:10, grade:'A', status:'graded' },
-  { _id:'q2', course:'BUS101',quiz:'Quiz 1 – Intro',    date:'2026-10-22', marks:7,  totalMarks:10, grade:'B', status:'graded' },
-  { _id:'q3', course:'CS101', quiz:'Quiz 2 – Functions', date:'2026-11-05', marks:null, totalMarks:10, grade:null, status:'upcoming' },
-];
 
 function gradeColor(g){ return !g?'':g==='A'?'grade-A':g==='B'?'grade-B':g==='C'?'grade-C':g==='D'?'grade-D':'grade-F'; }
 
 export default function StudentQuizzes() {
-  const [quizzes, setQuizzes] = useState(PLACEHOLDER_QUIZZES);
-  const [loading, setLoading] = useState(false);
+  const [search] = usePageSearch();
+  const [error, setError] = useState('');
+  const [quizzes, setQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(()=>{
     const fetch=async()=>{
       setLoading(true);
-      try{const res=await api.get('/student/quizzes');if(res.data?.quizzes)setQuizzes(res.data.quizzes);}catch{}finally{setLoading(false);}
+      try{const res=await api.get('/student/quizzes');if(res.data?.quizzes)setQuizzes(res.data.quizzes);}catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
     };
     fetch();
   },[]);
 
-  const graded   = quizzes.filter(q=>q.status==='graded');
-  const upcoming = quizzes.filter(q=>q.status==='upcoming');
+  const graded   = quizzes.filter(q=>q.status==='graded' && matchesPageSearch(search, q.course, q.quiz, q.date, q.grade, q.marks));
+  const upcoming = quizzes.filter(q=>q.status==='upcoming' && matchesPageSearch(search, q.course, q.quiz, q.date));
   const avg      = graded.length?Math.round(graded.reduce((a,q)=>a+(q.marks/q.totalMarks)*100,0)/graded.length):0;
 
   return (
     <>
+      {error && <div className="card card-body" role="alert">{error}</div>}
       <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
         <div className="stat-card"><div className="stat-icon blue">📊</div><div className="stat-info"><div className="stat-value">{avg}%</div><div className="stat-label">Quiz Average</div></div></div>
         <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><div className="stat-value">{graded.length}</div><div className="stat-label">Completed</div></div></div>
@@ -55,7 +54,7 @@ export default function StudentQuizzes() {
       <div className="card">
         <div className="card-header"><span className="card-title">Quiz Results ({graded.length})</span></div>
         {loading?<div className="spinner-wrap"><div className="spinner"/></div>
-          :graded.length===0?<div className="empty-state"><div className="empty-state-icon">🧩</div><h3>No quiz results yet</h3></div>
+          :graded.length===0?<div className="empty-state"><div className="empty-state-icon">🧩</div><h3>{search ? 'No matching quiz results' : 'No quiz results yet'}</h3></div>
           :(
           <div className="table-responsive">
             <table className="data-table">

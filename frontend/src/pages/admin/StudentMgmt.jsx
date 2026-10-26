@@ -1,3 +1,4 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 /**
  * Shared CRUD page factory for management pages.
  * Provides: search, pagination, add/edit modal, delete confirm.
@@ -7,15 +8,15 @@ import api from '../../services/api';
 
 // ─────────────────── STUDENT MANAGEMENT ────────────────────────
 const STUDENT_FIELDS = [
-  { key: 'name',      label: 'Full Name',   type: 'text',     required: true },
-  { key: 'studentId', label: 'Student ID',  type: 'text',     required: true },
-  { key: 'email',     label: 'Email',       type: 'email',    required: true },
-  { key: 'gender',    label: 'Gender',      type: 'select', options: ['male', 'female'], required: true },
-  { key: 'phone',     label: 'Phone',       type: 'tel' },
-  { key: 'course',    label: 'Course',      type: 'course', required: true },
-  { key: 'address',   label: 'Address',     type: 'text' },
-  { key: 'academicYear', label: 'Batch / Year', type: 'text' },
-  { key: 'status',    label: 'Status',      type: 'select', options: ['active','inactive','graduated','suspended'] },
+  { key: 'name', label: 'Full Name', type: 'text', required: true, example: 'Amina Hassan', guidance: 'Required. Enter the full name (2–100 characters).' },
+  { key: 'studentId', label: 'Student ID (automatic)', type: 'text', readOnly: true },
+  { key: 'email', label: 'Email', type: 'email', required: true, example: 'amina@example.com', guidance: 'Required. Use a valid, unique email address.' },
+  { key: 'gender', label: 'Gender', type: 'select', options: ['male', 'female'], required: true, example: 'female', guidance: 'Required. Use male or female.' },
+  { key: 'phone', label: 'Phone', type: 'tel', example: '+252 61 1234567', guidance: 'Optional. Enter as text to keep the country code and leading zeros.' },
+  { key: 'course', label: 'Course', type: 'course', required: true, guidance: 'Required. Use an existing course name from the Available Courses sheet.' },
+  { key: 'address', label: 'Address', type: 'text', example: 'Hargeisa', guidance: 'Optional. Enter the student address.' },
+  { key: 'academicYear', label: 'Batch / Year', type: 'text', guidance: 'Optional. Defaults to the course academic year, or the current year.' },
+  { key: 'status', label: 'Status', type: 'select', options: ['active','inactive','graduated','suspended'], example: 'active', guidance: 'Optional. Use active, inactive, graduated or suspended. Defaults to active.' },
 ];
 
 function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, onClose }) {
@@ -50,10 +51,10 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
                   {f.type === 'course' ? (
                     <select className="form-control" required={f.required} value={form.course || ''} disabled={coursesLoading || courses.length === 0} onChange={e => handleChange(f.key, e.target.value)}>
                       <option value="">{coursesLoading ? 'Loading courses…' : courses.length ? 'Select a course' : 'No courses available'}</option>
-                      {courses.map(course => <option key={course._id} value={course._id}>{course.courseCode ? `${course.courseCode} · ` : ''}{course.title || course.name}</option>)}
+                      {courses.map(course => <option key={course._id} value={course._id}>{course.title || course.name || 'Course'}</option>)}
                     </select>
                   ) : f.type === 'select' ? (
-                    <select className="form-control" value={form[f.key] || ''} onChange={e => handleChange(f.key, e.target.value)}>
+                    <select className="form-control" required={f.required} value={form[f.key] || ''} onChange={e => handleChange(f.key, e.target.value)}>
                       <option value="">Select…</option>
                       {f.options.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
@@ -61,6 +62,8 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
                     <input
                       className="form-control"
                       type={f.type}
+                      readOnly={f.readOnly}
+                      placeholder={f.readOnly ? 'Assigned automatically when saved' : undefined}
                       required={f.required}
                       value={form[f.key] || ''}
                       onChange={e => handleChange(f.key, e.target.value)}
@@ -105,9 +108,9 @@ function ConfirmModal({ message, onConfirm, onCancel, loading }) {
 
 const PAGE_SIZE = 8;
 
-const STUDENT_TEMPLATE_COLUMNS = [
-  'Full Name', 'Email', 'Student ID', 'Gender', 'Phone', 'Course', 'Address', 'Batch / Year',
-];
+const STUDENT_IMPORT_FIELDS = STUDENT_FIELDS.filter(field => !field.readOnly);
+const STUDENT_REQUIRED_FIELDS = STUDENT_IMPORT_FIELDS.filter(field => field.required);
+const STUDENT_TEMPLATE_COLUMNS = STUDENT_IMPORT_FIELDS.map(field => `${field.label}${field.required ? ' *' : ''}`);
 
 const normalizeHeader = (value) => String(value || '')
   .trim()
@@ -121,6 +124,7 @@ const STUDENT_COLUMN_MAP = {
   email: 'email',
   studentid: 'studentId',
   id: 'studentId',
+  status: 'status',
   gender: 'gender',
   sex: 'gender',
   phone: 'phone',
@@ -143,20 +147,41 @@ function mapStudentRows(rows) {
   }, {}));
 }
 
-function downloadStudentTemplate() {
+function downloadStudentTemplate(courses) {
   return import('xlsx').then((XLSX) => {
+    const sampleCourse = courses[0];
+    const currentYear = new Intl.DateTimeFormat('en-US', {timeZone:'Africa/Nairobi', year:'numeric'}).format(new Date());
+    const examples = { course: sampleCourse?.title || sampleCourse?.name || 'REPLACE_WITH_COURSE_NAME', academicYear: sampleCourse?.academicYear || currentYear };
     const worksheet = XLSX.utils.aoa_to_sheet([
       STUDENT_TEMPLATE_COLUMNS,
-      ['Amina Hassan', 'amina@example.com', 'STU-2026-001', 'female', '+252 61 1234567', 'CS101', 'Hargeisa', '2026'],
+      STUDENT_IMPORT_FIELDS.map(field => examples[field.key] || field.example || ''),
     ]);
-    worksheet['!cols'] = STUDENT_TEMPLATE_COLUMNS.map((column) => ({ wch: Math.max(column.length + 4, 18) }));
+    worksheet['!cols'] = STUDENT_TEMPLATE_COLUMNS.map(column => ({ wch: Math.max(column.length + 4, 22) }));
+    worksheet['!autofilter'] = { ref: 'A1:H2' };
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+    const instructions = XLSX.utils.aoa_to_sheet([
+      ['Student import template', 'Instructions'],
+      ['Students sheet', 'Replace the example row with real student data. Keep headings in row 1. One student per row.'],
+      ['Required fields', STUDENT_REQUIRED_FIELDS.map(field => field.label).join(', ') + '. Headings marked * are required.'],
+      ['Student ID', 'Generated by the system as TL-YYYY-01. Do not enter a Student ID.'],
+      ...STUDENT_IMPORT_FIELDS.map(field => [field.label, field.guidance]),
+    ]);
+    instructions['!cols'] = [{wch:24}, {wch:110}];
+    XLSX.utils.book_append_sheet(workbook, instructions, 'Instructions');
+    if (courses.length) {
+      const courseSheet = XLSX.utils.aoa_to_sheet([
+        ['Course Name', 'Academic Year'],
+        ...courses.map(course => [course.title || course.name || '', course.academicYear || '']),
+      ]);
+      courseSheet['!cols'] = [{wch:55}, {wch:20}];
+      XLSX.utils.book_append_sheet(workbook, courseSheet, 'Available Courses');
+    }
     XLSX.writeFile(workbook, 'student-upload-template.xlsx');
   });
 }
 
-function ImportStudentsModal({ onClose, onImport, importing, report }) {
+function ImportStudentsModal({ courses = [], onClose, onImport, importing, report }) {
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState('');
   const [parseError, setParseError] = useState('');
@@ -194,14 +219,16 @@ function ImportStudentsModal({ onClose, onImport, importing, report }) {
         </div>
         <div className="modal-body student-import-body">
           <p className="student-import-intro">Choose an Excel workbook or CSV file. Each valid row creates a student account using the Student ID sign-in flow.</p>
-          <button type="button" className="student-template-button" onClick={downloadStudentTemplate}><span aria-hidden="true">↓</span> Download Excel template</button>
+          <button type="button" className="student-template-button" onClick={() => downloadStudentTemplate(courses).catch(() => setParseError('The template could not be downloaded. Please try again.'))}><span aria-hidden="true">↓</span> Download Excel template</button>
           <label className="student-file-drop">
             <span className="student-file-icon" aria-hidden="true">↑</span>
             <strong>{fileName || 'Choose a student spreadsheet'}</strong>
             <small>.xlsx, .xls, or .csv</small>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} />
           </label>
-          <div className="student-import-requirements"><strong>Required columns</strong><span>Full Name · Email · Student ID · Gender · Course</span></div>
+          <div className="student-import-requirements"><strong>Required columns</strong><span>{STUDENT_REQUIRED_FIELDS.map(field => field.label).join(' · ')}</span></div>
+          <div className="student-import-requirements"><strong>Optional columns</strong><span>{STUDENT_IMPORT_FIELDS.filter(field => !field.required).map(field => field.label).join(' · ')}</span></div>
+          <p className="student-import-intro">Student IDs are assigned automatically. Use an existing course from the Available Courses sheet. Replace the example row before uploading.</p>
           {rows.length > 0 && !report && <div className="student-import-preview" role="status">{rows.length} student {rows.length === 1 ? 'row' : 'rows'} ready to import.</div>}
           {parseError && <div className="student-import-error" role="alert">{parseError}</div>}
           {report && (
@@ -227,11 +254,12 @@ export default function StudentMgmt() {
   const [enrollments, setEnrollments] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [loading, setLoading]       = useState(false);
-  const [search, setSearch]         = useState('');
+  const [search, setSearch] = usePageSearch();
   const [filterStatus, setFilter]   = useState('');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterAcademicYear, setFilterAcademicYear] = useState('');
   const [page, setPage]             = useState(1);
+  useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal]   = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -305,12 +333,12 @@ export default function StudentMgmt() {
     const enrollment = getStudentEnrollment(student);
     const course = enrollment?.course;
     return typeof course === 'object' && course
-      ? `${course.courseCode ? `${course.courseCode} · ` : ''}${course.title || course.name || 'Course'}`
+      ? course.title || course.name || 'Course'
       : courses.find((item) => String(item._id) === String(course))?.title || student.courseName || student.program || '—';
   };
 
   const filtered = students.filter(s => {
-    const matchSearch = !search || [s.name, s.studentId, s.email].some(v => v?.toLowerCase().includes(search.toLowerCase()));
+    const matchSearch = matchesPageSearch(search, s.name, s.studentId, s.email, s.phone, s.address, s.academicYear, getStudentCourseName(s));
     const matchStatus = !filterStatus || s.status === filterStatus;
     const enrollment = getStudentEnrollment(s);
     const enrolledCourseId = enrollment?.course?._id || enrollment?.course || '';
@@ -327,6 +355,7 @@ export default function StudentMgmt() {
     const selectedCourse = courses.find(course => String(course._id) === String(form.course));
     const academicYear = form.academicYear || selectedCourse?.academicYear || String(new Date().getFullYear());
     const { course: courseId, ...studentFields } = form;
+    delete studentFields.studentId;
     studentFields.academicYear = academicYear;
     let studentId = editTarget?._id;
 
@@ -361,7 +390,7 @@ export default function StudentMgmt() {
     try {
       for (const student of rows) {
         const { _rowNumber: row, ...payload } = student;
-        const missing = ['name', 'email', 'studentId', 'gender', 'course'].filter((field) => !String(payload[field] || '').trim());
+        const missing = STUDENT_REQUIRED_FIELDS.filter(field => !String(payload[field.key] || '').trim()).map(field => field.label);
         if (missing.length) {
           errors.push({ row, message: `Missing ${missing.join(', ')}.` });
           continue;
@@ -374,17 +403,21 @@ export default function StudentMgmt() {
         try {
           const selectedCourse = courses.find(course => [course._id, course.courseCode, course.title, course.name].some(value => String(value || '').trim().toLowerCase() === String(payload.course).trim().toLowerCase()));
           if (!selectedCourse) {
-            errors.push({ row, message: `Course "${payload.course}" was not found. Use a course code or name from the course list.` });
+            errors.push({ row, message: `Course "${payload.course}" was not found. Use a course name from the course list.` });
             continue;
           }
           const { course: ignoredCourse, ...studentPayload } = payload;
+          delete studentPayload.studentId;
+          studentPayload.academicYear = studentPayload.academicYear || selectedCourse.academicYear || new Intl.DateTimeFormat('en-US', {timeZone:'Africa/Nairobi', year:'numeric'}).format(new Date());
+          studentPayload.status = String(studentPayload.status || 'active').trim().toLowerCase();
+          if (!STUDENT_FIELDS.find(field => field.key === 'status').options.includes(studentPayload.status)) { errors.push({ row, message: 'Status must be active, inactive, graduated or suspended.' }); continue; }
           const response = await api.post('/users/students', studentPayload);
           const createdStudentId = response.data?.data?.student?._id || response.data?.student?._id;
           if (!createdStudentId) throw new Error('Student was created, but the server did not return its ID.');
           await api.post('/enrollments', {
             student: createdStudentId,
             course: selectedCourse._id,
-            academicYear: studentPayload.academicYear || selectedCourse.academicYear || String(new Date().getFullYear()),
+            academicYear: studentPayload.academicYear,
             semester: selectedCourse.semester || '',
             status: 'enrolled',
           });
@@ -441,7 +474,7 @@ export default function StudentMgmt() {
           <div className="filter-bar" style={{ marginBottom: 0 }}>
             <select aria-label="Filter students by course" className="form-control student-filter-select" value={filterCourse} onChange={event => { setFilterCourse(event.target.value); setPage(1); }}>
               <option value="">All courses</option>
-              {courses.map(course => <option key={course._id} value={course._id}>{course.courseCode ? `${course.courseCode} · ` : ''}{course.title || course.name}</option>)}
+              {courses.map(course => <option key={course._id} value={course._id}>{course.title || course.name || 'Course'}</option>)}
             </select>
             <select aria-label="Filter students by status" className="form-control student-filter-select" value={filterStatus} onChange={event => { setFilter(event.target.value); setPage(1); }}>
               <option value="">All statuses</option>
@@ -542,6 +575,7 @@ export default function StudentMgmt() {
       )}
       {showImportModal && (
         <ImportStudentsModal
+          courses={courses}
           onClose={() => setShowImportModal(false)}
           onImport={handleImport}
           importing={importing}

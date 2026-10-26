@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
+const studentIds = require('../services/studentIdService');
 const generateToken = require('../utils/generateToken');
 
 /**
@@ -166,7 +167,7 @@ const login = async (req, res, next) => {
  */
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, role = 'student', studentId, phone, department, gender = 'male' } = req.body;
+    const { name, email, password, role = 'student', phone, department, gender = 'male' } = req.body;
 
     if (!name || !email) {
       res.status(400);
@@ -189,6 +190,7 @@ const register = async (req, res, next) => {
       hashedPassword = password ? await bcrypt.hash(password, 10) : await bcrypt.hash('password123', 10);
     }
 
+    const generatedStudentId = role === 'student' ? await studentIds.nextStudentId() : null;
     const user = await User.create({
       name: String(name).trim(),
       email: normalizedEmail,
@@ -199,16 +201,15 @@ const register = async (req, res, next) => {
 
     let extraProfile = {};
     if (role === 'student') {
-      const generatedId = (studentId && String(studentId).trim())
-        ? String(studentId).trim().toUpperCase()
-        : 'STD-' + Math.floor(1000 + Math.random() * 9000);
+      const generatedId = generatedStudentId;
 
-      const student = await Student.create({
+      let student;
+      try { student = await Student.create({
         user: user._id,
         studentId: generatedId,
         gender: gender || 'male',
         phone: phone || '',
-      });
+      }); } catch (error) { await User.findByIdAndDelete(user._id); throw error; }
 
       extraProfile = {
         studentId: student.studentId,

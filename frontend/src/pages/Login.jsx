@@ -569,7 +569,7 @@ export default function LoginPage() {
                 </label>
               </div>
 
-              {/* Submit Button: Brand Telesom Green (#229948) */}
+              {/* Submit Button: Brand Telesom Green (var(--brand-green)) */}
               <button
                 type="submit"
                 className="btn-auth-primary green-btn"

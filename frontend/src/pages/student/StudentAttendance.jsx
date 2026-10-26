@@ -1,14 +1,8 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import './StudentAttendance.css';
 
-const PLACEHOLDER_RECORDS = [
-  { _id:'a1', date:'2026-11-10', course:'CS101',  status:'present' },
-  { _id:'a2', date:'2026-11-10', course:'BUS101', status:'present' },
-  { _id:'a3', date:'2026-11-08', course:'CS101',  status:'absent' },
-  { _id:'a4', date:'2026-11-06', course:'CS101',  status:'present' },
-  { _id:'a5', date:'2026-11-06', course:'BUS101', status:'late' },
-  { _id:'a6', date:'2026-11-04', course:'CS101',  status:'present' },
-];
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -45,10 +39,13 @@ function getCalendarDays(month) {
   });
 }
 export default function StudentAttendance() {
-  const [records, setRecords]     = useState(PLACEHOLDER_RECORDS);
-  const [loading, setLoading]     = useState(false);
+  const [search] = usePageSearch();
+  const [selectedDate, setSelectedDate] = useState(getDateKey(new Date()));
+  const [error, setError] = useState('');
+  const [records, setRecords]     = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [selCourse, setSelCourse] = useState('All');
-  const [displayedMonth, setDisplayedMonth] = useState(() => getLatestRecordMonth(PLACEHOLDER_RECORDS));
+  const [displayedMonth, setDisplayedMonth] = useState(() => getLatestRecordMonth([]));
 
   useEffect(()=>{
     const fetch=async()=>{
@@ -57,21 +54,22 @@ export default function StudentAttendance() {
         const res=await api.get('/student/attendance');
         if(res.data?.attendance) {
           setRecords(res.data.attendance);
-          if (res.data.attendance.length) setDisplayedMonth(getLatestRecordMonth(res.data.attendance));
+          if (res.data.attendance.length) { setDisplayedMonth(getLatestRecordMonth(res.data.attendance)); const latest = res.data.attendance.map(r => parseAttendanceDate(r.date)).filter(d => !Number.isNaN(d.getTime())).sort((a,b) => b-a)[0]; if (latest) setSelectedDate(getDateKey(latest)); }
         }
-      }catch{}finally{setLoading(false);}
+      }catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
     };
     fetch();
   },[]);
 
   const courses = ['All', ...new Set(records.map(r=>r.course))];
-  const filtered = selCourse==='All'?records:records.filter(r=>r.course===selCourse);
+  const filtered = records.filter(r => (selCourse==='All' || r.course===selCourse) && matchesPageSearch(search, r.course, r.date, r.status, r.remarks));
 
-  const total   = filtered.length;
-  const present = filtered.filter(r=>r.status==='present').length;
-  const absent  = filtered.filter(r=>r.status==='absent').length;
-  const late    = filtered.filter(r=>r.status==='late').length;
-  const excused = filtered.filter(r=>r.status==='excused').length;
+  const monthRecords = filtered.filter(r => { const d = parseAttendanceDate(r.date); return d.getFullYear() === displayedMonth.getFullYear() && d.getMonth() === displayedMonth.getMonth(); });
+  const total   = monthRecords.length;
+  const present = monthRecords.filter(r=>r.status==='present').length;
+  const absent  = monthRecords.filter(r=>r.status==='absent').length;
+  const late    = monthRecords.filter(r=>r.status==='late').length;
+  const excused = monthRecords.filter(r=>r.status==='excused').length;
   const attPct  = total?Math.round((present/total)*100):0;
   const recordsByDate = filtered.reduce((grouped, record) => {
     const date = parseAttendanceDate(record.date);
@@ -89,11 +87,12 @@ export default function StudentAttendance() {
 
   return (
     <>
+      {error && <div className="card card-body" role="alert">{error}</div>}
       {/* Attendance overview */}
-      <div className="card attendance-calendar-card">
+      <div className="card attendance-calendar-card attendance-redesign">
         <div className="card-header attendance-calendar-header">
-          <span className="card-title">Attendance Calendar</span>
-          <select className="form-control" style={{width:'auto'}} value={selCourse} onChange={e=>setSelCourse(e.target.value)}>
+          <div><span className="attendance-summary-eyebrow">YOUR LEARNING JOURNEY</span><h2>Attendance calendar</h2><p>A little consistency. A lot of progress.</p></div>
+          <select aria-label="Filter attendance by course" className="form-control" style={{width:'auto'}} value={selCourse} onChange={e=>setSelCourse(e.target.value)}>
             {courses.map(c=><option key={c} value={c}>{c==='All'?'All Courses':c}</option>)}
           </select>
         </div>
@@ -104,16 +103,16 @@ export default function StudentAttendance() {
               <button type="button" className="attendance-month-button" onClick={() => changeMonth(-1)} aria-label="Previous month">
                 ‹
               </button>
-              <h3>{displayedMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3>
+              <h3 aria-live="polite">{displayedMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3>
               <button type="button" className="attendance-month-button" onClick={() => changeMonth(1)} aria-label="Next month">
                 ›
               </button>
             </div>
 
-            <div className="attendance-calendar-scroll">
-              <div className="attendance-calendar-grid" role="grid" aria-label="Attendance by date">
+            <div className="attendance-calendar-caption"><span>Select a day to see your classes</span><button type="button" onClick={() => { setDisplayedMonth(getLatestRecordMonth([])); setSelectedDate(getDateKey(new Date())); }}>Today ↗</button></div><div className="attendance-calendar-scroll">
+              <div className="attendance-calendar-grid" role="group" aria-label="Attendance by date">
                 {WEEKDAYS.map(day => (
-                  <div key={day} className="attendance-weekday" role="columnheader">{day}</div>
+                  <div key={day} className="attendance-weekday">{day}</div>
                 ))}
                 {calendarDays.map(({ date, key, inMonth }) => {
                   const dayRecords = recordsByDate[key] || [];
@@ -126,14 +125,15 @@ export default function StudentAttendance() {
                         : '';
 
                   return (
-                    <div
+                    <button
+                      type="button" onClick={() => setSelectedDate(key)} aria-pressed={selectedDate === key}
                       key={key}
-                      className={`attendance-day ${inMonth ? '' : 'attendance-day-outside'} ${dayStatus ? `attendance-day-${dayStatus}` : ''}`}
-                      role="gridcell"
+                      className={`attendance-day ${key === getDateKey(new Date()) ? 'attendance-today' : ''} ${selectedDate === key ? 'attendance-selected' : ''} ${inMonth ? '' : 'attendance-day-outside'} ${dayStatus ? `attendance-day-${dayStatus}` : ''}`}
+                      aria-current={key === getDateKey(new Date()) ? 'date' : undefined}
                       aria-label={`${date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}${dayRecords.length ? `: ${dayRecords.map(record => `${record.course} ${record.status}`).join(', ')}` : ''}`}
                     >
                       <span className="attendance-day-number">{date.getDate()}</span>
-                      <div className="attendance-day-records">
+                      <span className="attendance-day-records">
                         {dayRecords.map((record, index) => (
                           <span
                             key={record._id || `${key}-${record.course}-${index}`}
@@ -141,11 +141,11 @@ export default function StudentAttendance() {
                             title={`${record.course}: ${record.status}`}
                           >
                             <span className="attendance-status-dot" />
-                            {record.course}
+                            <span className="attendance-course-label">{record.course}</span><span className="attendance-record-symbol">{record.status === 'present' ? '✓' : record.status === 'absent' ? '−' : record.status === 'late' ? '◷' : '↗'}</span>
                           </span>
                         ))}
-                      </div>
-                    </div>
+                      </span>
+                    </button>
                   );
                 })}
               </div>
@@ -155,7 +155,7 @@ export default function StudentAttendance() {
               <div className="attendance-calendar-legend" aria-label="Attendance status legend">
                 <span><i className="attendance-status-dot attendance-dot-present" />Present</span>
                 <span><i className="attendance-status-dot attendance-dot-absent" />Absent</span>
-                <span><i className="attendance-status-dot attendance-dot-excused" />Permission / excused / late</span>
+                <span><i className="attendance-status-dot attendance-dot-excused" />Excused / late</span>
               </div>
               {loading && <span className="attendance-calendar-loading">Updating attendance…</span>}
             </div>
@@ -163,18 +163,16 @@ export default function StudentAttendance() {
 
           <aside className="attendance-summary-panel" aria-label="Attendance summary">
             <div className="attendance-summary-heading">
-              <span className="attendance-summary-eyebrow">Your overview</span>
-              <h3>Attendance summary</h3>
+              <span className="attendance-summary-eyebrow">THIS MONTH</span>
+              <h3>Your consistency</h3><p className="attendance-summary-period">{displayedMonth.toLocaleDateString(undefined, {month:'long', year:'numeric'})} · {total} classes</p>
             </div>
 
             <div className="attendance-rate-card">
-              <div className="attendance-rate-value">{attPct}<span>%</span></div>
-              <div className="attendance-rate-label">Attendance rate</div>
-              <div className="attendance-rate-track" aria-label={`Attendance rate ${attPct}%`}>
-                <span style={{ width: `${attPct}%` }} />
+              <div className="attendance-donut" style={{'--attendance-angle': `${attPct * 3.6}deg`}}>
+                <div><div className="attendance-rate-value">{loading ? '…' : total ? attPct : '—'}{total > 0 && <span>%</span>}</div><div className="attendance-rate-label">Attendance rate</div></div>
               </div>
+              <p>{total ? `${present} of ${total} classes marked present` : 'Your month starts here'}</p>
             </div>
-
             <div className="attendance-summary-list">
               <div className="attendance-summary-item summary-present">
                 <span className="attendance-summary-indicator" />
@@ -199,8 +197,13 @@ export default function StudentAttendance() {
             </div>
 
             {total === 0 && !loading && (
-              <p className="attendance-summary-empty">No attendance records for this course.</p>
+              <p className="attendance-summary-empty">No attendance recorded this month.</p>
             )}
+            <div className="attendance-day-detail" aria-live="polite">
+              <span className="attendance-summary-eyebrow">DAY DETAILS</span>
+              <h4>{parseAttendanceDate(selectedDate).toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'})}</h4>
+              {loading ? <p>Loading your classes…</p> : error ? <p>Day details are unavailable.</p> : (recordsByDate[selectedDate] || []).length ? recordsByDate[selectedDate].map((r,i) => <div className="attendance-detail-row" key={r._id || i}><strong>{r.course}</strong><span className={`attendance-detail-status attendance-record-${r.status}`}>{r.status}</span></div>) : <p>No attendance recorded for this day.</p>}
+            </div>
           </aside>
         </div>
       </div>

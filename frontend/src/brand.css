@@ -1,0 +1,16 @@
+/* Shared brand palette for Admin, Teacher, Student and authentication pages. */
+:root {
+  --brand-green: #31B44A;
+  --brand-green-hover: #29983F;
+  --brand-green-active: #237F34;
+  --brand-green-deep: #164F24;
+  --brand-green-soft: #EDF9EF;
+  --brand-green-tint: #F5FCF6;
+  --brand-green-border: #C5EACD;
+  --brand-gold: #D7982F;
+  --brand-gold-hover: #B67D24;
+  --brand-gold-active: #96651D;
+  --brand-gold-soft: #FCF4E6;
+  --brand-gold-tint: #FEFAF3;
+  --brand-gold-border: #F0D7AC;
+}

@@ -70,7 +70,16 @@ export function AuthProvider({ children }) {
     setAuth({ token: null, user: null });
   }, []);
 
+  const updateUser = useCallback((updated) => {
+    setAuth(current => {
+      const nextUser = { ...current.user, ...updated };
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      return { ...current, user: nextUser };
+    });
+  }, []);
+
   const value = {
+    updateUser,
     user,
     token,
     login,

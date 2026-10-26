@@ -9,7 +9,6 @@ const { createStudent } = require('./userController');
 
 const controller = createResourceController(Student, {
   fields: [
-    'studentId',
     'gender',
     'phone',
     'address',

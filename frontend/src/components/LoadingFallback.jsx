@@ -17,8 +17,8 @@ export default function LoadingFallback() {
       <div style={{
         width: 48,
         height: 48,
-        border: '4px solid #edf8f0',
-        borderTopColor: '#229948',
+        border: '4px solid var(--brand-green-soft)',
+        borderTopColor: 'var(--brand-green)',
         borderRadius: '50%',
         animation: 'spin 0.7s linear infinite',
       }} />

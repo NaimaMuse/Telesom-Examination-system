@@ -97,14 +97,14 @@
 .switch-tab.active.green-tab {
   background-color: var(--telesom-green);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(34, 153, 72, 0.25);
+  box-shadow: 0 2px 8px rgba(49, 180, 74, 0.25);
 }
 
 /* Active Sign Up tab: Warm Gold */
 .switch-tab.active.gold-tab {
   background-color: var(--telesom-gold);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(214, 139, 41, 0.25);
+  box-shadow: 0 2px 8px rgba(215, 152, 47, 0.25);
 }
 
 /* ── Role Selector ── */
@@ -143,7 +143,7 @@
   background-color: #ffffff;
   color: var(--telesom-green-hover);
   border-color: var(--telesom-green);
-  box-shadow: 0 2px 6px rgba(34, 153, 72, 0.12);
+  box-shadow: 0 2px 6px rgba(49, 180, 74, 0.12);
 }
 
 /* Active role in Signup: Gold accent */
@@ -151,7 +151,7 @@
   background-color: #ffffff;
   color: var(--telesom-gold-hover);
   border-color: var(--telesom-gold);
-  box-shadow: 0 2px 6px rgba(214, 139, 41, 0.15);
+  box-shadow: 0 2px 6px rgba(215, 152, 47, 0.15);
 }
 
 /* ── Student Login Method Sub-tabs (Phone OTP vs ID) ── */
@@ -472,15 +472,15 @@
   transition: all var(--transition);
 }
 
-/* Log in button: Telesom Green (#229948) */
+/* Log in button: Telesom Green (var(--brand-green)) */
 .btn-auth-primary.green-btn {
   background-color: var(--telesom-green);
-  box-shadow: 0 3px 10px rgba(34, 153, 72, 0.25);
+  box-shadow: 0 3px 10px rgba(49, 180, 74, 0.25);
 }
 
 .btn-auth-primary.green-btn:hover:not(:disabled) {
   background-color: var(--telesom-green-hover);
-  box-shadow: 0 6px 14px rgba(34, 153, 72, 0.35);
+  box-shadow: 0 6px 14px rgba(49, 180, 74, 0.35);
   transform: translateY(-1px);
 }
 
@@ -489,15 +489,15 @@
   transform: translateY(0);
 }
 
-/* Sign Up button: Telesom Gold (#D68B29) */
+/* Sign Up button: Telesom Gold (var(--brand-gold)) */
 .btn-auth-primary.gold-btn {
   background-color: var(--telesom-gold);
-  box-shadow: 0 3px 10px rgba(214, 139, 41, 0.25);
+  box-shadow: 0 3px 10px rgba(215, 152, 47, 0.25);
 }
 
 .btn-auth-primary.gold-btn:hover:not(:disabled) {
   background-color: var(--telesom-gold-hover);
-  box-shadow: 0 6px 14px rgba(214, 139, 41, 0.35);
+  box-shadow: 0 6px 14px rgba(215, 152, 47, 0.35);
   transform: translateY(-1px);
 }
 

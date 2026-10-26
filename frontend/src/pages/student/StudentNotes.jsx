@@ -1,41 +1,39 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 
-const PLACEHOLDER_NOTES = [
-  { _id:'n1', title:'Week 1 – Python Basics',   course:'CS101',  teacher:'Dr. Abdullahi Said', filename:'week1_python.pdf',  size:'1.2 MB', uploadedAt:'2026-10-01' },
-  { _id:'n2', title:'Week 2 – Control Flow',    course:'CS101',  teacher:'Dr. Abdullahi Said', filename:'week2_control.pdf', size:'980 KB', uploadedAt:'2026-10-08' },
-  { _id:'n3', title:'Week 1 – Intro to Business',course:'BUS101',teacher:'Ms. Farhia Adan',    filename:'bus_week1.pdf',     size:'1.1 MB', uploadedAt:'2026-10-03' },
-];
 
-const PLACEHOLDER_COURSES = ['All','CS101','BUS101'];
 
 export default function StudentNotes() {
-  const [notes, setNotes]     = useState(PLACEHOLDER_NOTES);
-  const [loading, setLoading] = useState(false);
+  const [search] = usePageSearch();
+  const [error, setError] = useState('');
+  const [notes, setNotes]     = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selCourse, setSelCourse] = useState('All');
 
   useEffect(()=>{
     const fetch=async()=>{
       setLoading(true);
-      try{const res=await api.get('/student/notes');if(res.data?.notes)setNotes(res.data.notes);}catch{}finally{setLoading(false);}
+      try{const res=await api.get('/student/notes');if(res.data?.notes)setNotes(res.data.notes);}catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
     };
     fetch();
   },[]);
 
   const filtered = notes.filter(n=>{
-    return selCourse==='All'||n.course===selCourse;
+    return (selCourse==='All'||n.course===selCourse) && matchesPageSearch(search, n.title, n.course, n.teacher, n.content, n.uploadedAt);
   });
 
   return (
     <>
+      {error && <div className="card card-body" role="alert">{error}</div>}
       <div className="filter-bar">
         <select className="form-control" style={{width:'auto'}} value={selCourse} onChange={e=>setSelCourse(e.target.value)}>
-          {PLACEHOLDER_COURSES.map(c=><option key={c} value={c}>{c==='All'?'All Courses':c}</option>)}
+          {['All', ...new Set(notes.map(n=>n.course))].map(c=><option key={c} value={c}>{c==='All'?'All Courses':c}</option>)}
         </select>
       </div>
 
       {loading?<div className="spinner-wrap"><div className="spinner"/></div>
-        :filtered.length===0?<div className="card"><div className="empty-state"><div className="empty-state-icon">📄</div><h3>No notes available</h3><p>Your teachers haven't uploaded any notes yet.</p></div></div>
+        :filtered.length===0?<div className="card"><div className="empty-state"><div className="empty-state-icon">📄</div><h3>{search ? 'No matching notes' : 'No notes available'}</h3><p>Your teachers haven't uploaded any notes yet.</p></div></div>
         :(
         <div className="card">
           <div className="card-body" style={{padding:'1rem 1.4rem'}}>
@@ -43,11 +41,11 @@ export default function StudentNotes() {
               <div key={n._id} className="note-card">
                 <div className="note-icon">📄</div>
                 <div className="note-info">
-                  <h4>{n.title}</h4>
-                  <p>{n.course} • By {n.teacher} • {n.filename} ({n.size}) • {n.uploadedAt}</p>
+                  <h4>{n.title}</h4><p style={{whiteSpace: 'pre-wrap'}}>{n.content}</p>
+                  <p>{n.course} • By {n.teacher} • {n.uploadedAt}</p>
                 </div>
                 <div className="note-actions">
-                  <button className="btn btn-sm btn-primary" onClick={()=>alert('📌 Connect backend to enable real download.')}>
+                  <button className="btn btn-sm btn-primary" onClick={()=>{ const url=URL.createObjectURL(new Blob([n.content], {type:'text/plain;charset=utf-8'})); const link=document.createElement('a'); link.href=url; link.download=`${n.title.replace(/[^a-z0-9 -]/gi, '_')}.txt`; link.click(); URL.revokeObjectURL(url); }}>
                     ⬇️ Download
                   </button>
                 </div>
