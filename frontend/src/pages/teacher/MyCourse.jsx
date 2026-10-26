@@ -354,20 +354,6 @@ export default function MyCourse() {
 
   return (
     <div className="teacher-scope teacher-course-page">
-      <section className="course-page-hero">
-        <span className="course-hero-icon" aria-hidden="true">▤</span>
-        <div className="course-hero-copy">
-          <span className="course-section-kicker">Teaching workspace</span>
-          <h1>{course?.title || course?.name || 'My Course'}</h1>
-          <p>{course?.description || 'Your course materials, assessment schedule, and enrolled learners.'}</p>
-        </div>
-        <div className="course-hero-code">
-          <span>Course code</span>
-          <strong>{course?.courseCode || '—'}</strong>
-          <small>{course?.department || course?.semester || 'Assigned course'}</small>
-        </div>
-      </section>
-
       {error && (
         <div className="course-page-error" role="alert">
           <span aria-hidden="true">!</span>

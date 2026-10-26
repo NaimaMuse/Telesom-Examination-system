@@ -109,17 +109,6 @@ export default function TeacherExams() {
 
   return (
     <div className="teacher-scope teacher-assessments-page">
-      <section className="assessments-hero">
-        <div className="assessments-hero-copy">
-          <span className="assessment-kicker">TEACHING WORKSPACE</span>
-          <h1>Exams &amp; Quizzes</h1>
-          <p>Plan assessments and keep track of what is coming up.</p>
-        </div>
-        <button type="button" className="assessment-create-button" onClick={() => { setEditTarget(null); setShowModal(true); }}>
-          <span aria-hidden="true">+</span> Create {tab === 'exams' ? 'exam' : 'quiz'}
-        </button>
-      </section>
-
       <section className="assessment-summary" aria-label="Assessment totals">
         <article className="assessment-summary-item">
           <span className="assessment-summary-icon total" aria-hidden="true">▤</span>
@@ -141,12 +130,17 @@ export default function TeacherExams() {
             <span className="assessment-kicker">ASSESSMENT LIBRARY</span>
             <h2>Your assessments</h2>
           </div>
-          <div className="assessment-switcher" role="tablist" aria-label="Assessment type">
+          <div className="assessment-list-actions">
+            <div className="assessment-switcher" role="tablist" aria-label="Assessment type">
               <button type="button" id="exams-tab" role="tab" aria-selected={tab === 'exams'} aria-controls="assessments-panel" className={tab === 'exams' ? 'active' : ''} onClick={() => setTab('exams')}>
-              <span>Exams</span><span className="assessment-switch-count">{exams.length}</span>
-            </button>
+                <span>Exams</span><span className="assessment-switch-count">{exams.length}</span>
+              </button>
               <button type="button" id="quizzes-tab" role="tab" aria-selected={tab === 'quizzes'} aria-controls="assessments-panel" className={tab === 'quizzes' ? 'active' : ''} onClick={() => setTab('quizzes')}>
-              <span>Quizzes</span><span className="assessment-switch-count">{quizzes.length}</span>
+                <span>Quizzes</span><span className="assessment-switch-count">{quizzes.length}</span>
+              </button>
+            </div>
+            <button type="button" className="assessment-create-button" onClick={() => { setEditTarget(null); setShowModal(true); }}>
+              <span aria-hidden="true">+</span> Create {tab === 'exams' ? 'exam' : 'quiz'}
             </button>
           </div>
         </div>

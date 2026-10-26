@@ -195,6 +195,17 @@ export default function DashboardLayout({ role }) {
   const isStudentNotesPage = role === 'student' && location.pathname === '/student/notes';
   const isStudentAttendancePage = role === 'student' && location.pathname === '/student/attendance';
   const isStudentAcademicPage = isStudentCoursesPage || isStudentExamsPage || isStudentQuizzesPage || isStudentNotesPage || isStudentAttendancePage;
+  const isTeacherMyCoursePage = role === 'teacher' && location.pathname === '/teacher/my-course';
+  const isTeacherExamsPage = role === 'teacher' && location.pathname === '/teacher/exams';
+  const showGreetingInTopbar = isStudentAcademicPage;
+  const hideTopbarSubtitle = showGreetingInTopbar || isTeacherMyCoursePage || isTeacherExamsPage;
+  const topbarTitle = isTeacherMyCoursePage
+    ? 'Course overview'
+    : isTeacherExamsPage
+      ? 'Exams & Quizzes'
+      : showGreetingInTopbar
+        ? `${greeting()}, ${firstName}`
+        : pageMeta.title;
   const profilePath = role === 'admin' ? '/admin' : `/${role}/profile`;
 
   const handleLogout = () => {
@@ -292,10 +303,10 @@ export default function DashboardLayout({ role }) {
               ☰
             </button>
             <div>
-              <div className={`topbar-page-title ${isStudentAcademicPage ? 'topbar-greeting' : ''}`}>
-                {isStudentAcademicPage ? `${greeting()}, ${firstName}` : pageMeta.title}
+              <div className={`topbar-page-title ${showGreetingInTopbar ? 'topbar-greeting' : ''}`}>
+                {topbarTitle}
               </div>
-              {!isStudentAcademicPage && (
+              {!hideTopbarSubtitle && (
                 <div className="topbar-page-subtitle">{pageMeta.hint}</div>
               )}
             </div>

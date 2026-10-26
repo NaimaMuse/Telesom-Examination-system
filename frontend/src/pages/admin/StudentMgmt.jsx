@@ -8,7 +8,6 @@ import api from '../../services/api';
 // ─────────────────── STUDENT MANAGEMENT ────────────────────────
 const STUDENT_FIELDS = [
   { key: 'name',      label: 'Full Name',   type: 'text',     required: true },
-  { key: 'studentId', label: 'Student ID',  type: 'text',     required: true },
   { key: 'email',     label: 'Email',       type: 'email',    required: true },
   { key: 'gender',    label: 'Gender',      type: 'select', options: ['male', 'female'], required: true },
   { key: 'phone',     label: 'Phone',       type: 'tel' },
@@ -43,6 +42,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
+            {title === 'Add New Student' && <p className="student-id-generated-note">A Student ID will be generated automatically.</p>}
             <div className="grid-2">
               {fields.map(f => (
                 <div className="form-group" key={f.key}>
@@ -106,7 +106,7 @@ function ConfirmModal({ message, onConfirm, onCancel, loading }) {
 const PAGE_SIZE = 8;
 
 const STUDENT_TEMPLATE_COLUMNS = [
-  'Full Name', 'Email', 'Student ID', 'Gender', 'Phone', 'Course', 'Address', 'Batch / Year',
+  'Full Name', 'Email', 'Gender', 'Phone', 'Course', 'Address', 'Batch / Year',
 ];
 
 const normalizeHeader = (value) => String(value || '')
@@ -119,8 +119,6 @@ const STUDENT_COLUMN_MAP = {
   name: 'name',
   studentname: 'name',
   email: 'email',
-  studentid: 'studentId',
-  id: 'studentId',
   gender: 'gender',
   sex: 'gender',
   phone: 'phone',
@@ -147,7 +145,7 @@ function downloadStudentTemplate() {
   return import('xlsx').then((XLSX) => {
     const worksheet = XLSX.utils.aoa_to_sheet([
       STUDENT_TEMPLATE_COLUMNS,
-      ['Amina Hassan', 'amina@example.com', 'STU-2026-001', 'female', '+252 61 1234567', 'CS101', 'Hargeisa', '2026'],
+      ['Amina Hassan', 'amina@example.com', 'female', '+252 61 1234567', 'CS101', 'Hargeisa', '2026'],
     ]);
     worksheet['!cols'] = STUDENT_TEMPLATE_COLUMNS.map((column) => ({ wch: Math.max(column.length + 4, 18) }));
     const workbook = XLSX.utils.book_new();
@@ -193,7 +191,7 @@ function ImportStudentsModal({ onClose, onImport, importing, report }) {
           <button type="button" className="modal-close" aria-label="Close upload dialog" onClick={onClose}>×</button>
         </div>
         <div className="modal-body student-import-body">
-          <p className="student-import-intro">Choose an Excel workbook or CSV file. Each valid row creates a student account using the Student ID sign-in flow.</p>
+          <p className="student-import-intro">Choose an Excel workbook or CSV file. Each valid row creates a student account with an automatically generated Student ID.</p>
           <button type="button" className="student-template-button" onClick={downloadStudentTemplate}><span aria-hidden="true">↓</span> Download Excel template</button>
           <label className="student-file-drop">
             <span className="student-file-icon" aria-hidden="true">↑</span>
@@ -201,7 +199,7 @@ function ImportStudentsModal({ onClose, onImport, importing, report }) {
             <small>.xlsx, .xls, or .csv</small>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} />
           </label>
-          <div className="student-import-requirements"><strong>Required columns</strong><span>Full Name · Email · Student ID · Gender · Course</span></div>
+          <div className="student-import-requirements"><strong>Required columns</strong><span>Full Name · Email · Gender · Course</span></div>
           {rows.length > 0 && !report && <div className="student-import-preview" role="status">{rows.length} student {rows.length === 1 ? 'row' : 'rows'} ready to import.</div>}
           {parseError && <div className="student-import-error" role="alert">{parseError}</div>}
           {report && (
@@ -326,7 +324,7 @@ export default function StudentMgmt() {
   const handleSave = async (form) => {
     const selectedCourse = courses.find(course => String(course._id) === String(form.course));
     const academicYear = form.academicYear || selectedCourse?.academicYear || String(new Date().getFullYear());
-    const { course: courseId, ...studentFields } = form;
+    const { course: courseId, studentId: ignoredStudentId, ...studentFields } = form;
     studentFields.academicYear = academicYear;
     let studentId = editTarget?._id;
 
@@ -361,7 +359,7 @@ export default function StudentMgmt() {
     try {
       for (const student of rows) {
         const { _rowNumber: row, ...payload } = student;
-        const missing = ['name', 'email', 'studentId', 'gender', 'course'].filter((field) => !String(payload[field] || '').trim());
+        const missing = ['name', 'email', 'gender', 'course'].filter((field) => !String(payload[field] || '').trim());
         if (missing.length) {
           errors.push({ row, message: `Missing ${missing.join(', ')}.` });
           continue;

@@ -4,6 +4,7 @@ const { createStudent, createTeacher } = require('../controllers/userController'
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
+const Counter = require('../models/Counter');
 
 const runTests = async () => {
   let passed = 0;
@@ -54,12 +55,15 @@ const runTests = async () => {
 
   const origUserFindOne = User.findOne;
   const origStudentFindOne = Student.findOne;
+  const origStudentExists = Student.exists;
   const origTeacherFindOne = Teacher.findOne;
   const origUserCreate = User.create;
   const origStudentCreate = Student.create;
   const origTeacherCreate = Teacher.create;
   const origUserDelete = User.findByIdAndDelete;
   const origStartSession = mongoose.startSession;
+  const origCounterFindOneAndUpdate = Counter.findOneAndUpdate;
+  let studentSequence = 2000;
 
   mongoose.startSession = async () => ({
     startTransaction() {},
@@ -70,6 +74,8 @@ const runTests = async () => {
 
   User.findOne = () => Promise.resolve(null);
   Student.findOne = () => Promise.resolve(null);
+  Student.exists = () => Promise.resolve(null);
+  Counter.findOneAndUpdate = async () => ({ sequence: ++studentSequence });
   Teacher.findOne = () => Promise.resolve(null);
   User.findByIdAndDelete = () => Promise.resolve();
 
@@ -101,7 +107,7 @@ const runTests = async () => {
     assert(
       result.statusCode === 400 &&
         result.nextCalled &&
-        /student ID/i.test(result.nextError.message),
+        /name, email, and gender/i.test(result.nextError.message),
       'Student creation rejects missing required fields'
     );
   }
@@ -141,21 +147,22 @@ const runTests = async () => {
   }
 
   {
-    Student.findOne = () => Promise.resolve({ studentId: 'STD-2001' });
+    let existsChecks = 0;
+    Student.exists = async () => (++existsChecks === 1 ? { _id: 'legacy' } : null);
     const { req, res, next, getResult } = createMock({
       name: 'Amina Student',
       email: 'amina@student.telesom.com',
-      studentId: 'std-2001',
       gender: 'female',
     });
     await createStudent(req, res, next);
     const result = getResult();
     assert(
-      result.statusCode === 409 &&
-        result.nextError.message === 'Student ID already exists',
-      'Student creation rejects duplicate Student ID'
+      result.statusCode === 201 &&
+        result.responseBody?.data?.student?.studentId === 'STD-2002' &&
+        existsChecks === 2,
+      'Student ID generation skips IDs already used by existing students'
     );
-    Student.findOne = () => Promise.resolve(null);
+    Student.exists = () => Promise.resolve(null);
   }
 
   {
@@ -173,7 +180,7 @@ const runTests = async () => {
     const { req, res, next, getResult } = createMock({
       name: '  Amina Student  ',
       email: '  Amina@Student.Telesom.com ',
-      studentId: 'std-2001',
+      studentId: 'USER-PROVIDED-ID',
       gender: 'Female',
       academicYear: '2026',
     });
@@ -185,7 +192,7 @@ const runTests = async () => {
         result.responseBody?.success === true &&
         result.responseBody?.data?.user?.role === 'student' &&
         result.responseBody?.data?.user?.email === 'amina@student.telesom.com' &&
-        result.responseBody?.data?.student?.studentId === 'STD-2001' &&
+        result.responseBody?.data?.student?.studentId === 'STD-2003' &&
         createdUserPayload.password === undefined &&
         result.responseBody?.data?.user?.password === undefined,
       'Student account is created without a password and returns safe data'
@@ -226,7 +233,7 @@ const runTests = async () => {
     const { req, res, next, getResult } = createMock({
       name: 'Amina Student',
       email: 'amina@student.telesom.com',
-      studentId: 'STD-2001',
+      studentId: 'STD-2004',
       gender: 'female',
     });
     await createStudent(req, res, next);
@@ -343,12 +350,14 @@ const runTests = async () => {
 
   User.findOne = origUserFindOne;
   Student.findOne = origStudentFindOne;
+  Student.exists = origStudentExists;
   Teacher.findOne = origTeacherFindOne;
   User.create = origUserCreate;
   Student.create = origStudentCreate;
   Teacher.create = origTeacherCreate;
   User.findByIdAndDelete = origUserDelete;
   mongoose.startSession = origStartSession;
+  Counter.findOneAndUpdate = origCounterFindOneAndUpdate;
 
   console.log(`\nTests finished: ${passed} passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);

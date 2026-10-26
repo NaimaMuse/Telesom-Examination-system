@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { loginUser, signupUser } from '../services/authService';
 
 /**
@@ -27,6 +27,12 @@ const loadStoredAuth = () => {
 
 export function AuthProvider({ children }) {
   const [{ token, user }, setAuth] = useState(loadStoredAuth);
+
+  useEffect(() => {
+    const clearAuth = () => setAuth({ token: null, user: null });
+    window.addEventListener('auth:unauthorized', clearAuth);
+    return () => window.removeEventListener('auth:unauthorized', clearAuth);
+  }, []);
 
   /**
    * login()

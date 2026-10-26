@@ -122,24 +122,6 @@ export default function LoginPage() {
         });
         navigate('/dashboard', { replace: true });
       } catch (err) {
-        // Fallback for development if backend only has STD-1001 ID route
-        if (err.response?.status === 401 || err.response?.status === 400 || !err.response) {
-          // If demo code 123456 was entered, log into student dashboard
-          if (otpCode.trim() === '123456' || otpCode.trim() === '000000') {
-            const mockStudent = {
-              _id: 'std-' + Date.now(),
-              name: 'Student (Phone Verified)',
-              phone: phone.trim(),
-              studentId: 'STD-1001',
-              role: 'student',
-              isActive: true,
-            };
-            localStorage.setItem('token', 'mock-jwt-token-' + Date.now());
-            localStorage.setItem('user', JSON.stringify(mockStudent));
-            window.location.href = '/dashboard';
-            return;
-          }
-        }
         const msg = err.response?.data?.message || 'Invalid verification code. Please check and try again.';
         setError(msg);
       } finally {
