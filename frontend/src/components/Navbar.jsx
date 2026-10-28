@@ -138,13 +138,7 @@ export default function Navbar() {
           </Link>
 
           {/* Sign Up Button (Telesom Gold) */}
-          <Link
-            to="/signup"
-            className={`btn-nav-signup${isSignupPage ? ' current-page' : ''}`}
-            aria-current={isSignupPage ? 'page' : undefined}
-          >
-            Sign Up
-          </Link>
+
 
           {/* Mobile Menu Hamburger */}
           <button
@@ -189,13 +183,7 @@ export default function Navbar() {
             >
               Log in
             </Link>
-            <Link
-              to="/signup"
-              className="btn-nav-signup"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Sign Up
-            </Link>
+
           </div>
         </div>
       )}

@@ -12,12 +12,12 @@ async function syncAssessmentCompletion(Assessment, assessment, type) {
   if (assessment.status === 'cancelled') return;
   const Result = type === 'exam' ? ExamResult : QuizResult;
   const [enrolled, results] = await Promise.all([
-    Enrollment.distinct('student', { course: assessment.course, status: 'enrolled' }),
+    Enrollment.distinct('student', { course: assessment.course, status: 'enrolled',...(assessment.academicYear?{academicYear:assessment.academicYear}:{}),...(assessment.batch?{batch:assessment.batch}:{}) }),
     Result.find({ [type]: assessment._id }).select('student marksObtained').lean(),
   ]);
   const complete = allStudentsGraded(enrolled, results, assessment.totalMarks);
   if (complete || assessment.status === 'completed') {
-    await Assessment.updateOne({ _id: assessment._id, status: { $ne: 'cancelled' } }, { $set: { status: complete ? 'completed' : 'ongoing' } });
+    await Assessment.updateOne({ _id: assessment._id, status: { $ne: 'cancelled' } }, { $set: { status: complete ? 'completed' : type==='quiz'?'published':'ongoing' } });
   }
 }
 module.exports = { allStudentsGraded, syncAssessmentCompletion };

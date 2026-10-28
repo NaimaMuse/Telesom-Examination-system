@@ -1839,3 +1839,53 @@ select.form-control { cursor: pointer; }
 /* Keep page search available on smaller screens. */
 @media(max-width:768px){.dash-topbar .topbar-search{display:flex;width:130px;min-width:0;padding-inline:8px;gap:4px}.dash-topbar .topbar-search input{width:100%;min-width:0;font-size:.7rem}.dash-topbar .topbar-right{gap:7px}.dash-topbar .topbar-page-subtitle{display:none}}
 @media(max-width:480px){.dash-topbar .topbar-search{width:110px}.dash-topbar{padding-inline:10px}.dash-topbar .topbar-page-title{font-size:.75rem}.dash-topbar .topbar-profile{padding:5px}.dash-topbar .topbar-profile-name{font-size:.65rem}}
+
+/* Teacher account and contract form */
+.teacher-form-modal { width: min(540px, calc(100vw - 24px)); max-width: 540px; max-height: none; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #d8ebdc; border-radius: 18px; box-shadow: 0 24px 80px rgba(17,65,29,.22); }
+.teacher-form-modal > form { display: flex; flex-direction: column; min-height: 0; overflow: visible; }
+.teacher-form-header { align-items: flex-start; padding: 14px 18px; background: linear-gradient(120deg,#effaf1,#fff); border-bottom: 1px solid #d8ebdc; border-top: 4px solid #31B44A; }
+.teacher-form-eyebrow { display: block; margin-bottom: 7px; color: #D7982F; font-size: 10px; font-weight: 800; letter-spacing: 1.6px; }
+.teacher-form-header .modal-title { margin: 0; color: #175c29; font-size: 20px; font-weight: 800; }
+.teacher-form-header p { margin: 6px 0 0; color: #65836c; font-size: 12px; }
+.teacher-form-header .modal-close { background: #fff; color: #207a31; border: 1px solid #d8ebdc; border-radius: 50%; width: 32px; height: 32px; }
+.teacher-form-modal .modal-body { padding: 14px 18px; overflow: visible; max-height: none; }
+.teacher-form-grid { gap: 10px 14px; }
+.teacher-form-modal .form-group { margin: 0; }
+.teacher-form-modal .form-label { display: block; margin-bottom: 4px; color: #285c35; font-size: 12px; font-weight: 700; }
+.teacher-form-modal .form-control { width: 100%; min-height: 36px; height: 36px; padding: 7px 10px; background: #fbfefb; border: 1px solid #d4e5d8; border-radius: 9px; font-size: 13px; color: #214e2c; transition: border-color .15s, box-shadow .15s; }
+.teacher-form-modal .form-control:focus { outline: none; border-color: #31B44A; box-shadow: 0 0 0 3px rgba(49,180,74,.12); background: #fff; }
+.teacher-form-modal .modal-footer { padding: 11px 18px; background: #f5faf6; border-top: 1px solid #e2ede4; gap: 10px; }
+.teacher-form-modal .btn { border-radius: 9px; padding: 8px 16px; font-size: 12px; font-weight: 700; }
+.teacher-form-modal .btn-primary { background: #31B44A; border-color: #31B44A; color: #fff; box-shadow: 0 3px 8px rgba(49,180,74,.15); }
+.teacher-form-modal .btn-primary:hover:not(:disabled) { background: #278f3b; border-color: #278f3b; }
+.teacher-form-modal .btn-secondary { background: #fff; border-color: #d7e5da; color: #376141; }
+@media(max-width: 560px) { .teacher-form-grid { grid-template-columns: 1fr; } .teacher-form-header, .teacher-form-modal .modal-body, .teacher-form-modal .modal-footer { padding: 14px; } }
+.teacher-details-contracts { margin-top: 18px; }
+.teacher-details-contracts h3 { margin: 0 0 10px; color: #175c29; font-size: 15px; }
+.teacher-details-contract { border: 1px solid #d8ebdc; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #fbfefb; }
+.teacher-details-contract-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; color: #175c29; font-size: 13px; }
+.teacher-details-contract-heading > span { color: #885d18; background: #fcf3e3; padding: 4px 9px; border-radius: 20px; font-size: 11px; }
+.teacher-details-contract-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 12px 0; }
+.teacher-details-contract-metrics > div { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 8px; background: #edf8ef; }
+.teacher-details-contract-metrics strong { font-size: 22px; color: #207a31; }
+.teacher-details-contract-metrics span { font-size: 11px; color: #56715d; }
+.teacher-details-contract-metrics > div:last-child { background: #fcf3e3; }
+.teacher-details-contract-metrics > div:last-child strong { color: #a06f22; }
+.teacher-details-contract-empty { color: #6b7e70; font-size: 13px; }
+/* Compact course and student dialogs share the academy form palette. */
+.course-form-modal.teacher-form-modal .course-form-wide textarea.form-control { height: 60px; min-height: 60px; resize: none; }
+.course-form-modal.teacher-form-modal .course-form-grid { gap: 10px 14px; }
+.student-form-modal.teacher-form-modal .form-control[readonly] { background: #fcf3e3; border-color: #ecd8b6; color: #885d18; font-size: 11px; }
+.student-form-modal.teacher-form-modal .student-form-error { margin: 0 18px 10px; }
+@media(max-width: 560px) { .course-form-modal.teacher-form-modal .course-form-grid { grid-template-columns: 1fr; } }
+/* Unified My Course: preserve the course hero, cards and green tabs. */
+.course-workspace-selector { display: flex; align-items: end; gap: 18px; padding: 16px 20px; margin: 18px 0; background: #fff; border: 1px solid #dcecdf; border-radius: 12px; flex-wrap: wrap; }
+.course-workspace-selector label { flex: 1; min-width: 220px; font-size: 11px; font-weight: 750; color: #376141; }.course-workspace-selector label select { margin-top: 7px; min-height: 39px; font-size: 12px; }
+.course-cohort-badges { display: flex; gap: 7px; flex-wrap: wrap; padding-bottom: 5px; }.course-cohort-badges span { padding: 6px 10px; border-radius: 7px; background: #eaf7ed; color: #27833a; font-size: 11px; font-weight: 700; }.course-cohort-badges span:last-child { background: #fcf3e3; color: #a17026; }
+.teacher-course-page .course-tabs { flex-wrap: wrap; }.course-tabs .course-tab:disabled { opacity: .55; cursor: not-allowed; }.course-draft-hint { margin: 10px 0; font-size: 12px; color: #996b22; }
+.course-contract-summary { padding: 18px; margin: 20px 0; border: 1px solid #dcecdf; border-radius: 12px; background: linear-gradient(110deg,#f6fcf7,#fff); }.course-contract-summary .contract-metrics { margin: 14px 0; }.course-contract-summary .contract-metrics > div { background: #fff; padding: 15px; }.course-contract-summary .contract-metrics > div:nth-child(3) { border-top: 3px solid #D7982F; }.course-contract-summary .contract-metrics > div:nth-child(3) strong { color: #a97627; }
+.course-contract-progress { display: flex; align-items: center; gap: 15px; font-size: 11px; color: #65836c; margin: 12px 0; }.course-contract-progress progress { flex: 1; height: 8px; accent-color: #31B44A; border: 0; border-radius: 6px; }
+.course-outline-integrated { margin-top: 0!important; }.course-outline-integrated .teaching-outline-section { margin-top: 0; padding-top: 0; border-top: 0; }.course-outline-integrated .contract-heading.lessons-heading { margin-top: 18px; }
+.course-assessment-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }.course-assessment-tabs button { padding: 10px 16px; border: 1px solid #dcecdf; border-radius: 8px; color: #577361; background: #fff; font-size: 12px; cursor: pointer; }.course-assessment-tabs button.active { border-color: #31B44A; background: #edf8ef; color: #207a31; font-weight: 750; }.course-assessment-tabs button:disabled { opacity: .6; cursor: not-allowed; }
+.mycourse-assessment-panel .results-page-hero { display: none; }.mycourse-assessment-panel .assessments-hero { padding: 18px; }.mycourse-assessment-panel .assessments-hero h1 { font-size: 21px; }
+@media(max-width:650px) { .course-workspace-selector { gap: 12px; padding: 14px; }.course-workspace-selector label { min-width: 100%; }.course-contract-summary { padding: 13px; }.course-contract-summary .contract-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }.course-contract-progress { flex-direction: column; align-items: stretch; gap: 8px; } }

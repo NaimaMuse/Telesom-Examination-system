@@ -1,3 +1,4 @@
+import {AssessmentProgress} from '../../components/AcademyWorkspace';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
@@ -11,13 +12,38 @@ export default function StudentExams() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(()=>{
-    const fetch=async()=>{
-      setLoading(true);
-      try{const res=await api.get('/student/results');if(res.data?.results)setResults(res.data.results);}catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
+  useEffect(() => {
+    let active = true;
+    let busy = false;
+    const controller = new AbortController();
+    const loadResults = async () => {
+      if (busy || !active) return;
+      busy = true;
+      try {
+        const { data } = await api.get('/student/results', { signal: controller.signal });
+        if (!active) return;
+        setResults(data.results || []);
+        setError('');
+      } catch (err) {
+        if (active) setError(err.response?.data?.message || 'Results could not refresh. Retrying automatically.');
+      } finally {
+        busy = false;
+        if (active) setLoading(false);
+      }
     };
-    fetch();
-  },[]);
+    const refresh = () => { if (!document.hidden) loadResults(); };
+    loadResults();
+    const timer = setInterval(refresh, 10000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      active = false;
+      controller.abort();
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
 
   const visibleResults = results.filter(r => matchesPageSearch(search, r.course, r.exam, r.date, r.grade, r.status, r.marks));
   const avg = results.length ? Math.round(results.reduce((a,r)=>a+(r.marks/r.totalMarks)*100,0)/results.length) : 0;
@@ -25,6 +51,7 @@ export default function StudentExams() {
   return (
     <>
       {error && <div className="card card-body" role="alert">{error}</div>}
+      <AssessmentProgress />
       <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
         <div className="stat-card"><div className="stat-icon blue">📊</div><div className="stat-info"><div className="stat-value">{avg}%</div><div className="stat-label">Average Score</div></div></div>
         <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><div className="stat-value">{results.filter(r=>r.isPassed===true).length}</div><div className="stat-label">Passed Exams</div></div></div>
@@ -35,6 +62,7 @@ export default function StudentExams() {
       <div className="card">
         <div className="card-header">
           <span className="card-title">My Results ({visibleResults.length})</span>
+          <span style={{fontSize:'0.7rem',color:'var(--text-muted)'}}>Auto-refresh · every 10 seconds</span>
         </div>
 
         {loading?<div className="spinner-wrap"><div className="spinner"/></div>

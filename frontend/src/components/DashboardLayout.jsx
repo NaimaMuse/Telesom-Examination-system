@@ -1,3 +1,6 @@
+import {AcademyReports,BatchManagement,CourseOutlines,MakeupClasses} from './AcademyWorkspace';
+import TeacherContracts from './TeacherContracts';
+import ChangePasswordModal from './ChangePasswordModal';
 import NotificationBell from './NotificationBell';
 import TelesomLogo from './TelesomLogo';
 import { useState, useEffect } from 'react';
@@ -47,6 +50,7 @@ const NAV = {
       items: [
         { to: '/admin/students',   label: 'Student Management', icon: '🎓' },
         { to: '/admin/teachers',   label: 'Teacher Management', icon: '👨‍🏫' },
+        { to: '/admin/batches', label: 'Years & Batches', icon: '🗓️' },
         { to: '/admin/courses',    label: 'Course Management',  icon: '📚' },
       ],
     },
@@ -56,6 +60,9 @@ const NAV = {
         { to: '/admin/exams',      label: 'Exam & Quiz Mgmt',  icon: '📝' },
         { to: '/admin/marks',      label: 'Marks & Results',   icon: '📊' },
         { to: '/admin/attendance', label: 'Attendance',         icon: '📅' },
+        { to: '/admin/reports', label: 'Reports Center', icon: '📑' },
+        { to: '/admin/outlines', label: 'Teaching & Outlines', icon: '📖' },
+        { to: '/admin/makeup', label: 'Makeup Classes', icon: '🗓️' },
         { to: '/admin/analytics',  label: 'Analytics & Reports',icon: '📈' },
       ],
     },
@@ -67,8 +74,9 @@ const NAV = {
         { to: '/teacher', label: 'Dashboard', icon: '🏠', end: true },
         { to: '/teacher/my-course', label: 'My Course', icon: '📚' },
         { to: '/teacher/exams', label: 'Exams & Quizzes', icon: '📝' },
-        { to: '/teacher/results', label: 'Results & Marks', icon: '📋' },
+        { to: '/teacher/results', label: 'Result', icon: '📋' },
         { to: '/teacher/performance', label: 'Student Performance', icon: '📊' },
+        { to: '/teacher/makeup', label: 'Makeup Classes', icon: '🗓️' },
         { to: '/teacher/profile', label: 'My Profile', icon: '👤' },
       ],
     },
@@ -86,6 +94,8 @@ const NAV = {
         { to: '/student/courses',   label: 'My Courses',      icon: '📚' },
         { to: '/student/exams',     label: 'Exams & Results', icon: '📊' },
         { to: '/student/quizzes',   label: 'Quizzes',         icon: '📝' },
+        { to: '/student/makeup', label: 'Makeup Classes', icon: '🗓️' },
+        { to: '/student/outlines', label: 'Course Outlines', icon: '📖' },
         { to: '/student/notes',     label: 'Study Notes',     icon: '📄' },
         { to: '/student/attendance',label: 'Attendance',      icon: '📅' },
       ],
@@ -99,12 +109,22 @@ const NAV = {
   ],
 };
 
+function LegacyTeachingRedirect({tab='outline'}) {
+  const location=useLocation();const params=new URLSearchParams(location.search);params.set('tab',tab);
+  return <Navigate to={'/teacher/my-course?'+params.toString()} replace/>;
+}
+
 const ROLE_ROUTES = {
   admin: (
     <Routes>
       <Route index            element={<AdminDashboard />} />
       <Route path="students"  element={<StudentMgmt />} />
       <Route path="teachers"  element={<TeacherMgmt />} />
+      <Route path="reports" element={<AcademyReports />} />
+      <Route path="batches" element={<BatchManagement />} />
+      <Route path="outlines" element={<TeacherContracts admin combined />} />
+      <Route path="makeup" element={<MakeupClasses role="admin" />} />
+      <Route path="contracts" element={<TeacherContracts admin combined />} />
       <Route path="courses"   element={<CourseMgmt />} />
       <Route path="exams"     element={<ExamMgmt />} />
       <Route path="marks"     element={<MarksMgmt />} />
@@ -117,9 +137,13 @@ const ROLE_ROUTES = {
     <Routes>
       <Route index              element={<TeacherDashboard />} />
       <Route path="my-course"  element={<MyCourse />} />
+      <Route path="my-course/outline" element={<MyCourse outlinePage />} />
       <Route path="exams"     element={<TeacherExams />} />
       <Route path="results"  element={<TeacherResults />} />
       <Route path="performance" element={<TeacherPerformance />} />
+      <Route path="outlines" element={<LegacyTeachingRedirect />} />
+      <Route path="contracts" element={<LegacyTeachingRedirect tab="overview" />} />
+      <Route path="makeup" element={<MakeupClasses role="teacher" />} />
       <Route path="profile"   element={<TeacherProfile />} />
       <Route path="*"         element={<Navigate to="/teacher" replace />} />
     </Routes>
@@ -132,6 +156,8 @@ const ROLE_ROUTES = {
       <Route path="quizzes"     element={<StudentQuizzes />} />
       <Route path="notes"       element={<StudentNotes />} />
       <Route path="attendance"  element={<StudentAttendance />} />
+      <Route path="makeup" element={<MakeupClasses role="student" />} />
+      <Route path="outlines" element={<CourseOutlines role="student" />} />
       <Route path="profile"     element={<StudentProfile />} />
       <Route path="*"           element={<Navigate to="/student" replace />} />
     </Routes>
@@ -139,8 +165,17 @@ const ROLE_ROUTES = {
 };
 
 const PAGE_META = {
+  '/teacher/my-course/outline': {title:'Course Planner',hint:'Plan lessons, organize topics and track teaching progress.'},
+  '/admin/reports': {title:'Reports Center',hint:'Filtered academy reports and exports.'},
+  '/admin/batches': {title:'Years & Batches',hint:'Organize enrollments by academic year and batch.'},
+  '/admin/outlines': {title:'Teaching & Outlines',hint:'Contract days, course plans and lesson progress.'},
+  '/admin/makeup': {title:'Makeup Classes',hint:'Schedule replacements for missed lessons.'},
+  '/teacher/outlines': {title:'Teaching & Outlines',hint:'Your contract and course plan in one workspace.'},
+  '/teacher/makeup': {title:'Makeup Classes',hint:'Your assigned replacement lessons.'},
+  '/student/outlines': {title:'Course Outlines',hint:'Published lessons and course progress.'},
   '/admin': { title: 'Admin Dashboard', hint: 'Overview of students, courses, exams, and reports.' },
   '/admin/students': { title: 'Student Management', hint: 'Add, edit, and manage student records.' },
+  '/admin/contracts': { title: 'Teacher Contracts', hint: 'Monitor completed teaching days and contract balances.' },
   '/admin/teachers': { title: 'Teacher Management', hint: 'Manage faculty accounts and assignments.' },
   '/admin/courses': { title: 'Course Management', hint: 'Create and organize academic courses.' },
   '/admin/exams': { title: 'Exam & Quiz Management', hint: 'Schedule and configure assessments.' },
@@ -148,9 +183,9 @@ const PAGE_META = {
   '/admin/attendance': { title: 'Attendance', hint: 'Track and review class attendance.' },
   '/admin/analytics': { title: 'Analytics & Reports', hint: 'Insights and performance summaries.' },
   '/teacher': { title: 'Teacher Dashboard', hint: 'Your courses, exams, and class at a glance.' },
-  '/teacher/my-course': { title: 'My Course', hint: 'Course content and enrolled students.' },
+  '/teacher/my-course': { title: 'My Course', hint: 'Course information, outlines, materials, students and assessments.' },
   '/teacher/exams': { title: 'Exams & Quizzes', hint: 'Create and manage assessments.' },
-  '/teacher/results': { title: 'Results & Marks', hint: 'Enter and review results for your enrolled students.' },
+  '/teacher/results': { title: 'Result', hint: 'Enter and review results for your enrolled students.' },
   '/teacher/performance': { title: 'Student Performance', hint: 'Scores, trends, and progress.' },
   '/teacher/profile': { title: 'My Profile', hint: 'Your account and contact details.' },
   '/student': { title: 'Student Dashboard', hint: 'Courses, marks, and upcoming exams.' },
@@ -211,7 +246,8 @@ export default function DashboardLayout({ role }) {
 
   return (
     <div className={`dash-shell ${role === 'teacher' ? 'teacher-shell' : ''}`}>
-      {showGreeting && <div className="dashboard-greeting-popup" role="status">
+      {role === 'teacher' && user?.mustChangePassword && <ChangePasswordModal required onSignOut={handleLogout} />}
+      {showGreeting && !user?.mustChangePassword && <div className="dashboard-greeting-popup" role="status">
         <span className="dashboard-greeting-mark" aria-hidden="true">☀</span>
         <div><strong>{greeting()}, {firstName}</strong><p>Welcome to your {role} dashboard.</p></div>
         <button type="button" aria-label="Dismiss greeting" onClick={() => setShowGreeting(false)}>×</button>

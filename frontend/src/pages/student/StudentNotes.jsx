@@ -1,5 +1,6 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../../services/api';
 
 
@@ -11,14 +12,14 @@ export default function StudentNotes() {
   const [loading, setLoading] = useState(true);
   const [selCourse, setSelCourse] = useState('All');
 
-  useEffect(()=>{
-    const fetch=async()=>{
-      setLoading(true);
-      try{const res=await api.get('/student/notes');if(res.data?.notes)setNotes(res.data.notes);}catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
-    };
-    fetch();
-  },[]);
-
+  useAutoRefresh(async ({ signal, isCurrent }) => {
+    try {
+      const { data } = await api.get('/student/notes', { signal });
+      if (!isCurrent()) return;
+      setNotes(data.notes || []); setError('');
+    } catch (err) { if (isCurrent()) setError(err.response?.data?.message || 'Data could not refresh. Retrying automatically.'); }
+    finally { if (isCurrent()) setLoading(false); }
+  });
   const filtered = notes.filter(n=>{
     return (selCourse==='All'||n.course===selCourse) && matchesPageSearch(search, n.title, n.course, n.teacher, n.content, n.uploadedAt);
   });
@@ -45,7 +46,7 @@ export default function StudentNotes() {
                   <p>{n.course} • By {n.teacher} • {n.uploadedAt}</p>
                 </div>
                 <div className="note-actions">
-                  <button className="btn btn-sm btn-primary" onClick={()=>{ const url=URL.createObjectURL(new Blob([n.content], {type:'text/plain;charset=utf-8'})); const link=document.createElement('a'); link.href=url; link.download=`${n.title.replace(/[^a-z0-9 -]/gi, '_')}.txt`; link.click(); URL.revokeObjectURL(url); }}>
+                  <button className="btn btn-sm btn-primary" onClick={async()=>{ if(n.hasAttachment){try{const response=await api.get('/student/materials/'+n._id+'/file',{responseType:'blob'});const url=URL.createObjectURL(response.data),link=document.createElement('a');link.href=url;link.download=n.filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}catch{setError('Study document could not be downloaded.');}return;} const url=URL.createObjectURL(new Blob([n.content], {type:'text/plain;charset=utf-8'})); const link=document.createElement('a'); link.href=url; link.download=`${n.title.replace(/[^a-z0-9 -]/gi, '_')}.txt`; link.click(); URL.revokeObjectURL(url); }}>
                     ⬇️ Download
                   </button>
                 </div>

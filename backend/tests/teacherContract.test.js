@@ -1,0 +1,14 @@
+const assert=require('assert');
+const {calculateBalance,teachingDay,validDate,validateContract}=require('../services/teacherContractService');
+const contract={totalDays:90,startDate:'2026-01-01',status:'active'};
+let balance=calculateBalance(contract,['2026-10-01','2026-10-01','2026-10-02'],new Date('2026-10-27T10:00:00Z'));
+assert.strictEqual(balance.completedTeachingDays,2);assert.strictEqual(balance.remainingContractDays,88);
+assert.strictEqual(calculateBalance(contract,['2026-10-02']).remainingContractDays,89);
+assert.strictEqual(calculateBalance(contract,[]).remainingContractDays,90);
+assert.strictEqual(teachingDay(new Date('2026-10-26T20:59:59Z')),'2026-10-26');
+assert.strictEqual(teachingDay(new Date('2026-10-26T21:00:00Z')),'2026-10-27');
+assert.strictEqual(validDate('2026-02-30'),false);assert.strictEqual(validDate('2028-02-29'),true);
+assert.throws(()=>validateContract({...contract,totalDays:1.5,batch:'B1',academicYear:'2026'}));
+assert.throws(()=>validateContract({...contract,endDate:'2025-01-01',batch:'B1',academicYear:'2026'}));
+assert.strictEqual(calculateBalance({...contract,totalDays:1},['2026-01-01','2026-01-02']).remainingContractDays,0);
+console.log('Contract balance tests passed: unique days, reversals, Nairobi midnight, date validation and non-negative balances.');

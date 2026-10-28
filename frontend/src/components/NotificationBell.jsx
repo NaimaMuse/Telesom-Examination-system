@@ -1,3 +1,4 @@
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
@@ -15,19 +16,13 @@ export default function NotificationBell({ userId, onNavigate }) {
   const [refresh, setRefresh] = useState(0);
   const wrapper = useRef(null);
   const trigger = useRef(null);
-  useEffect(() => {
-    let active = true, timer;
-    const controller = new AbortController();
-    const fetchUpdates = async () => {
-      try {
-        const response = await api.get('/notifications', {signal:controller.signal});
-        if (active) { setItems(response.data.notifications || []); setError(''); }
-      } catch (err) { if (active) setError(err.response?.data?.message || 'Unable to load notifications.'); }
-      finally { if (active) { setLoading(false); timer = setTimeout(fetchUpdates, 30000); } }
-    };
-    fetchUpdates();
-    return () => { active = false; clearTimeout(timer); controller.abort(); };
-  }, [userId, refresh]);
+  useAutoRefresh(async ({ signal, isCurrent }) => {
+    try {
+      const response = await api.get('/notifications', { signal });
+      if (isCurrent()) { setItems(response.data.notifications || []); setError(''); }
+    } catch (err) { if (isCurrent()) setError(err.response?.data?.message || 'Unable to load notifications.'); }
+    finally { if (isCurrent()) setLoading(false); }
+  }, { deps: [userId, refresh] });
   useEffect(() => {
     if (!open) return;
     const outside = event => { if (!wrapper.current?.contains(event.target)) setOpen(false); };

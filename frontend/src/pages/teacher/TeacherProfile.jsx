@@ -1,10 +1,15 @@
+import {TeacherPicture} from '../../components/AcademyWorkspace';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
+import ChangePasswordModal from '../../components/ChangePasswordModal';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
 export default function TeacherProfile() {
   const [search] = usePageSearch();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -22,29 +27,17 @@ export default function TeacherProfile() {
 
   const initials = (user?.name||'T').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 
-  useEffect(() => {
-    let active = true;
-    api.get('/teacher/profile')
-      .then((response) => {
-        if (!active) return;
-        const details = response.data?.teacher || null;
-        if (!details) return;
-        setProfileDetails(details);
-        setForm((current) => ({
-          ...current,
-          name: details.name || current.name,
-          email: details.email || current.email,
-          phone: details.phone || current.phone,
-          department: details.department || current.department,
-          subjects: details.specialization || current.subjects,
-          bio: details.qualification || current.bio,
-        }));
-      })
-      .catch(() => {
-        if (active) setProfileDetails(null);
-      });
-    return () => { active = false; };
-  }, []);
+  useAutoRefresh(async ({ signal, isCurrent }) => {
+    try {
+      const response = await api.get('/teacher/profile', { signal });
+      if (!isCurrent()) return;
+      const details = response.data?.teacher;
+      if (!details) return;
+      setProfileDetails(details);
+      setForm({ name:details.name || '', email:details.email || '', phone:details.phone || '', department:details.department || '', subjects:details.specialization || '', bio:details.qualification || '' });
+      setSaveError('');
+    } catch (err) { if (isCurrent()) setSaveError(err.response?.data?.message || 'Profile could not refresh. Retrying automatically.'); }
+  }, { enabled: !editing && !saving && !showPasswordModal });
 
   const handleSave = async(e) => {
     e.preventDefault();
@@ -93,7 +86,7 @@ export default function TeacherProfile() {
   return (
     <div className="teacher-scope teacher-profile-page">
       <section className="teacher-profile-hero">
-        <div className="teacher-profile-avatar">{initials}</div>
+        <TeacherPicture editable={editing} />
         <div className="teacher-profile-identity">
           <span className="profile-section-kicker">FACULTY DIRECTORY / TEACHING STAFF</span>
           <h1>{form.name || 'Teacher profile'}</h1>
@@ -163,6 +156,8 @@ export default function TeacherProfile() {
           )}
         </div>
       </section>
+      <div style={{marginTop:20}}><button type="button" className="btn btn-secondary" onClick={()=>{setPasswordChanged(false);setShowPasswordModal(true);}}>Change password</button>{passwordChanged && <p role="status" style={{marginTop:10,color:'var(--brand-green-active)'}}>Password changed successfully.</p>}</div>
+      {showPasswordModal && !user?.mustChangePassword && <ChangePasswordModal onClose={()=>setShowPasswordModal(false)} onSuccess={()=>{setShowPasswordModal(false);setPasswordChanged(true);}} />}
     </div>
   );
 }

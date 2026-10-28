@@ -1,5 +1,6 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
@@ -24,11 +25,13 @@ export default function StudentProfile() {
     setForm({ name: next.name || '', email: next.email || '', phone: next.phone || '', studentId: next.studentId || '', address: next.address || '', academicYear: next.academicYear || '' });
     updateUser(next);
   };
-  useEffect(() => {
-    api.get('/profile').then(res => applyProfile(res.data.data)).catch(err => setError(err.response?.data?.message || 'Unable to load profile.')).finally(() => setLoading(false));
-  }, []);
   const [saving, setSaving] = useState(false);
-  const [saved,  setSaved]  = useState(false);
+  const [saved, setSaved] = useState(false);
+  useAutoRefresh(async ({ signal, isCurrent }) => {
+    try { const { data } = await api.get('/profile', { signal }); if (isCurrent()) { applyProfile(data.data); setError(''); } }
+    catch (err) { if (isCurrent()) setError(err.response?.data?.message || 'Profile could not refresh. Retrying automatically.'); }
+    finally { if (isCurrent()) setLoading(false); }
+  }, { enabled: !editing && !saving });
 
   const initials = (user?.name||'S').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 

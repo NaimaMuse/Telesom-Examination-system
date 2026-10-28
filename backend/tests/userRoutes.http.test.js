@@ -24,7 +24,8 @@ const adminEmail = `userctrl.admin.${stamp}@telesom.local`;
 const studentEmail = `userctrl.student.${stamp}@telesom.local`;
 const teacherEmail = `userctrl.teacher.${stamp}@telesom.local`;
 let studentId;
-const teacherId = `TCH-${stamp}`;
+let teacherId;
+let teacherPassword;
 
 const createdIds = {
   adminUser: null,
@@ -235,6 +236,8 @@ const run = async () => {
   });
   createdIds.teacherUser = createdTeacher.json?.data?.user?._id;
   createdIds.teacherProfile = createdTeacher.json?.data?.teacher?._id;
+  teacherId = createdTeacher.json?.data?.teacher?.teacherId;
+  teacherPassword = createdTeacher.json?.data?.credentials?.temporaryPassword;
   const teacherResponseHasNoPassword =
     createdTeacher.json?.data?.user?.password === undefined &&
     createdTeacher.json?.data?.teacher &&
@@ -251,7 +254,7 @@ const run = async () => {
     '+password'
   );
   const teacherHashMatches = storedTeacherUser?.password
-    ? await bcrypt.compare('TeacherPass1', storedTeacherUser.password)
+    ? await bcrypt.compare(teacherPassword, storedTeacherUser.password)
     : false;
   assert(
     teacherHashMatches,
@@ -259,7 +262,7 @@ const run = async () => {
   );
 
   const teacherLogin = await requestJson('POST', '/api/auth/login', {
-    body: { email: teacherEmail, password: 'TeacherPass1' },
+    body: { email: teacherEmail, password: teacherPassword },
   });
   assert(
     teacherLogin.status === 200 && teacherLogin.json?.user?.role === 'teacher',

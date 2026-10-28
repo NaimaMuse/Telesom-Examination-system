@@ -1,5 +1,6 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../../services/api';
 import './StudentAttendance.css';
 
@@ -47,20 +48,20 @@ export default function StudentAttendance() {
   const [selCourse, setSelCourse] = useState('All');
   const [displayedMonth, setDisplayedMonth] = useState(() => getLatestRecordMonth([]));
 
-  useEffect(()=>{
-    const fetch=async()=>{
-      setLoading(true);
-      try{
-        const res=await api.get('/student/attendance');
-        if(res.data?.attendance) {
-          setRecords(res.data.attendance);
-          if (res.data.attendance.length) { setDisplayedMonth(getLatestRecordMonth(res.data.attendance)); const latest = res.data.attendance.map(r => parseAttendanceDate(r.date)).filter(d => !Number.isNaN(d.getTime())).sort((a,b) => b-a)[0]; if (latest) setSelectedDate(getDateKey(latest)); }
-        }
-      }catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
-    };
-    fetch();
-  },[]);
-
+  useAutoRefresh(async ({ signal, isCurrent, initial }) => {
+    try {
+      const { data } = await api.get('/student/attendance', { signal });
+      if (!isCurrent()) return;
+      const attendance = data.attendance || [];
+      setRecords(attendance); setError('');
+      if (initial && attendance.length) {
+        setDisplayedMonth(getLatestRecordMonth(attendance));
+        const latest = attendance.map(r => parseAttendanceDate(r.date)).filter(d => !Number.isNaN(d.getTime())).sort((a,b) => b-a)[0];
+        if (latest) setSelectedDate(getDateKey(latest));
+      }
+    } catch (err) { if (isCurrent()) setError(err.response?.data?.message || 'Attendance could not refresh. Retrying automatically.'); }
+    finally { if (isCurrent()) setLoading(false); }
+  });
   const courses = ['All', ...new Set(records.map(r=>r.course))];
   const filtered = records.filter(r => (selCourse==='All' || r.course===selCourse) && matchesPageSearch(search, r.course, r.date, r.status, r.remarks));
 

@@ -7,10 +7,12 @@ const ExamResult = require('../models/ExamResult');
 const QuizResult = require('../models/QuizResult');
 const { gradeFor, round } = require('./gradebookIntegrityService');
 
-const enrollmentBatch = enrollment => String(enrollment.student?.academicYear || '').trim() || String(enrollment.academicYear || '').trim();
+const enrollmentBatch = enrollment => String(enrollment.batch || enrollment.student?.batch || enrollment.student?.academicYear || '').trim() || String(enrollment.academicYear || '').trim();
+
+const primaryEnrollment=(enrollments,student,course)=>{const rows=enrollments.filter(e=>String(e.student?._id)===String(student));return rows.find(e=>course.academicYear&&e.academicYear===course.academicYear)||[...rows].sort((a,b)=>String(b.academicYear||'').localeCompare(String(a.academicYear||''),undefined,{numeric:true}))[0];};
 
 // Course totals always use earned marks / 100; assessment percentages are separate.
-const calculatePerformance = ({ course, assessments, enrollments, results }) => {
+const calculatePerformance = ({ course, assessments, enrollments, results, attendance }) => {
   const valid = assessments.filter(a => a.status !== 'cancelled' && Number.isFinite(a.totalMarks) && a.totalMarks > 0 && a.totalMarks <= 100);
   const invalidAssessmentCount = assessments.filter(a => a.status !== 'cancelled').length - valid.length;
   const allocatedMarks = round(valid.reduce((sum, a) => sum + a.totalMarks, 0));
@@ -33,6 +35,7 @@ const calculatePerformance = ({ course, assessments, enrollments, results }) => 
     const student = students.get(String(result.student));
     const key = `${result.storageType}:${result.assessmentId}:${result.student}`;
     if (!assessment || !student || seen.has(key)) continue;
+    if(attendance!==undefined){const enrollment=primaryEnrollment(enrollments,student._id,course);if(enrollment&&!require('./academicProgressService').assessmentApplies(assessment,enrollment))continue;}
     seen.add(key);
     if (typeof result.marksObtained !== 'number' || !Number.isFinite(result.marksObtained) || result.marksObtained < 0 || result.marksObtained > assessment.totalMarks) { student.invalidScores++; continue; }
     const percentage = round(result.marksObtained / assessment.totalMarks * 100);
@@ -41,13 +44,24 @@ const calculatePerformance = ({ course, assessments, enrollments, results }) => 
   }
   const allocationComplete = allocatedMarks === 100 && invalidAssessmentCount === 0;
   const totals = [...students.values()].map(student => {
+    if (attendance !== undefined) {
+      const {calculateCourseMarks,day,assessmentApplies}=require('./academicProgressService');
+      const enrollment=primaryEnrollment(enrollments,student._id,course);
+      const relevant=attendance.filter(r=>String(r.student)===String(student._id)&&String(r.course)===String(course._id)&&(!enrollment?.enrollmentDate||day(r.date)>=day(enrollment.enrollmentDate)));
+      const marks=calculateCourseMarks(valid.filter(a=>!enrollment||assessmentApplies(a,enrollment)).map(a=>({...a,kind:a.storageType})),results.filter(r=>String(r.student)===String(student._id)).map(r=>({...r,kind:r.storageType,assessment:r.assessmentId})),relevant);
+      const cohort=valid.filter(a=>!enrollment||assessmentApplies(a,enrollment));
+      const maximum=cohort.reduce((sum,a)=>sum+a.totalMarks,0);
+      const threshold=ownThreshold??(maximum>=90&&cohort.every(a=>Number.isFinite(a.passingMarks)&&a.passingMarks>=0&&a.passingMarks<=a.totalMarks)?round(cohort.reduce((sum,a)=>sum+a.passingMarks,0)/maximum*100):null);
+      const finalized=marks.complete&&threshold!==null;
+      return {...student,...marks,totalMarks:marks.finalMarks,courseMaximum:100,coursePercentage:marks.finalMarks,hasMarks:student.gradedAssessments>0||marks.eligibleSessions>0,gradedAssessments:marks.completedAssessments,expectedAssessments:marks.totalAssessments,finalized,isPassed:finalized?marks.finalMarks>=threshold:null,marksLost:marks.complete?round(100-marks.finalMarks):null,progress:marks.totalAssessments?round(marks.completedAssessments/marks.totalAssessments*100):0,status:finalized?(marks.finalMarks>=threshold?'Passed':'Failed'):marks.complete?'Pass threshold unavailable':'In progress'};
+    }
     const complete = allocationComplete && student.gradedAssessments === valid.length && student.invalidScores === 0;
     const finalized = complete && passingThreshold !== null;
     return { ...student, totalMarks: round(student.totalMarks), courseMaximum: 100, coursePercentage: round(student.totalMarks), hasMarks: student.gradedAssessments > 0, complete, finalized, isPassed: finalized ? student.totalMarks >= passingThreshold : null, marksLost: complete ? round(100 - student.totalMarks) : null, gradedMarksLost: round(student.gradedMaximum - student.totalMarks), progress: valid.length ? round(student.gradedAssessments / valid.length * 100) : 0, status: finalized ? (student.totalMarks >= passingThreshold ? 'Passed' : 'Failed') : !student.gradedAssessments ? 'No marks' : !allocationComplete ? 'Allocation incomplete' : !complete ? 'Awaiting marks' : 'Pass threshold unavailable' };
   });
   const recorded = totals.filter(student => student.hasMarks);
   const summary = { classAverage: recorded.length ? round(recorded.reduce((sum, student) => sum + student.totalMarks, 0) / recorded.length) : null, highestScore: recorded.length ? Math.max(...recorded.map(student => student.totalMarks)) : null, passingStudents: totals.filter(student => student.isPassed === true).length, failingStudents: totals.filter(student => student.isPassed === false).length, enrolledStudents: totals.length, recordedStudents: recorded.length, incompleteStudents: totals.filter(student => !student.finalized).length, provisional: recorded.some(student => !student.finalized) };
-  return { results: rows, students: totals, summary, allocation: { courseMaximum: 100, allocatedMarks, remainingMarks: round(100 - allocatedMarks), allocationComplete, passingThreshold, passingThresholdSource: ownThreshold !== null ? 'Course passing marks' : 'Sum of configured assessment passing marks', invalidAssessmentCount }, assessments: valid.map(a => ({ _id: `${a.storageType}:${a._id}`, title: a.title, type: a.assessmentType, totalMarks: a.totalMarks })) };
+  return { results: rows, students: totals, summary, allocation: { courseMaximum: 100, allocatedMarks, remainingMarks: round((attendance===undefined?100:90) - allocatedMarks), teacherMaximum:90, attendanceMaximum:10, allocationComplete:attendance===undefined?allocationComplete:allocatedMarks>=90, legacyNormalization:allocatedMarks>90, passingThreshold, passingThresholdSource: ownThreshold !== null ? 'Course passing marks' : 'Sum of configured assessment passing marks', invalidAssessmentCount }, assessments: valid.map(a => ({ _id: `${a.storageType}:${a._id}`, title: a.title, type: a.assessmentType, totalMarks: a.totalMarks })) };
 };
 // Assessment filters select participants without replacing their full course total.
 const filterPerformanceReport = (report, { type = 'all', assessmentId = '', search = '' } = {}) => {
@@ -90,6 +104,7 @@ const getPerformance = async (req) => {
   ]);
   const report = calculatePerformance({ course, enrollments: cohortEnrollments,
     assessments: [...exams.map(a => ({ ...a, storageType: 'exam', assessmentType: a.type === 'quiz' ? 'quiz' : 'exam' })), ...quizzes.map(a => ({ ...a, storageType: 'quiz', assessmentType: 'quiz' }))],
+    attendance:await require('../models/Attendance').find({course:course._id,student:{$in:studentIds}}).lean(),
     results: [...examResults.map(r => ({ ...r, storageType: 'exam', assessmentId: r.exam })), ...quizResults.map(r => ({ ...r, storageType: 'quiz', assessmentId: r.quiz }))],
   });
   const filtered = filterPerformanceReport(report, { type: req.query.assessmentType || 'all', assessmentId: req.query.assessmentId || '', search: req.query.search || '' });

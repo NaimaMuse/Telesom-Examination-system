@@ -2,7 +2,6 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
-const studentIds = require('../services/studentIdService');
 const generateToken = require('../utils/generateToken');
 
 /**
@@ -43,15 +42,9 @@ const login = async (req, res, next) => {
       const normalizedStudentId = rawStudentId.toUpperCase();
 
       // Find student record by normalized studentId or phone
-      const student = await Student.findOne({
-        $or: [
-          { studentId: normalizedStudentId },
-          { phone: rawStudentId },
-          { phone: rawStudentId.replace(/\s+/g, '') },
-        ],
-      });
+      const student = await Student.findOne({ studentId: normalizedStudentId });
 
-      if (!student || !student.user) {
+      if (!student || !student.user || (student.status && student.status !== 'active')) {
         res.status(401);
         return next(new Error('Invalid credentials'));
       }
@@ -110,12 +103,14 @@ const login = async (req, res, next) => {
       }
     }
 
+    if (req.body.role && req.body.role !== user.role) { res.status(401); return next(new Error('Invalid credentials for the selected role')); }
+
     // Update lastLogin timestamp
     const loginTime = new Date();
     await User.findByIdAndUpdate(user._id, { lastLogin: loginTime });
 
     // Generate JWT token
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.authVersion || 0);
 
     let teacherProfile = null;
     if (user.role === 'teacher') {
@@ -137,6 +132,7 @@ const login = async (req, res, next) => {
         role: user.role,
         isActive: user.isActive,
         lastLogin: loginTime,
+        mustChangePassword: !!user.mustChangePassword,
         ...(studentProfile
           ? {
               studentId: studentProfile.studentId,
@@ -160,101 +156,6 @@ const login = async (req, res, next) => {
   }
 };
 
-/**
- * Register a new user (Student, Teacher, or Admin).
- * @route   POST /api/auth/register
- * @access  Public
- */
-const register = async (req, res, next) => {
-  try {
-    const { name, email, password, role = 'student', phone, department, gender = 'male' } = req.body;
-
-    if (!name || !email) {
-      res.status(400);
-      return next(new Error('Name and email are required'));
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
-      res.status(400);
-      return next(new Error('Email is already registered'));
-    }
-
-    let hashedPassword = undefined;
-    if (role !== 'student' || password) {
-      if (password && password.length < 6) {
-        res.status(400);
-        return next(new Error('Password must be at least 6 characters'));
-      }
-      hashedPassword = password ? await bcrypt.hash(password, 10) : await bcrypt.hash('password123', 10);
-    }
-
-    const generatedStudentId = role === 'student' ? await studentIds.nextStudentId() : null;
-    const user = await User.create({
-      name: String(name).trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-      role,
-      isActive: true,
-    });
-
-    let extraProfile = {};
-    if (role === 'student') {
-      const generatedId = generatedStudentId;
-
-      let student;
-      try { student = await Student.create({
-        user: user._id,
-        studentId: generatedId,
-        gender: gender || 'male',
-        phone: phone || '',
-      }); } catch (error) { await User.findByIdAndDelete(user._id); throw error; }
-
-      extraProfile = {
-        studentId: student.studentId,
-        studentProfileId: student._id,
-        phone: student.phone,
-      };
-    } else if (role === 'teacher') {
-      const teacher = await Teacher.create({
-        user: user._id,
-        teacherId: 'TCH-' + Math.floor(1000 + Math.random() * 9000),
-        gender: gender || 'male',
-        phone: phone || '',
-        department: department || 'General Academic',
-      });
-
-      extraProfile = {
-        teacherId: teacher.teacherId,
-        teacherProfileId: teacher._id,
-        department: teacher.department,
-        phone: teacher.phone,
-      };
-    }
-
-    const token = generateToken(user._id);
-
-    res.status(201).json({
-      success: true,
-      token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-        lastLogin: new Date(),
-        ...extraProfile,
-      },
-    });
-  } catch (error) {
-    res.status(500);
-    next(error);
-  }
-};
-
-module.exports = {
-  login,
-  register,
-};
+// Accounts can only be provisioned by the administrator.
+const register = (req, res) => res.status(403).json({ success: false, message: 'Public registration is disabled. Contact the administrator for an account.' });
+module.exports = { login, register };

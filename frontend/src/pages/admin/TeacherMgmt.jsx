@@ -1,3 +1,4 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../services/api';
@@ -22,19 +23,19 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
   };
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e => e.stopPropagation()}>
-        <div className="modal-header"><span className="modal-title">{title}</span><button type="button" className="modal-close" onClick={onClose}>✕</button></div>
+      <div className="modal-box teacher-form-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-form-title" onClick={e => e.stopPropagation()}>
+        <div className="modal-header teacher-form-header"><div><span className="teacher-form-eyebrow">TELESOM ACADEMY</span><h2 className="modal-title" id="teacher-form-title">{title}</h2><p>Teacher account &amp; teaching contract</p></div><button type="button" className="modal-close" aria-label="Close teacher form" onClick={onClose}>×</button></div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            <div className="grid-2">
+            <div className="grid-2 teacher-form-grid">
               {fields.map(f => (
                 <div className="form-group" key={f.key}>
-                  <label className="form-label">{f.label}{f.required && ' *'}</label>
+                  <label className="form-label" htmlFor={`teacher-${f.key}`}>{f.label}{f.required && ' *'}</label>
                   {f.type === 'course'
-                    ? <select className="form-control" required value={form.course||''} disabled={coursesLoading || courses.length === 0} onChange={e=>setForm(p=>({...p,course:e.target.value}))}><option value="">{coursesLoading ? 'Loading courses…' : courses.length ? 'Select a course' : 'No courses available'}</option>{courses.map(course=><option key={course._id} value={course._id}>{course.courseCode ? `${course.courseCode} · ` : ''}{course.title || course.name}</option>)}</select>
+                    ? <select id={`teacher-${f.key}`} className="form-control" required value={form.course||''} disabled={coursesLoading || courses.length === 0} onChange={e=>setForm(p=>({...p,course:e.target.value}))}><option value="">{coursesLoading ? 'Loading courses…' : courses.length ? 'Select a course' : 'No courses available'}</option>{courses.map(course=><option key={course._id} value={course._id}>{course.courseCode ? `${course.courseCode} · ` : ''}{course.title || course.name}</option>)}</select>
                     : f.type === 'select'
                     ? <select className="form-control" value={form[f.key]||''} onChange={e => setForm(p=>({...p,[f.key]:e.target.value}))}><option value="">Select…</option>{f.options.map(o=><option key={o} value={o}>{o}</option>)}</select>
-                    : <input className="form-control" type={f.type} required={f.required} value={form[f.key]||''} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} />
+                    : <input id={`teacher-${f.key}`} className="form-control" type={f.type} min={f.type==='number'?1:undefined} step={f.type==='number'?1:undefined} required={f.required} value={form[f.key]||''} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} />
                   }
                 </div>
               ))}
@@ -43,7 +44,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
           {error && <div className="teacher-create-error" role="alert">{error}</div>}
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving || coursesLoading || courses.length === 0}>{saving?'Saving…':'Save'}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving || coursesLoading || courses.length === 0}>{saving?'Saving…':initial?._id?'Save changes':'Create teacher'}</button>
           </div>
         </form>
       </div>
@@ -55,18 +56,21 @@ function TeacherDetailsModal({ teacher, courseAssignment, loading, error, onClos
   const course = courseAssignment?.course;
   const details = [
     ['Full name', teacher.name],
+    ['Teacher ID', teacher.teacherId],
+    ['Account status', teacher.user?.isActive === false ? 'Inactive' : (teacher.status || 'Active')],
     ['Work email', teacher.email],
     ['Phone', teacher.phone],
     ['Course', teacher.department],
     ['Specialization', teacher.specialization || teacher.subjects],
     ['Qualification', teacher.qualification],
+    ['Registered on', teacher.createdAt ? new Date(teacher.createdAt).toLocaleDateString() : null],
   ];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <section className="modal-box teacher-details-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-details-title" onClick={(event) => event.stopPropagation()}>
         <header className="modal-header teacher-details-header">
-          <div className="teacher-details-avatar" aria-hidden="true">{(teacher.name || 'T').split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</div>
+          {teacher.profilePicture && <img className="teacher-details-avatar" style={{objectFit:'cover'}} src={teacher.profilePicture} alt="Teacher profile"/>}<div className="teacher-details-avatar" style={teacher.profilePicture?{display:'none'}:undefined} aria-hidden="true">{(teacher.name || 'T').split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</div>
           <div className="teacher-details-heading"><span className="teacher-directory-kicker">FACULTY PROFILE</span><h2 className="modal-title" id="teacher-details-title">{teacher.name || 'Teacher details'}</h2><p>{teacher.email || 'Email not provided'}</p></div>
           <button type="button" className="modal-close" aria-label="Close teacher details" onClick={onClose}>×</button>
         </header>
@@ -83,6 +87,14 @@ function TeacherDetailsModal({ teacher, courseAssignment, loading, error, onClos
           <dl className="teacher-details-grid">
             {details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>)}
           </dl>
+          <section className="teacher-details-contracts" aria-label="Teaching contracts">
+            <h3>Teaching contracts</h3>
+            {teacher.contracts?.length ? teacher.contracts.map(contract => <article className="teacher-details-contract" key={contract._id}>
+              <div className="teacher-details-contract-heading"><strong>{contract.course?.title || contract.course?.name || 'Course'}</strong><span>{contract.contractStatus}</span></div>
+              <div className="teacher-details-contract-metrics">{[['Total days',contract.totalContractDays],['Completed',contract.completedTeachingDays],['Remaining',contract.remainingContractDays]].map(([label,value])=><div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
+              <dl className="teacher-details-grid">{[['Batch',contract.batch],['Academic year',contract.academicYear],['Start date',contract.startDate],['End date',contract.endDate || 'Not set'],['Progress',contract.progress+'%']].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>)}</dl>
+            </article>) : <p className="teacher-details-contract-empty">No teaching contract configured.</p>}
+          </section>
           </>}
         </div>
         <footer className="modal-footer"><button type="button" className="btn btn-primary" onClick={onClose}>Done</button></footer>
@@ -191,10 +203,11 @@ export default function TeacherMgmt() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchTeachers = useCallback(async () => {
-    setLoading(true);
+  const fetchTeachers = useCallback(async (background = false, context = {}) => {
+    if (!background) setLoading(true);
     try {
-      const res = await api.get('/teachers', { params: { limit: 100 } });
+      const res = await api.get('/teachers', { signal: context.signal, params: { limit: 100 } });
+      if (context.isCurrent && !context.isCurrent()) return;
       const records = res.data?.data || res.data?.teachers;
       if (Array.isArray(records)) setTeachers(records.map((record) => ({
         ...record,
@@ -202,37 +215,46 @@ export default function TeacherMgmt() {
         email: record.user?.email || record.email || '',
         subjects: record.specialization || record.subjects || '',
       })));
-    } catch { setTeachers([]); } finally { setLoading(false); }
+    } catch {
+      if (context.isCurrent && !context.isCurrent()) return; if (!background) setTeachers([]); } finally { if (!background && (!context.isCurrent || context.isCurrent())) setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchTeachers(); }, [fetchTeachers]);
 
-  const fetchCourseAssignments = useCallback(async () => {
+
+  const fetchCourseAssignments = useCallback(async (background = false, context = {}) => {
     try {
-      const response = await api.get('/course-teachers', { params: { limit: 100, status: 'active' } });
+      const response = await api.get('/course-teachers', { signal: context.signal, params: { limit: 100, status: 'active' } });
+      if (context.isCurrent && !context.isCurrent()) return;
       const rows = response.data?.data || [];
       setCourseAssignments(Array.isArray(rows) ? rows : []);
     } catch {
+      if (context.isCurrent && !context.isCurrent()) return;
       setCourseAssignments([]);
     }
   }, []);
 
-  useEffect(() => { fetchCourseAssignments(); }, [fetchCourseAssignments]);
 
-  const fetchCourses = useCallback(async () => {
-    setCoursesLoading(true);
+
+  const fetchCourses = useCallback(async (background = false, context = {}) => {
+    if (!background) setCoursesLoading(true);
     try {
-      const response = await api.get('/courses', { params: { limit: 100, status: 'active' } });
+      const response = await api.get('/courses', { signal: context.signal, params: { limit: 100, status: 'active' } });
+      if (context.isCurrent && !context.isCurrent()) return;
       const rows = response.data?.data || response.data?.courses || [];
       setCourses(Array.isArray(rows) ? rows.filter((course) => course.isActive !== false && course.status !== 'inactive') : []);
     } catch {
-      setCourses([]);
+      if (context.isCurrent && !context.isCurrent()) return;
+      if (!background) setCourses([]);
     } finally {
-      setCoursesLoading(false);
+      if (!background && (!context.isCurrent || context.isCurrent())) setCoursesLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchCourses(); }, [fetchCourses]);
+
+
+  useAutoRefresh(async context => {
+    await Promise.all([fetchTeachers(!context.initial, context), fetchCourseAssignments(!context.initial, context), fetchCourses(!context.initial, context)]);
+  }, { enabled: !showModal && !deleting });
 
   const filtered = teachers.filter(teacher => matchesPageSearch(search, teacher.name, teacher.email, teacher.phone, teacher.teacherId, teacher.department, teacher.subjects, courseAssignments.filter(a => String(a.teacher?._id || a.teacher) === String(teacher._id)).map(a => [a.course?.title, a.course?.name, a.course?.courseCode])));
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -248,12 +270,13 @@ export default function TeacherMgmt() {
     setTeacherDetailsLoading(true);
     setTeacherDetailsError('');
     try {
-      const response = await api.get(`/teachers/${teacher._id}/details`);
+      const [response, contractsResponse] = await Promise.all([api.get(`/teachers/${teacher._id}/details`), api.get('/teacher-contracts', {params:{teacher:teacher._id}})]);
       if (requestId !== teacherDetailsRequest.current) return;
       const record = response.data?.data || response.data?.teacher;
       if (!record) throw new Error('Teacher profile could not be found.');
       setSelectedTeacher({
         ...record,
+        contracts: contractsResponse.data?.contracts || [],
         name: record.user?.name || record.name || teacher.name,
         email: record.user?.email || record.email || teacher.email,
       });
@@ -279,17 +302,15 @@ export default function TeacherMgmt() {
       return;
     }
 
-    const temporaryPassword = Array.from(crypto.getRandomValues(new Uint8Array(18)), (value) => 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*'[value % 68]).join('');
-    const teacherId = `TCH-${crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`;
     const course = courses.find((item) => item._id === form.course);
     const response = await api.post('/users/teachers', {
       name: form.name,
       email: form.email,
       phone: form.phone,
-      teacherId,
-      password: temporaryPassword,
     });
     const teacher = response.data?.data?.teacher;
+    const { email, temporaryPassword } = response.data?.data?.credentials || {};
+    const teacherId = teacher?.teacherId;
     if (!teacher?._id) throw new Error('Teacher was created but the server did not return its profile ID.');
 
     let assignmentWarning = '';
@@ -303,11 +324,12 @@ export default function TeacherMgmt() {
         isPrimary: true,
         status: 'active',
       });
+      await api.post('/teacher-contracts', {teacher:teacher._id, course:course._id, academicYear:course.academicYear || String(new Date().getFullYear()), batch:form.contractBatch, startDate:form.contractStart, endDate:form.contractEnd || null, totalDays:Number(form.contractDays)});
     } catch (assignmentError) {
-      assignmentWarning = assignmentError.response?.data?.message || 'The teacher was created, but the selected course could not be assigned.';
+      assignmentWarning = assignmentError.response?.data?.message || 'The account was created, but the course assignment or contract could not be saved. Complete setup in Teacher Contracts.';
     }
 
-    setCreatedCredentials({ name: form.name, email: form.email, teacherId, temporaryPassword, course: course.title || course.name, warning: assignmentWarning });
+    setCreatedCredentials({ name: form.name, email, teacherId, temporaryPassword, course: course.title || course.name, warning: assignmentWarning });
     await Promise.all([fetchTeachers(), fetchCourseAssignments()]);
     setShowModal(false);
     setEditTarget(null);
@@ -405,7 +427,7 @@ export default function TeacherMgmt() {
         </footer>
       </section>
 
-      {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_FIELDS : [...TEACHER_FIELDS, { key: 'course', label: 'Course', type: 'course', required: true }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
+      {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_FIELDS : [...TEACHER_FIELDS, { key: 'course', label: 'Course', type: 'course', required: true }, { key: 'contractDays', label: 'Contract days', type: 'number', required: true }, { key: 'contractBatch', label: 'Contract batch', type: 'text', required: true }, { key: 'contractStart', label: 'Contract start date', type: 'date', required: true }, { key: 'contractEnd', label: 'Contract end date (optional)', type: 'date' }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
       {deleteTarget && <ConfirmModal message={`Delete "${deleteTarget.name}"?`} onConfirm={handleDelete} onCancel={()=>setDeleteTarget(null)} loading={deleting} />}
       {createdCredentials && <TeacherCredentialsModal credentials={createdCredentials} onClose={() => setCreatedCredentials(null)} />}
       {selectedTeacher && <TeacherDetailsModal teacher={selectedTeacher} courseAssignment={selectedTeacher.assignedCourse || null} loading={teacherDetailsLoading} error={teacherDetailsError} onClose={() => { teacherDetailsRequest.current += 1; setSelectedTeacher(null); setTeacherDetailsError(''); }} />}

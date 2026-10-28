@@ -4,10 +4,10 @@ const models = Object.fromEntries(['Student','Teacher','CourseTeacher','Enrollme
 const now = new Date('2026-10-26T12:00:00Z');
 const recent = new Date('2026-10-25T12:00:00Z');
 const old = new Date('2026-08-01T12:00:00Z');
-const base = (id, values) => ({_id:id,updatedAt:recent,...values});
+const base = (id, values) => ({_id:id,updatedAt:recent,visibleToStudents:true,...values});
 const exam = base('exam-a',{title:'Assigned exam',course:'course-a',academicYear:'2026',semester:'S1',status:'completed'});
 const other = base('exam-b',{title:'Private other course',course:'course-b',academicYear:'2026',status:'completed'});
-const upcoming = base('upcoming',{title:'This week',course:'course-a',academicYear:'2026',semester:'S1',status:'scheduled',examDate:new Date('2026-10-28'),updatedAt:old});
+const upcoming = base('upcoming',{visibleToStudents:true,title:'This week',course:'course-a',academicYear:'2026',semester:'S1',status:'scheduled',examDate:new Date('2026-10-28'),updatedAt:old});
 const fixtures = {
  Student:[base('student-a',{studentId:'TL-2026-01',user:{name:'Amina'}})], Teacher:[],
  CourseTeacher:[base('assignment-a',{teacher:'teacher-a',course:'course-a',academicYear:'2026',semester:'S1',status:'active'})],

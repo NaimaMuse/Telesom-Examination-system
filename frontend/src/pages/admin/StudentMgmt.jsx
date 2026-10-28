@@ -1,3 +1,4 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 /**
  * Shared CRUD page factory for management pages.
@@ -15,12 +16,15 @@ const STUDENT_FIELDS = [
   { key: 'phone', label: 'Phone', type: 'tel', example: '+252 61 1234567', guidance: 'Optional. Enter as text to keep the country code and leading zeros.' },
   { key: 'course', label: 'Course', type: 'course', required: true, guidance: 'Required. Use an existing course name from the Available Courses sheet.' },
   { key: 'address', label: 'Address', type: 'text', example: 'Hargeisa', guidance: 'Optional. Enter the student address.' },
-  { key: 'academicYear', label: 'Batch / Year', type: 'text', guidance: 'Optional. Defaults to the course academic year, or the current year.' },
-  { key: 'status', label: 'Status', type: 'select', options: ['active','inactive','graduated','suspended'], example: 'active', guidance: 'Optional. Use active, inactive, graduated or suspended. Defaults to active.' },
+  { key: 'academicYear', label: 'Academic year', type: 'year', required:true, guidance: 'Required. Select the academic year that owns the batch.' },
+  { key: 'batch', label: 'Batch', type: 'batch', required:true, guidance:'Required. Use an active batch from the Available Batches sheet matching the academic year.' },
+  { key: 'status', label: 'Status', type: 'select', options: ['active','inactive','graduated','suspended','dropped'], example: 'active', guidance: 'Optional. Use active, inactive, graduated or suspended. Defaults to active.' },
 ];
 
 function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, onClose }) {
-  const [form, setForm] = useState(initial || {});
+  const [form, setForm] = useState({...initial,academicYear:initial?.academicYear||String(new Date().getFullYear())});
+  const [batches,setBatches]=useState([]);
+  useEffect(()=>{api.get('/academy/batches').then(r=>setBatches(r.data.batches.filter(b=>b.status==='active'))).catch(()=>setError('Batches could not load. Please reopen this form.'));},[]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,29 +41,30 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-title">{title}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+      <div className="modal-box student-form-modal teacher-form-modal" role="dialog" aria-modal="true" aria-labelledby="student-form-title" onClick={e => e.stopPropagation()}>
+        <div className="modal-header teacher-form-header">
+          <div><span className="teacher-form-eyebrow">STUDENT REGISTRATION</span><h2 className="modal-title" id="student-form-title">{title}</h2></div>
+          <button type="button" className="modal-close" aria-label="Close student form" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            <div className="grid-2">
+            <div className="grid-2 teacher-form-grid">
               {fields.map(f => (
                 <div className="form-group" key={f.key}>
-                  <label className="form-label">{f.label}{f.required && ' *'}</label>
-                  {f.type === 'course' ? (
-                    <select className="form-control" required={f.required} value={form.course || ''} disabled={coursesLoading || courses.length === 0} onChange={e => handleChange(f.key, e.target.value)}>
+                  <label className="form-label" htmlFor={`student-${f.key}`}>{f.label}{f.required && ' *'}</label>
+                  {f.type === 'year' ? <select id={`student-${f.key}`} className="form-control" required value={form.academicYear||''} onChange={e=>setForm(p=>({...p,academicYear:e.target.value,batch:''}))}><option value="">Select academic year</option>{[...new Set([form.academicYear,...batches.map(b=>b.academicYear)].filter(Boolean))].sort().map(y=><option key={y}>{y}</option>)}</select> : f.type === 'batch' ? <select id={`student-${f.key}`} className="form-control" required value={form.batch||''} onChange={e=>handleChange('batch',e.target.value)}><option value="">Select batch</option>{batches.filter(b=>b.academicYear===form.academicYear).map(b=><option key={b._id} value={b.name}>{b.name}</option>)}{form.batch&&!batches.some(b=>b.name===form.batch&&b.academicYear===form.academicYear)&&<option>{form.batch}</option>}</select> : f.type === 'course' ? (
+                    <select id={`student-${f.key}`} className="form-control" required={f.required} value={form.course || ''} disabled={coursesLoading || courses.length === 0} onChange={e => handleChange(f.key, e.target.value)}>
                       <option value="">{coursesLoading ? 'Loading courses…' : courses.length ? 'Select a course' : 'No courses available'}</option>
                       {courses.map(course => <option key={course._id} value={course._id}>{course.title || course.name || 'Course'}</option>)}
                     </select>
                   ) : f.type === 'select' ? (
-                    <select className="form-control" required={f.required} value={form[f.key] || ''} onChange={e => handleChange(f.key, e.target.value)}>
+                    <select id={`student-${f.key}`} className="form-control" required={f.required} value={form[f.key] || ''} onChange={e => handleChange(f.key, e.target.value)}>
                       <option value="">Select…</option>
                       {f.options.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   ) : (
                     <input
+                      id={`student-${f.key}`}
                       className="form-control"
                       type={f.type}
                       readOnly={f.readOnly}
@@ -77,7 +82,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={saving || coursesLoading || (fields.some(field => field.type === 'course') && courses.length === 0)}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Saving…' : initial?._id ? 'Save changes' : 'Create student'}
             </button>
           </div>
         </form>
@@ -131,7 +136,7 @@ const STUDENT_COLUMN_MAP = {
   phonenumber: 'phone',
   address: 'address',
   batchyear: 'academicYear',
-  batch: 'academicYear',
+  batch: 'batch',
   academicyear: 'academicYear',
   year: 'academicYear',
   course: 'course',
@@ -148,16 +153,17 @@ function mapStudentRows(rows) {
 }
 
 function downloadStudentTemplate(courses) {
-  return import('xlsx').then((XLSX) => {
+  return import('xlsx').then(async (XLSX) => {
+    const batches=(await api.get('/academy/batches')).data.batches.filter(b=>b.status==='active');
     const sampleCourse = courses[0];
     const currentYear = new Intl.DateTimeFormat('en-US', {timeZone:'Africa/Nairobi', year:'numeric'}).format(new Date());
-    const examples = { course: sampleCourse?.title || sampleCourse?.name || 'REPLACE_WITH_COURSE_NAME', academicYear: sampleCourse?.academicYear || currentYear };
+    const examples = { batch:batches.find(b=>b.academicYear===(sampleCourse?.academicYear||currentYear))?.name||'SELECT_A_BATCH', course: sampleCourse?.title || sampleCourse?.name || 'REPLACE_WITH_COURSE_NAME', academicYear: sampleCourse?.academicYear || currentYear };
     const worksheet = XLSX.utils.aoa_to_sheet([
       STUDENT_TEMPLATE_COLUMNS,
       STUDENT_IMPORT_FIELDS.map(field => examples[field.key] || field.example || ''),
     ]);
     worksheet['!cols'] = STUDENT_TEMPLATE_COLUMNS.map(column => ({ wch: Math.max(column.length + 4, 22) }));
-    worksheet['!autofilter'] = { ref: 'A1:H2' };
+    worksheet['!autofilter'] = {ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:1,c:STUDENT_TEMPLATE_COLUMNS.length-1}})};
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
     const instructions = XLSX.utils.aoa_to_sheet([
@@ -177,6 +183,8 @@ function downloadStudentTemplate(courses) {
       courseSheet['!cols'] = [{wch:55}, {wch:20}];
       XLSX.utils.book_append_sheet(workbook, courseSheet, 'Available Courses');
     }
+    const batchSheet=XLSX.utils.aoa_to_sheet([['Batch','Academic year'],...batches.map(b=>[b.name,b.academicYear])]);
+    batchSheet['!cols']=[{wch:35},{wch:25}];XLSX.utils.book_append_sheet(workbook,batchSheet,'Available Batches');
     XLSX.writeFile(workbook, 'student-upload-template.xlsx');
   });
 }
@@ -258,6 +266,7 @@ export default function StudentMgmt() {
   const [filterStatus, setFilter]   = useState('');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterAcademicYear, setFilterAcademicYear] = useState('');
+  const [filterBatch,setFilterBatch]=useState('');
   const [page, setPage]             = useState(1);
   useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal]   = useState(false);
@@ -267,35 +276,41 @@ export default function StudentMgmt() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importReport, setImportReport] = useState(null);
+  const [createdStudentLogin, setCreatedStudentLogin] = useState(null);
   const [showAllDetails, setShowAllDetails] = useState(false);
 
-  const fetchCourses = useCallback(async () => {
-    setCoursesLoading(true);
+  const fetchCourses = useCallback(async (background = false, context = {}) => {
+    if (!background) setCoursesLoading(true);
     try {
-      const response = await api.get('/courses', { params: { limit: 100 } });
+      const response = await api.get('/courses', { signal: context.signal, params: { limit: 100 } });
+      if (context.isCurrent && !context.isCurrent()) return;
       const records = response.data?.data || response.data?.courses || response.data;
       if (Array.isArray(records)) setCourses(records.filter(course => course.status !== 'inactive' && course.status !== 'archived' && course.isActive !== false));
     } catch {
-      setCourses([]);
+      if (context.isCurrent && !context.isCurrent()) return;
+      if (!background) setCourses([]);
     } finally {
-      setCoursesLoading(false);
+      if (!background && (!context.isCurrent || context.isCurrent())) setCoursesLoading(false);
     }
   }, []);
 
-  const fetchEnrollments = useCallback(async () => {
+  const fetchEnrollments = useCallback(async (background = false, context = {}) => {
     try {
-      const response = await api.get('/enrollments', { params: { limit: 100 } });
+      const response = await api.get('/enrollments', { signal: context.signal, params: { limit: 100 } });
+      if (context.isCurrent && !context.isCurrent()) return;
       const records = response.data?.data || [];
       setEnrollments(Array.isArray(records) ? records : []);
     } catch {
+      if (context.isCurrent && !context.isCurrent()) return;
       setEnrollments([]);
     }
   }, []);
 
-  const fetchStudents = useCallback(async () => {
-    setLoading(true);
+  const fetchStudents = useCallback(async (background = false, context = {}) => {
+    if (!background) setLoading(true);
     try {
-      const res = await api.get('/students', { params: { limit: 100 } });
+      const res = await api.get('/students', { signal: context.signal, params: { limit: 100 } });
+      if (context.isCurrent && !context.isCurrent()) return;
       const records = res.data?.data || res.data?.students;
       if (Array.isArray(records)) {
         setStudents(records.map((record) => ({
@@ -306,17 +321,18 @@ export default function StudentMgmt() {
         })));
       }
     } catch {
-      setStudents([]);
+      if (context.isCurrent && !context.isCurrent()) return;
+      if (!background) setStudents([]);
     } finally {
-      setLoading(false);
+      if (!background && (!context.isCurrent || context.isCurrent())) setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchStudents();
-    fetchCourses();
-    fetchEnrollments();
-  }, [fetchStudents, fetchCourses, fetchEnrollments]);
+
+
+  useAutoRefresh(async context => {
+    await Promise.all([fetchStudents(!context.initial, context), fetchCourses(!context.initial, context), fetchEnrollments(!context.initial, context)]);
+  }, { enabled: !showModal && !showImportModal && !importing && !deleting });
 
   const getStudentEnrollment = (student) => enrollments.find((enrollment) => {
     const enrolledStudentId = enrollment.student?._id || enrollment.student;
@@ -339,13 +355,14 @@ export default function StudentMgmt() {
 
   const filtered = students.filter(s => {
     const matchSearch = matchesPageSearch(search, s.name, s.studentId, s.email, s.phone, s.address, s.academicYear, getStudentCourseName(s));
-    const matchStatus = !filterStatus || s.status === filterStatus;
+    const matchStatus = filterStatus ? s.status === filterStatus : s.status !== 'dropped';
     const enrollment = getStudentEnrollment(s);
     const enrolledCourseId = enrollment?.course?._id || enrollment?.course || '';
     const enrolledYear = getStudentAcademicYear(s);
     const matchCourse = !filterCourse || String(enrolledCourseId) === String(filterCourse);
     const matchAcademicYear = !filterAcademicYear || String(enrolledYear) === String(filterAcademicYear);
-    return matchSearch && matchStatus && matchCourse && matchAcademicYear;
+    const matchBatch=!filterBatch||(enrollment?.batch||s.batch)===filterBatch;
+    return matchSearch && matchStatus && matchCourse && matchAcademicYear && matchBatch;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -363,6 +380,8 @@ export default function StudentMgmt() {
       await api.put(`/students/${editTarget._id}`, studentFields);
     } else {
       const response = await api.post('/users/students', studentFields);
+      const createdStudent = response.data?.data?.student;
+      if (createdStudent?.studentId) setCreatedStudentLogin({ name: form.name, studentId: createdStudent.studentId });
       studentId = response.data?.data?.student?._id || response.data?.student?._id;
       if (!studentId) throw new Error('Student was created, but the server did not return a student ID.');
     }
@@ -372,6 +391,7 @@ export default function StudentMgmt() {
       student: studentId,
       course: courseId,
       academicYear,
+      batch:form.batch||'',
       semester: selectedCourse?.semester || '',
       status: 'enrolled',
     };
@@ -418,6 +438,7 @@ export default function StudentMgmt() {
             student: createdStudentId,
             course: selectedCourse._id,
             academicYear: studentPayload.academicYear,
+            batch:studentPayload.batch||'',
             semester: selectedCourse.semester || '',
             status: 'enrolled',
           });
@@ -451,6 +472,7 @@ export default function StudentMgmt() {
 
   return (
     <>
+      {createdStudentLogin && <div className="card card-body" role="status" style={{marginBottom:16,display:'flex',gap:12,alignItems:'center',justifyContent:'space-between'}}><div><strong>{createdStudentLogin.name}: account ready</strong><p>Student ID: <strong>{createdStudentLogin.studentId}</strong>. Use this ID in the Student sign-in tab.</p></div><button type="button" className="btn btn-sm btn-secondary" aria-label="Dismiss student sign-in details" onClick={()=>setCreatedStudentLogin(null)}>×</button></div>}
       <div className="page-header student-management-header">
         <div className="student-management-actions">
         <button type="button" className="btn btn-sm btn-secondary student-view-toggle" aria-pressed={showAllDetails} onClick={() => setShowAllDetails(current => !current)}>
@@ -482,11 +504,13 @@ export default function StudentMgmt() {
               <option value="inactive">Inactive</option>
               <option value="graduated">Graduated</option>
               <option value="suspended">Suspended</option>
+              <option value="dropped">Dropped</option>
             </select>
             <select aria-label="Filter students by academic year" className="form-control student-filter-select" value={filterAcademicYear} onChange={event => { setFilterAcademicYear(event.target.value); setPage(1); }}>
               <option value="">All academic years</option>
               {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
             </select>
+            <select aria-label="Filter students by batch" className="form-control student-filter-select" value={filterBatch} onChange={e=>{setFilterBatch(e.target.value);setPage(1);}}><option value="">All batches</option>{[...new Set(enrollments.filter(e=>!filterAcademicYear||e.academicYear===filterAcademicYear).map(e=>e.batch).filter(Boolean))].sort().map(b=><option key={b}>{b}</option>)}</select>
           </div>
         </div>
 
@@ -556,7 +580,7 @@ export default function StudentMgmt() {
         <CrudModal
           title={editTarget ? 'Edit Student' : 'Add New Student'}
           fields={STUDENT_FIELDS}
-          initial={editTarget || {}}
+          initial={editTarget ? {...editTarget,batch:getStudentEnrollment(editTarget)?.batch||editTarget.batch||''} : {}}
           courses={courses}
           coursesLoading={coursesLoading}
           onSave={handleSave}

@@ -37,18 +37,11 @@ const ids = require('../services/studentIdService');
   assert.strictEqual(await ids.nextStudentId(new Date('2028-01-01T12:00:00Z')), 'TL-2028-102');
   console.log('Student ID tests passed: sequence, parallel allocations, Nairobi year rollover, existing IDs and 100+ students.');
 
-  // Public signup uses the same allocator and ignores a supplied manual ID.
-  const User = require('../models/User');
-  const { register } = require('../controllers/authController');
-  process.env.JWT_SECRET = 'student-id-test-secret';
-  ids.nextStudentId = async () => 'TL-2026-54';
-  User.findOne = async () => null;
-  User.create = async payload => ({_id:'507f1f77bcf86cd799439011',...payload});
-  Student.create = async payload => { assert.strictEqual(payload.studentId, 'TL-2026-54'); return {_id:'profile-a',...payload}; };
-  let body;
-  const res = {status(code){this.statusCode=code;return this;},json(data){body=data;}};
-  await register({body:{name:'Amina',email:'amina@example.com',studentId:'MANUAL-99',role:'student'}},res,error=>{throw error;});
-  assert.strictEqual(res.statusCode,201);
-  assert.strictEqual(body.user.studentId,'TL-2026-54');
-  console.log('Public registration auto-ID test passed.');
+  const {register}=require('../controllers/authController');
+  for(const role of ['student','teacher','admin']) {
+    let body;const res={status(code){this.statusCode=code;return this;},json(data){body=data;}};
+    register({body:{role}},res);
+    assert.strictEqual(res.statusCode,403);assert.strictEqual(body.success,false);
+  }
+  console.log('Public registration is disabled for all roles.');
 })().catch(error => { console.error(error); process.exitCode=1; });

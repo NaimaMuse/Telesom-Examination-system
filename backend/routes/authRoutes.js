@@ -12,4 +12,7 @@ router.post('/login', login);
 // @access  Public
 router.post('/register', register);
 
+const { protect } = require('../middleware/authMiddleware');
+const { authorizeRoles } = require('../middleware/roleMiddleware');
+router.put('/password', protect, authorizeRoles('teacher', 'admin'), require('../controllers/passwordController').changePassword);
 module.exports = router;

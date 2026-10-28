@@ -7,6 +7,9 @@ const controller = createResourceController(Quiz, {
   authorizeRead: (req, record) => authorizeCourse(req, record.course?._id || record.course),
   fields: [
     'title',
+    'batch',
+    'visibleToStudents',
+    'marksPublished',
     'quizCode',
     'course',
     'totalMarks',

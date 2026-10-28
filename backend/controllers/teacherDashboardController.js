@@ -38,7 +38,7 @@ const formatCourse = (course) => {
 
 const getTeacherDashboard = async (req, res, next) => {
   try {
-    const { teacher, assignment } = await getTeacherAssignment(req.user._id);
+    const { teacher, assignment, assignments } = await getTeacherAssignment(req.user._id);
 
     if (!teacher) {
       return res.status(404).json({ success: false, message: 'Teacher profile not found.' });
@@ -59,10 +59,10 @@ const getTeacherDashboard = async (req, res, next) => {
       });
     }
 
-    const courseId = assignment.course._id;
+    const courseId = {$in:assignments.map(a=>a.course?._id).filter(Boolean)};
 
     const [studentCount, totalExams, nativeQuizzes, examQuizzes, scheduledExams, scheduledQuizzes] = await Promise.all([
-      Enrollment.countDocuments({ course: courseId, status: 'enrolled' }),
+      Enrollment.distinct('student',{ course: courseId, status: 'enrolled' }).then(ids=>ids.length),
       Exam.countDocuments({ course: courseId, type: { $ne: 'quiz' } }),
       Quiz.countDocuments({ course: courseId }),
       Exam.countDocuments({ course: courseId, type: 'quiz' }),
@@ -70,8 +70,8 @@ const getTeacherDashboard = async (req, res, next) => {
         course: courseId,
         status: { $in: ['upcoming', 'scheduled', 'ongoing'] },
         examDate: { $gte: new Date() },
-      }).sort({ examDate: 1 }).lean(),
-      Quiz.find({ course: courseId, status: { $in: ['published', 'draft', 'upcoming', 'scheduled', 'ongoing'] }, quizDate: { $gte: new Date() } }).sort({ quizDate: 1 }).lean(),
+      }).populate('course','title name courseCode').sort({ examDate: 1 }).lean(),
+      Quiz.find({ course: courseId, status: { $in: ['published', 'draft', 'upcoming', 'scheduled', 'ongoing'] }, quizDate: { $gte: new Date() } }).populate('course','title name courseCode').sort({ quizDate: 1 }).lean(),
     ]);
 
     const totalQuizzes = nativeQuizzes + examQuizzes;
@@ -92,8 +92,8 @@ const getTeacherDashboard = async (req, res, next) => {
         type: exam.type || 'exam',
         examDate: exam.examDate,
         date: exam.examDate,
-        courseName: assignment.course.title || assignment.course.name || 'Course',
-        courseCode: assignment.course.courseCode || assignment.course.code || '—',
+        courseName: exam.course?.title || exam.course?.name || 'Course',
+        courseCode: exam.course?.courseCode || '—',
       })),
       course: formatCourse(assignment.course),
     });
@@ -102,87 +102,9 @@ const getTeacherDashboard = async (req, res, next) => {
   }
 };
 
-const getTeacherMyCourse = async (req, res, next) => {
-  try {
-    const { teacher, assignment, assignments } = await getTeacherAssignment(req.user._id);
-
-    if (!teacher) {
-      return res.status(404).json({ success: false, message: 'Teacher profile not found.' });
-    }
-
-    const assignedCourses = (assignments && assignments.length > 0)
-      ? assignments.map((a) => a.course).filter(Boolean).map(formatCourse)
-      : [];
-
-    if (!assignment || !assignment.course) {
-      return res.status(200).json({
-        success: true,
-        course: assignedCourses[0] || null,
-        courses: assignedCourses,
-        students: [],
-        upcomingExams: [],
-        notes: [],
-      });
-    }
-
-    const courseId = assignment.course._id;
-
-    const [students, upcomingExams, quizzes] = await Promise.all([
-      Enrollment.find({ course: courseId, status: 'enrolled' })
-        .populate({
-          path: 'student',
-          populate: { path: 'user', select: 'name email' },
-        })
-        .lean(),
-      Exam.find({
-        course: courseId,
-        status: { $in: ['scheduled', 'ongoing'] },
-        examDate: { $gte: new Date() },
-      }).sort({ examDate: 1 }).lean(),
-      Quiz.find({ course: courseId, status: { $in: ['published', 'draft'] } }).sort({ quizDate: 1 }).lean(),
-    ]);
-
-    const formattedStudents = students.map((item) => {
-      const studentData = item.student || {};
-      const userData = studentData.user || {};
-      return {
-        _id: studentData._id,
-        name: userData.name || 'Student',
-        email: userData.email || '',
-        studentId: studentData.studentId || '—',
-        status: studentData.status || 'active',
-      };
-    });
-
-    return res.status(200).json({
-      success: true,
-      course: formatCourse(assignment.course),
-      courses: assignedCourses,
-      students: formattedStudents,
-      upcomingExams: upcomingExams.map((exam) => ({
-        _id: exam._id,
-        title: exam.title,
-        type: exam.type || 'exam',
-        examDate: exam.examDate,
-        date: exam.examDate,
-        durationMinutes: exam.durationMinutes || null,
-        totalMarks: exam.totalMarks || null,
-        status: exam.status,
-      })),
-      quizzes: quizzes.map((quiz) => ({
-        _id: quiz._id,
-        title: quiz.title,
-        type: 'quiz',
-        quizDate: quiz.quizDate,
-        durationMinutes: quiz.durationMinutes || null,
-        totalMarks: quiz.totalMarks || null,
-        status: quiz.status,
-      })),
-      notes: [],
-    });
-  } catch (error) {
-    next(error);
-  }
+const getTeacherMyCourse = async (req,res,next) => {
+  try { res.json(await require('../services/teacherCourseWorkspaceService').getWorkspace(req.user,req.query)); }
+  catch(error){next(error);}
 };
 
 const getTeacherStudents = async (req, res, next) => {
@@ -283,6 +205,7 @@ const getTeacherProfile = async (req, res, next) => {
       success: true,
       teacher: {
         _id: teacher._id,
+        profilePicture: (await Teacher.findById(teacher._id).select('+profilePicture').lean())?.profilePicture || '',
         name: user?.name || '',
         email: user?.email || '',
         role: user?.role || 'teacher',
@@ -345,6 +268,7 @@ const updateTeacherProfile = async (req, res, next) => {
       success: true,
       teacher: {
         _id: teacherProfile._id,
+        profilePicture: teacherProfile.profilePicture || '',
         name: user.name,
         email: user.email,
         role: user.role,
@@ -369,9 +293,11 @@ const getTeacherAssessments = async (req, res, next) => {
       return res.status(200).json({ success: true, assessments: [] });
     }
 
+    const context=req.query.courseId?await require('../services/teacherCourseWorkspaceService').resolveScope(req.user,req.query):null;
+    const assessmentFilter=context?.selected?require('../services/teacherCourseWorkspaceService').assessmentFilter(context.selected):{course:{$in:courseIds}};
     const [exams, quizzes] = await Promise.all([
-      Exam.find({ course: { $in: courseIds } }).sort({ examDate: -1 }).lean(),
-      Quiz.find({ course: assignment.course._id }).sort({ quizDate: -1 }).lean(),
+      Exam.find(assessmentFilter).sort({ examDate: -1 }).lean(),
+      Quiz.find(assessmentFilter).sort({ quizDate: -1 }).lean(),
     ]);
 
     const assessments = [
@@ -379,6 +305,7 @@ const getTeacherAssessments = async (req, res, next) => {
         _id: exam._id,
         title: exam.title,
         type: 'exam',
+        assessmentType:exam.type,
         date: exam.examDate,
         totalMarks: exam.totalMarks,
         passingMarks: exam.passingMarks,
@@ -409,6 +336,11 @@ const assignmentForAssessment = async (req, assignments) => {
   return assessment ? assignments.find(a => String(a.course?._id) === String(assessment.course)) : null;
 };
 
+const assessmentEnrollmentFilter=async(req,assessment)=>{
+  if(req.query.courseId){const service=require('../services/teacherCourseWorkspaceService');const context=await service.resolveScope(req.user,req.query);if(!context.selected||!require('../services/academicProgressService').assessmentApplies(assessment,context.selected))throw Object.assign(new Error('Assessment does not belong to this course and batch.'),{statusCode:403});return service.enrollmentFilter(context.selected);}
+  return {course:assessment.course,status:'enrolled',...(assessment.academicYear?{academicYear:assessment.academicYear}:{}),...(assessment.batch?{batch:assessment.batch}:{})};
+};
+
 const getTeacherAssessmentResults = async (req, res, next) => {
   try {
     const { assignments } = await getTeacherAssignment(req.user._id);
@@ -429,7 +361,7 @@ const getTeacherAssessmentResults = async (req, res, next) => {
     }
 
     const [enrollments, results] = await Promise.all([
-      Enrollment.find({ course: assignment.course._id, status: 'enrolled' })
+      Enrollment.find(await assessmentEnrollmentFilter(req,assessment))
         .populate({ path: 'student', populate: { path: 'user', select: 'name email' } })
         .lean(),
       Result.find({ [assessmentType]: assessmentId }).lean(),
@@ -491,7 +423,7 @@ const saveTeacherAssessmentResults = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Assessment not found for your assigned course.' });
     }
 
-    const enrollments = await Enrollment.find({ course: assignment.course._id, status: 'enrolled' })
+    const enrollments = await Enrollment.find(await assessmentEnrollmentFilter(req,assessment))
       .select('student')
       .lean();
     const enrolledStudentIds = new Set(enrollments.map(({ student }) => String(student)));

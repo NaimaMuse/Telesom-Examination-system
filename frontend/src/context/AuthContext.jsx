@@ -15,7 +15,7 @@ const loadStoredAuth = () => {
   try {
     const token = localStorage.getItem('token');
     const userJson = localStorage.getItem('user');
-    if (token && userJson) {
+    if (token && userJson && token.split('.').length === 3) {
       return { token, user: JSON.parse(userJson) };
     }
   } catch {
@@ -78,7 +78,12 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  const updateSession = useCallback((newToken, updates) => {
+    localStorage.setItem('token', newToken);
+    setAuth(current => {const nextUser={...current.user,...updates};localStorage.setItem('user',JSON.stringify(nextUser));return {token:newToken,user:nextUser};});
+  }, []);
   const value = {
+    updateSession,
     updateUser,
     user,
     token,

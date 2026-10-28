@@ -1,5 +1,6 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../../services/api';
 
 
@@ -9,14 +10,14 @@ export default function StudentCourses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(()=>{
-    const fetch=async()=>{
-      setLoading(true);
-      try{const res=await api.get('/student/courses');if(res.data?.courses)setCourses(res.data.courses);}catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
-    };
-    fetch();
-  },[]);
-
+  useAutoRefresh(async ({ signal, isCurrent }) => {
+    try {
+      const { data } = await api.get('/student/courses', { signal });
+      if (!isCurrent()) return;
+      setCourses(data.courses || []); setError('');
+    } catch (err) { if (isCurrent()) setError(err.response?.data?.message || 'Data could not refresh. Retrying automatically.'); }
+    finally { if (isCurrent()) setLoading(false); }
+  });
   const visibleCourses = courses.filter(c => matchesPageSearch(search, c.name, c.code, c.teacher, c.semester, c.description));
 
   return (

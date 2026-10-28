@@ -1,5 +1,12 @@
+import CourseOverview from '../../components/CourseOverview';
+import TeachingIcon from '../../components/TeachingIcon';
+import {Navigate,useNavigate,useSearchParams} from 'react-router-dom';
+import TeacherContracts from '../../components/TeacherContracts';
+import TeacherExams from './TeacherExams';
+import TeacherResults from './TeacherResults';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import api from '../../services/api';
 
 const NOTE_FILE_TYPES = [
@@ -12,16 +19,17 @@ const NOTE_FILE_TYPES = [
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
-function formatCourseDate(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? 'Date to be confirmed'
-    : date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-export default function MyCourse() {
+export default function MyCourse({outlinePage=false}) {
   const [search] = usePageSearch();
-  const [tab, setTab] = useState('overview');
+  const [params,setParams]=useSearchParams();
+  const navigate=useNavigate();
+  const outlineUrl=()=>{const query=new URLSearchParams(params);query.delete('tab');return '/teacher/my-course/outline'+(query.size?'?'+query.toString():'');};
+  const tab=['overview','outline','notes','students','assessments'].includes(params.get('tab'))?params.get('tab'):'overview';
+  const setTab=next=>next==='outline'?navigate(outlineUrl()):setParams(previous=>{const nextParams=new URLSearchParams(previous);nextParams.set('tab',next);return nextParams;});
+  const [workspace,setWorkspace]=useState(null),[revision,setRevision]=useState(0),[childBusy,setChildBusy]=useState(false),[assessmentView,setAssessmentView]=useState('activities');
+  const requestScope=useMemo(()=>Object.fromEntries(['courseId','academicYear','batch','contractId'].filter(k=>params.has(k)).map(k=>[k,params.get(k)])),[params]);
+  const scopeKey=JSON.stringify(requestScope);
+  const updateContract=useCallback(data=>{if(data?.contract)setWorkspace(p=>p?{...p,contract:{...p.contract,...data.contract}}:p);setRevision(v=>v+1);},[]);
   const [course, setCourse] = useState(null);
   const [students, setStudents] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
@@ -34,31 +42,20 @@ export default function MyCourse() {
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [form, setForm] = useState({ title: '', description: '', file: null });
 
-  useEffect(() => {
-    const fetchCourseData = async () => {
-      setLoading(true);
+  useAutoRefresh(async ({ signal, isCurrent, initial }) => {
+    try {
+      const response = await api.get('/teacher/my-course', { signal,params:requestScope });
+      if (!isCurrent()) return;
+      const payload = response.data || {};
+      setWorkspace(payload);
+      setCourse(payload.course || null);
+      setStudents(Array.isArray(payload.students) ? payload.students : []);
+      setUpcoming(Array.isArray(payload.upcomingExams) ? payload.upcomingExams : []);
+      setNotes(Array.isArray(payload.notes) ? payload.notes : []);
       setError(null);
-      try {
-        const response = await api.get('/teacher/my-course');
-        const payload = response.data || {};
-        const nextCourse = payload.course || null;
-        setCourse(nextCourse);
-        setStudents(Array.isArray(payload.students) ? payload.students : []);
-        setUpcoming(Array.isArray(payload.upcomingExams) ? payload.upcomingExams : []);
-        setNotes(Array.isArray(payload.notes) ? payload.notes : []);
-      } catch (err) {
-        setError('My Course data is currently unavailable.');
-        setCourse(null);
-        setStudents([]);
-        setUpcoming([]);
-        setNotes([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCourseData();
-  }, []);
+    } catch (err) { if (isCurrent()) setError('My Course data could not refresh. Retrying automatically.'); }
+    finally { if (isCurrent()) setLoading(false); }
+  }, { enabled: !uploading && !editingNoteId && !form.title && !form.description && !form.file, deps:[scopeKey,revision] });
 
   const filteredNotes = useMemo(() => {
     const matchingNotes = notes.filter(note => matchesPageSearch(search, note.title, note.description, note.filename));
@@ -91,112 +88,36 @@ export default function MyCourse() {
   const handleUpload = async (event) => {
     event.preventDefault();
 
-    const validationError = handleFileValidation(form.file);
-    if (!form.title.trim() || validationError) {
-      setNoteError(validationError || 'Please enter a document title.');
-      return;
-    }
-
-    setUploading(true);
-    setNoteError('');
-
-    const nextNote = {
-      _id: editingNoteId || `note-${Date.now()}`,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      filename: form.file?.name || 'document.pdf',
-      fileType: form.file?.name?.split('.').pop().toLowerCase() || 'pdf',
-      uploadedAt: new Date().toISOString(),
-      size: form.file ? `${(form.file.size / 1024 / 1024).toFixed(1)} MB` : '—',
-    };
-
-    if (editingNoteId) {
-      setNotes((current) => current.map((note) => (note._id === editingNoteId ? { ...note, ...nextNote } : note)));
-      setEditingNoteId(null);
-    } else {
-      setNotes((current) => [nextNote, ...current]);
-    }
-
-    setForm({ title: '', description: '', file: null });
-    setUploading(false);
+    const validationError=form.file?handleFileValidation(form.file):editingNoteId?'':handleFileValidation(null);
+    if(!form.title.trim()||validationError){setNoteError(validationError||'Please enter a document title.');return;}
+    setUploading(true);setNoteError('');
+    try{
+      const body=new FormData();body.append('title',form.title.trim());body.append('description',form.description.trim());
+      for(const [key,value] of Object.entries(workspace.scope))if(key!=='contractId')body.append(key,value);
+      if(form.file)body.append('file',form.file);
+      const response=editingNoteId?await api.put('/teacher/materials/'+editingNoteId,body,{headers:{'Content-Type':'multipart/form-data'}}):await api.post('/teacher/materials',body,{headers:{'Content-Type':'multipart/form-data'}});
+      setNotes(current=>[response.data.note,...current.filter(n=>n._id!==response.data.note._id)]);
+      setEditingNoteId(null);setForm({title:'',description:'',file:null});setRevision(v=>v+1);
+    }catch(error){setNoteError(error.response?.data?.message||'Study material could not be saved.');}finally{setUploading(false);}
+  };
+  const handleDelete=async noteId=>{
+    if(!window.confirm('Remove this study material from the course?'))return;
+    setUploading(true);setNoteError('');
+    try{await api.delete('/teacher/materials/'+noteId);setNotes(current=>current.filter(n=>n._id!==noteId));if(editingNoteId===noteId){setEditingNoteId(null);setForm({title:'',description:'',file:null});}setRevision(v=>v+1);}
+    catch(error){setNoteError(error.response?.data?.message||'Study material could not be removed.');}finally{setUploading(false);}
+  };
+  const downloadNote=async note=>{
+    try{const response=await api.get('/teacher/materials/'+note._id+'/file',{responseType:'blob'});const url=URL.createObjectURL(response.data),link=document.createElement('a');link.href=url;link.download=note.filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
+    catch{setNoteError('The document could not be downloaded.');}
+  };
+  const hasDraft=childBusy||uploading||!!(editingNoteId||form.title||form.description||form.file);
+  const changeCohort=key=>{
+    const cohort=workspace.cohorts.find(c=>c.key===key);if(!cohort)return;
+    setLoading(true);setWorkspace(null);setCourse(null);setStudents([]);setUpcoming([]);setNotes([]);setChildBusy(false);
+    setParams(previous=>{const next=new URLSearchParams(previous);next.set('courseId',cohort.courseId);next.set('academicYear',cohort.academicYear);next.set('batch',cohort.batch);next.delete('contractId');return next;});
   };
 
-  const handleDelete = (noteId) => {
-    if (!window.confirm('Delete this study note?')) return;
-    setNotes((current) => current.filter((note) => note._id !== noteId));
-    if (editingNoteId === noteId) setEditingNoteId(null);
-  };
-
-  const renderOverview = () => (
-    <div className="card course-panel">
-      <div className="card-header course-panel-header">
-        <div>
-          <span className="course-section-kicker">At a glance</span>
-          <h2>Course overview</h2>
-        </div>
-        {course?.courseCode && <span className="course-panel-code">{course.courseCode}</span>}
-      </div>
-      <div className="card-body course-panel-body">
-        {course ? (
-          <>
-            <div className="stats-grid course-overview-stats">
-              <div className="stat-card">
-                <div className="stat-icon green" aria-hidden="true">▤</div>
-                <div className="stat-info"><div className="stat-value">{course.courseCode || '—'}</div><div className="stat-label">Course code</div></div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon blue" aria-hidden="true">♙</div>
-                <div className="stat-info"><div className="stat-value">{students.length}</div><div className="stat-label">Enrolled students</div></div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon gold" aria-hidden="true">◷</div>
-                <div className="stat-info"><div className="stat-value">{upcoming.length}</div><div className="stat-label">Upcoming exams</div></div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon purple" aria-hidden="true">▧</div>
-                <div className="stat-info"><div className="stat-value">{notes.length}</div><div className="stat-label">Study notes</div></div>
-              </div>
-            </div>
-
-            <div className="course-overview-lower">
-              <section className="course-detail-block">
-                <span className="course-section-kicker">About this course</span>
-                <h3>{course.title || course.name || 'Course title unavailable'}</h3>
-                <p>{course.description || 'No course description has been added yet.'}</p>
-                <dl className="course-facts">
-                  <div><dt>Course</dt><dd>{course.department || 'Not specified'}</dd></div>
-                  <div><dt>Semester</dt><dd>{course.semester || 'Not specified'}</dd></div>
-                  <div><dt>Credits</dt><dd>{course.credits ?? '—'}</dd></div>
-                </dl>
-              </section>
-              <section className="course-assessment-block">
-                <div className="course-block-heading"><h3>Upcoming assessments</h3><span>{upcoming.length}</span></div>
-                {upcoming.length ? (
-                  <ul className="course-assessment-list">
-                    {upcoming.filter(exam => matchesPageSearch(search, exam.title, exam.type, exam.examDate, exam.date)).slice(0, 4).map((exam, index) => (
-                      <li key={exam._id || index}>
-                        <span className="course-assessment-mark" aria-hidden="true">{exam.type === 'quiz' ? 'Q' : 'E'}</span>
-                        <span className="course-assessment-copy"><strong>{exam.title || 'Assessment'}</strong><small>{formatCourseDate(exam.examDate || exam.quizDate || exam.date)}</small></span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="course-assessment-empty">No upcoming assessments scheduled.</p>
-                )}
-              </section>
-            </div>
-          </>
-        ) : (
-          <div className="empty-state course-empty-state">
-            <div className="empty-state-icon" aria-hidden="true">▤</div>
-            <h3>Course information unavailable</h3>
-            <p>The assigned course record could not be loaded from the backend.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
+  const renderOverview = () => <CourseOverview course={course} contract={workspace?.contract} lessonProgress={workspace?.lessonProgress} students={students} notes={notes.filter(note=>matchesPageSearch(search,note.title,note.description,note.filename))} upcoming={upcoming.filter(exam=>matchesPageSearch(search,exam.title,exam.type,exam.course?.title))} onTab={setTab}/>;
   const renderNotes = () => (
     <div className="card">
       <div className="card-header">
@@ -206,18 +127,21 @@ export default function MyCourse() {
         <form onSubmit={handleUpload} style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">Document Title *</label>
+              <label className="form-label" htmlFor="course-note-title">Document Title *</label>
               <input
                 className="form-control"
+                id="course-note-title" required
                 value={form.title}
                 onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
                 placeholder="Week 3 – Lecture notes"
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Select Document *</label>
+              <label className="form-label" htmlFor="course-note-file">{editingNoteId?'Replace document (optional)':'Select Document *'}</label>
               <input
                 className="form-control"
+                key={`${editingNoteId||'new'}-${revision}`}
+                id="course-note-file"
                 type="file"
                 accept=".pdf,.doc,.docx,.ppt,.pptx"
                 onChange={(event) => setForm((current) => ({ ...current, file: event.target.files?.[0] || null }))}
@@ -226,10 +150,10 @@ export default function MyCourse() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Description</label>
+            <label className="form-label" htmlFor="course-note-description">Description</label>
             <textarea
               className="form-control"
-              rows={3}
+              rows={3} id="course-note-description" maxLength={4000}
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
               placeholder="Add a short summary for students..."
@@ -246,7 +170,7 @@ export default function MyCourse() {
             <button type="submit" className="btn btn-primary" disabled={uploading}>
               {uploading ? 'Uploading…' : editingNoteId ? 'Save Changes' : 'Upload Document'}
             </button>
-            {editingNoteId && (
+            {(editingNoteId||form.title||form.description||form.file) && (
               <button type="button" className="btn btn-secondary" onClick={() => { setEditingNoteId(null); setForm({ title: '', description: '', file: null }); }}>
                 Cancel
               </button>
@@ -288,7 +212,7 @@ export default function MyCourse() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}><button type="button" className="btn btn-sm btn-primary" onClick={()=>downloadNote(note)}>Download</button>
                   <button
                     type="button"
                     className="btn btn-sm btn-secondary"
@@ -357,22 +281,17 @@ export default function MyCourse() {
     </div>
   );
 
+  if(!outlinePage&&tab==='outline')return <Navigate to={outlineUrl()} replace/>;
+  if(outlinePage)return <div className="teacher-scope teacher-course-page dedicated-outline-page">
+    {error&&<p className="profile-save-error" role="alert">{error}</p>}
+    {loading?<div className="card course-loading"><div className="spinner-wrap"><div className="spinner"/></div></div>:workspace?.contract?<TeacherContracts key={workspace.scope.contractId} combined controlledContractId={workspace.scope.contractId} workspaceMode="outline" onContractUpdate={updateContract} onEditingChange={setChildBusy}/>:<section className="outline-start"><TeachingIcon name="book" size={32}/><h2>{course?'Teaching contract not configured':'No assigned course available'}</h2><p>{course?'Ask your administrator to assign a teaching contract before adding outlines and lessons.':'Your assigned course will appear here when it is available.'}</p></section>}
+  </div>;
+
   return (
     <div className="teacher-scope teacher-course-page">
-      <section className="course-page-hero">
-        <span className="course-hero-icon" aria-hidden="true">▤</span>
-        <div className="course-hero-copy">
-          <span className="course-section-kicker">Teaching workspace</span>
-          <h1>{course?.title || course?.name || 'My Course'}</h1>
-          <p>{course?.description || 'Your course materials, assessment schedule, and enrolled learners.'}</p>
-        </div>
-        <div className="course-hero-code">
-          <span>Course code</span>
-          <strong>{course?.courseCode || '—'}</strong>
-          <small>{course?.department || course?.semester || 'Assigned course'}</small>
-        </div>
-      </section>
 
+
+      {course&&<section className="co-course-meta" aria-label="Course details">{[['calendar','blue','Batch / Academic Year',[course.batch,course.academicYear].filter(Boolean).join(' · ')||'Not specified'],['star','amber','Credits',course.credits],['users','blue','Enrolled Students',students.length]].map(([icon,tone,label,value])=><div key={label}><span className={'tp-icon '+tone}><TeachingIcon name={icon}/></span><span><small>{label}</small><strong>{value??'Not specified'}</strong></span></div>)}</section>}
       {error && (
         <div className="course-page-error" role="alert">
           <span aria-hidden="true">!</span>
@@ -380,29 +299,36 @@ export default function MyCourse() {
         </div>
       )}
 
+      {workspace?.course&&<section className="course-workspace-selector"><label>Assigned course / batch / academic year<select className="form-control" disabled={hasDraft} value={workspace.cohorts.find(c=>String(c.courseId)===String(workspace.scope.courseId)&&c.batch===workspace.scope.batch&&c.academicYear===workspace.scope.academicYear)?.key||''} onChange={e=>changeCohort(e.target.value)}>{workspace.cohorts.map(c=><option key={c.key} value={c.key}>{c.courseName} · {c.batch||'No batch assigned'} · {c.academicYear}</option>)}</select></label>{workspace.contracts.length>1&&<label>Teaching contract<select className="form-control" disabled={hasDraft} value={workspace.scope.contractId} onChange={e=>{setLoading(true);setParams(previous=>{const next=new URLSearchParams(previous);for(const key of ['courseId','academicYear','batch'])next.set(key,workspace.scope[key]);next.set('contractId',e.target.value);return next;});}}>{workspace.contracts.map(c=><option key={c._id} value={c._id}>{c.startDate} · {c.status}</option>)}</select></label>}<div className="course-cohort-badges"><span>{course.batch||'No batch assigned'}</span><span>{course.academicYear}</span></div></section>}
+      {hasDraft&&<p className="course-draft-hint" role="status">Save or cancel your changes before switching course or tab.</p>}
       <div className="course-tabs" role="tablist" aria-label="Course sections">
-        {['overview', 'notes', 'students'].map((nextTab) => (
+        {['overview', 'outline', 'notes'].map((nextTab) => (
           <button
             key={nextTab}
             type="button"
-            id={`${nextTab}-tab`}
+            id={`course-${nextTab}-tab`}
             role="tab"
             aria-selected={tab === nextTab}
-            aria-controls={`${nextTab}-panel`}
+            aria-controls={`course-${nextTab}-panel`}
             className={`course-tab ${tab === nextTab ? 'active' : ''}`}
+            disabled={hasDraft&&tab!==nextTab}
             onClick={() => setTab(nextTab)}
           >
-            <span>{nextTab === 'overview' ? 'Overview' : nextTab === 'notes' ? 'Study notes' : 'Students'}</span>
+            <TeachingIcon name={{overview:'grid',outline:'book',notes:'folder',students:'users',assessments:'file'}[nextTab]} size={18}/><span>{{overview:'Overview',outline:'Course Outline',notes:'Study Notes',students:'Students',assessments:'Assessments'}[nextTab]}</span>
             <span className="course-tab-count">{nextTab === 'notes' ? notes.length : nextTab === 'students' ? students.length : ''}</span>
           </button>
         ))}
       </div>
 
-      <div className="course-tab-content" id={`${tab}-panel`} role="tabpanel" aria-labelledby={`${tab}-tab`}>
+      <div className="course-tab-content" id={`course-${tab}-panel`} role="tabpanel" aria-labelledby={`course-${tab}-tab`}>
         {loading ? (
           <div className="card course-loading"><div className="spinner-wrap"><div className="spinner" /></div></div>
-        ) : tab === 'overview' ? (
+        ) : !course ? (<div className="card course-panel"><div className="empty-state"><h3>No assigned course available</h3><p>{error||'Your administrator has not assigned a course yet.'}</p></div></div>) : tab === 'overview' ? (
           renderOverview()
+        ) : tab === 'outline' ? (
+          workspace?.contract?<TeacherContracts key={workspace.scope.contractId} combined controlledContractId={workspace.scope.contractId} workspaceMode="outline" onContractUpdate={updateContract} onEditingChange={setChildBusy}/>:<div className="card course-panel"><div className="empty-state"><h3>Teaching contract not configured</h3><p>Your administrator must configure a contract for this course and batch before you add outlines and lessons.</p></div></div>
+        ) : tab === 'assessments' ? (
+          course&&<div className="mycourse-assessment-panel"><div className="course-assessment-tabs"><button type="button" disabled={childBusy} className={assessmentView==='activities'?'active':''} onClick={()=>setAssessmentView('activities')}>Exams, quizzes &amp; assignments</button><button type="button" disabled={childBusy} className={assessmentView==='marks'?'active':''} onClick={()=>setAssessmentView('marks')}>Results &amp; marks</button></div>{assessmentView==='activities'?<TeacherExams key={scopeKey} scope={{...workspace.scope,course}} onEditingChange={setChildBusy} onChange={()=>setRevision(v=>v+1)}/>:<TeacherResults key={scopeKey} scope={workspace.scope} onEditingChange={setChildBusy}/>}</div>
         ) : tab === 'notes' ? (
           renderNotes()
         ) : (

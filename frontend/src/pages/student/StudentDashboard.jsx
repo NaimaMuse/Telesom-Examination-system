@@ -1,5 +1,7 @@
+import {AssessmentProgress} from '../../components/AcademyWorkspace';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
@@ -16,24 +18,23 @@ export default function StudentDashboard() {
   const [results,    setResults]    = useState([]);
   const [attendance, setAttendance] = useState({ present:0, total:0 });
 
-  useEffect(()=>{
-    const fetch=async()=>{
+  useAutoRefresh(async ({ signal, isCurrent }) => {
       try{
         const [cRes,eRes,rRes,aRes] = await Promise.allSettled([
-          api.get('/student/courses'),
-          api.get('/student/exams/upcoming'),
-          api.get('/student/results'),
-          api.get('/student/attendance/summary'),
+          api.get('/student/courses', { signal }),
+          api.get('/student/exams/upcoming', { signal }),
+          api.get('/student/results', { signal }),
+          api.get('/student/attendance/summary', { signal }),
         ]);
+        if (!isCurrent()) return;
+        setError('');
         if ([cRes,eRes,rRes,aRes].some(r=>r.status==='rejected')) setError('Some student data could not be loaded. Please refresh to try again.');
         if(cRes.status==='fulfilled'&&cRes.value.data?.courses)setCourses(cRes.value.data.courses);
         if(eRes.status==='fulfilled'&&eRes.value.data?.exams)setUpcoming(eRes.value.data.exams);
         if(rRes.status==='fulfilled'&&rRes.value.data?.results)setResults(rRes.value.data.results);
         if(aRes.status==='fulfilled')setAttendance(aRes.value.data);
-      }catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
-    };
-    fetch();
-  },[]);
+      }catch(err){if (isCurrent()) setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{if (isCurrent()) setLoading(false);}
+  });
 
   const visibleCourses = courses.filter(c => matchesPageSearch(search, c.name, c.code, c.teacher, c.semester));
   const visibleExams = upcoming.filter(e => matchesPageSearch(search, e.title, e.course, e.date, e.type));
@@ -56,6 +57,7 @@ export default function StudentDashboard() {
         <div className="stat-card"><div className="stat-icon purple">📅</div><div className="stat-info"><div className="stat-value">{attPct}%</div><div className="stat-label">Attendance</div></div></div>
       </div>
 
+      <AssessmentProgress />
       <div className="grid-2">
         {/* Enrolled courses */}
         <div className="card">

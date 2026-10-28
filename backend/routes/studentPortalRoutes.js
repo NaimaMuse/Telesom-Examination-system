@@ -29,27 +29,27 @@ router.get('/courses', asyncHandler(async (req, res) => {
 }));
 async function enrolledScopes(student) {
   const rows = await Enrollment.find({ student, status: 'enrolled' }).lean();
-  return rows.map(e => ({ course: e.course, academicYear: e.academicYear, ...(e.semester ? { semester: e.semester } : {}) }));
+  return rows.map(e => ({ $or:[{batch:e.batch||''},{batch:{$exists:false}},{batch:''}], course: e.course, academicYear: e.academicYear, ...(e.semester ? { semester: e.semester } : {}) }));
 }
 router.get('/exams/upcoming', asyncHandler(async (req, res) => {
   const scopes = await enrolledScopes(req.student._id);
   const today = new Date(); today.setUTCHours(0, 0, 0, 0);
-  const exams = scopes.length ? await Exam.find({ $or: scopes, status: { $in: ['scheduled', 'upcoming', 'ongoing'] }, examDate: { $gte: today } }).populate('course').sort({ examDate: 1 }).lean() : [];
-  const quizzes = scopes.length ? await Quiz.find({ $or: scopes, status: 'published', quizDate: { $gte: today } }).populate('course').lean() : [];
+  const exams = scopes.length ? await Exam.find({ $or: scopes, visibleToStudents:true, status: { $in: ['scheduled', 'upcoming', 'ongoing'] }, examDate: { $gte: today } }).populate('course').sort({ examDate: 1 }).lean() : [];
+  const quizzes = scopes.length ? await Quiz.find({ $or: scopes, visibleToStudents:true, status: {$in:['published','scheduled','upcoming']}, quizDate: { $gte: today } }).populate('course').lean() : [];
   res.json({ exams: [...exams.map(e => ({ ...e, date: date(e.examDate), course: courseLabel(e.course) })), ...quizzes.map(q => ({ ...q, _id: 'quiz-' + q._id, type: 'quiz', date: date(q.quizDate), course: courseLabel(q.course) }))].sort((a,b) => a.date.localeCompare(b.date)) });
 }));
 router.get('/results', asyncHandler(async (req, res) => {
   const rows = await ExamResult.find({ student: req.student._id }).populate({ path: 'exam', populate: { path: 'course' } }).sort({ createdAt: -1 }).lean();
-  res.json({ results: rows.filter(r => r.exam && r.exam.status !== 'cancelled' && r.exam.totalMarks > 0 && Number.isFinite(r.marksObtained) && r.marksObtained >= 0 && r.marksObtained <= r.exam.totalMarks).map(r => ({ _id: r._id, course: courseLabel(r.exam.course), exam: r.exam.title, date: date(r.exam.examDate), marks: r.marksObtained, totalMarks: r.exam.totalMarks, grade: gradeFor(r.marksObtained / r.exam.totalMarks * 100), isPassed: r.marksObtained >= r.exam.passingMarks, status: 'published' })) });
+  res.json({ results: rows.filter(r => r.exam && r.exam.visibleToStudents === true && r.exam.marksPublished === true && !['draft','cancelled'].includes(r.exam.status) && r.exam.totalMarks > 0 && Number.isFinite(r.marksObtained) && r.marksObtained >= 0 && r.marksObtained <= r.exam.totalMarks).map(r => ({ _id: r._id, course: courseLabel(r.exam.course), exam: r.exam.title, date: date(r.exam.examDate), marks: r.marksObtained, totalMarks: r.exam.totalMarks, grade: gradeFor(r.marksObtained / r.exam.totalMarks * 100), isPassed: r.marksObtained >= r.exam.passingMarks, status: 'published' })) });
 }));
 router.get('/quizzes', asyncHandler(async (req, res) => {
   const scopes = await enrolledScopes(req.student._id);
   const rows = await QuizResult.find({ student: req.student._id }).populate({ path: 'quiz', populate: { path: 'course' } }).lean();
   const today = new Date(); today.setUTCHours(0, 0, 0, 0);
-  const scheduled = scopes.length ? await Quiz.find({ $or: scopes, status: 'published', quizDate: { $gte: today } }).populate('course').lean() : [];
-  const graded = rows.filter(r => r.quiz && !['draft', 'cancelled'].includes(r.quiz.status) && r.quiz.totalMarks > 0 && Number.isFinite(r.marksObtained) && r.marksObtained >= 0 && r.marksObtained <= r.quiz.totalMarks).map(r => ({ _id: r._id, assessmentId: String(r.quiz._id), course: courseLabel(r.quiz.course), quiz: r.quiz.title, date: date(r.quiz.quizDate), marks: r.marksObtained, totalMarks: r.quiz.totalMarks, grade: gradeFor(r.marksObtained / r.quiz.totalMarks * 100), status: 'graded' }));
-  const examRows = await ExamResult.find({ student: req.student._id }).populate({ path: 'exam', match: { type: 'quiz', status: { $ne: 'cancelled' } }, populate: { path: 'course' } }).lean();
-  const examQuizzes = scopes.length ? await Exam.find({ $or: scopes, type: 'quiz', status: { $in: ['scheduled', 'upcoming', 'ongoing'] }, examDate: { $gte: today } }).populate('course').lean() : [];
+  const scheduled = scopes.length ? await Quiz.find({ $or: scopes, visibleToStudents:true, status: {$in:['published','scheduled','upcoming']}, quizDate: { $gte: today } }).populate('course').lean() : [];
+  const graded = rows.filter(r => r.quiz && r.quiz.visibleToStudents === true && r.quiz.marksPublished === true && !['draft', 'cancelled'].includes(r.quiz.status) && r.quiz.totalMarks > 0 && Number.isFinite(r.marksObtained) && r.marksObtained >= 0 && r.marksObtained <= r.quiz.totalMarks).map(r => ({ _id: r._id, assessmentId: String(r.quiz._id), course: courseLabel(r.quiz.course), quiz: r.quiz.title, date: date(r.quiz.quizDate), marks: r.marksObtained, totalMarks: r.quiz.totalMarks, grade: gradeFor(r.marksObtained / r.quiz.totalMarks * 100), status: 'graded' }));
+  const examRows = await ExamResult.find({ student: req.student._id }).populate({ path: 'exam', match: { type: 'quiz', visibleToStudents:true, marksPublished:true, status: { $nin: ['draft','cancelled'] } }, populate: { path: 'course' } }).lean();
+  const examQuizzes = scopes.length ? await Exam.find({ $or: scopes, type: 'quiz', visibleToStudents:true, status: { $in: ['scheduled', 'upcoming', 'ongoing'] }, examDate: { $gte: today } }).populate('course').lean() : [];
   const examGraded = examRows.filter(r => r.exam && r.exam.totalMarks > 0 && Number.isFinite(r.marksObtained) && r.marksObtained >= 0 && r.marksObtained <= r.exam.totalMarks).map(r => ({ _id: 'exam-' + r._id, assessmentId: String(r.exam._id), course: courseLabel(r.exam.course), quiz: r.exam.title, date: date(r.exam.examDate), marks: r.marksObtained, totalMarks: r.exam.totalMarks, grade: gradeFor(r.marksObtained / r.exam.totalMarks * 100), status: 'graded' }));
   res.json({ quizzes: [...graded, ...examGraded, ...examQuizzes.filter(q => !examGraded.some(r => r.assessmentId === String(q._id))).map(q => ({ _id: 'exam-' + q._id, course: courseLabel(q.course), quiz: q.title, date: date(q.examDate), totalMarks: q.totalMarks, status: 'upcoming' })), ...scheduled.filter(q => !graded.some(r => r.assessmentId === String(q._id))).map(q => ({ _id: q._id, course: courseLabel(q.course), quiz: q.title, date: date(q.quizDate), totalMarks: q.totalMarks, status: 'upcoming' }))] });
 }));
@@ -61,10 +61,20 @@ router.get('/attendance/summary', asyncHandler(async (req, res) => {
   const rows = await Attendance.find({ student: req.student._id }).lean();
   res.json({ total: rows.length, present: rows.filter(r => r.status === 'present').length });
 }));
+async function enrolledMaterialScopes(student){const rows=await Enrollment.find({student,status:'enrolled'}).lean();return rows.map(e=>({course:e.course,academicYear:e.academicYear,batch:e.batch||''}));}
 router.get('/notes', asyncHandler(async (req, res) => {
   // Notes are private staff records unless explicitly addressed to this student.
-  const rows = await Note.find({ student: req.student._id }).populate('course').populate('createdBy', 'name').sort({ updatedAt: -1 }).lean();
-  res.json({ notes: rows.map(n => ({ ...n, course: courseLabel(n.course), teacher: n.createdBy?.name || 'Staff', uploadedAt: date(n.updatedAt) })) });
+  const own = await Note.find({ student: req.student._id }).populate('course').populate('createdBy', 'name').sort({ updatedAt: -1 }).lean();
+  const scopes=await enrolledMaterialScopes(req.student._id);
+  const shared=scopes.length?await Note.find({material:true,archivedAt:null,$or:scopes}).populate('course').populate('createdBy','name').sort({updatedAt:-1}).lean():[];
+  const rows=[...new Map([...own,...shared].map(n=>[String(n._id),n])).values()].filter(n=>!n.archivedAt);
+  res.json({ notes: rows.map(n => ({ ...n, hasAttachment:!!n.attachment?.filename, filename:n.attachment?.filename||'',course: courseLabel(n.course), teacher: n.createdBy?.name || 'Staff', uploadedAt: date(n.updatedAt) })) });
+}));
+router.get('/materials/:id/file',asyncHandler(async(req,res)=>{
+  const scopes=await enrolledMaterialScopes(req.student._id);
+  const note=scopes.length?await Note.findOne({_id:req.params.id,material:true,archivedAt:null,$or:scopes}).select('+attachment.data'):null;
+  if(!note?.attachment?.data)throw Object.assign(new Error('Study document unavailable.'),{statusCode:404});
+  require('../controllers/courseMaterialController').sendFile(res,note);
 }));
 const { pick } = require('../controllers/resourceController');
 const User = require('../models/User');

@@ -27,8 +27,8 @@ async function getNotifications(user, now = new Date()) {
   if (!filter) return [];
   const dates = { $gte: upcomingStart, $lt: upcomingEnd };
   const [exams, quizzes] = await Promise.all([
-    Exam.find({ ...filter, status: { $in: ['scheduled', 'upcoming', 'ongoing'] }, examDate: dates }).sort({ examDate: 1 }).limit(30).lean(),
-    Quiz.find({ ...filter, status: 'published', quizDate: dates }).sort({ quizDate: 1 }).limit(30).lean(),
+    Exam.find({ ...filter, ...(user.role==='student'?{visibleToStudents:true}:{}), status: { $in: ['scheduled', 'upcoming', 'ongoing'] }, examDate: dates }).sort({ examDate: 1 }).limit(30).lean(),
+    Quiz.find({ ...filter, ...(user.role==='student'?{visibleToStudents:true}:{}), status: 'published', quizDate: dates }).sort({ quizDate: 1 }).limit(30).lean(),
   ]);
   const toNotice = (row, storageType) => {
     const type = storageType === 'quiz' || row.type === 'quiz' ? 'quiz' : ['assignment', 'assessment', 'practical'].includes(row.type) ? 'assessment' : 'exam';

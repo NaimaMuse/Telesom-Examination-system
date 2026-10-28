@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
@@ -161,6 +162,7 @@ const createStudent = async (req, res, next) => {
       return next(new Error('Email is already registered'));
     }
 
+    await require('../services/batchService').validateBatch(req.body.batch,academicYear);
     const normalizedStudentId = await studentIds.nextStudentId();
 
     // SECURITY: Student accounts have no password because login uses Student ID only.
@@ -181,6 +183,7 @@ const createStudent = async (req, res, next) => {
         phone,
         address,
         academicYear,
+        batch:req.body.batch||'',
         status: status || 'active',
       },
     });
@@ -211,8 +214,6 @@ const createTeacher = async (req, res, next) => {
     const {
       name,
       email,
-      password,
-      teacherId,
       gender,
       phone,
       department,
@@ -220,28 +221,23 @@ const createTeacher = async (req, res, next) => {
       specialization,
     } = req.body;
 
-    if (!name || !email || !password || !teacherId) {
+    if (!name || !email) {
       res.status(400);
       return next(
-        new Error('Name, email, password, and teacher ID are required')
+        new Error('Name and email are required')
       );
     }
 
-    if (String(password).length < 8) {
-      res.status(400);
-      return next(
-        new Error('Password must be at least 8 characters long')
-      );
-    }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const normalizedTeacherId = String(teacherId).trim().toUpperCase();
+    const normalizedTeacherId = 'TCH-' + crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase();
+    const temporaryPassword = crypto.randomBytes(18).toString('base64url');
     const normalizedGender = normalizeGender(gender);
 
     if (!normalizedEmail || !normalizedTeacherId) {
       res.status(400);
       return next(
-        new Error('Name, email, password, and teacher ID are required')
+        new Error('Name and email are required')
       );
     }
 
@@ -264,7 +260,7 @@ const createTeacher = async (req, res, next) => {
       return next(new Error('Teacher ID already exists'));
     }
 
-    const hashedPassword = await bcrypt.hash(String(password), 12);
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
 
     const { user, profile: teacher } = await createUserWithProfile({
       userData: {
@@ -272,6 +268,7 @@ const createTeacher = async (req, res, next) => {
         email: normalizedEmail,
         password: hashedPassword,
         role: 'teacher',
+        mustChangePassword: true,
         isActive: true,
       },
       ProfileModel: Teacher,
@@ -291,6 +288,7 @@ const createTeacher = async (req, res, next) => {
       data: {
         user: toSafeUser(user),
         teacher,
+        credentials: { email: user.email, temporaryPassword },
       },
     });
   } catch (error) {

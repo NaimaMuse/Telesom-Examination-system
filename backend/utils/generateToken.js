@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
  * @param {string|mongoose.Types.ObjectId} userId - User ID to encode in token
  * @returns {string} Signed JWT token
  */
-const generateToken = (userId) => {
+const generateToken = (userId, authVersion = 0) => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error('Server configuration error: JWT_SECRET is not set');
@@ -14,7 +14,7 @@ const generateToken = (userId) => {
   const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
   const algorithm = process.env.JWT_ALGORITHM || 'HS256';
 
-  return jwt.sign({ id: userId }, secret, {
+  return jwt.sign({ id: userId, authVersion }, secret, {
     expiresIn,
     algorithm,
   });

@@ -24,6 +24,12 @@ const router = express.Router();
 router.use(protect);
 router.use(authorizeRoles('teacher'));
 
+const materials=require('../controllers/courseMaterialController');
+router.get('/materials',materials.list);
+router.post('/materials',materials.upload,materials.create);
+router.put('/materials/:id',materials.upload,materials.update);
+router.delete('/materials/:id',materials.remove);
+router.get('/materials/:id/file',materials.download);
 router.get('/dashboard', getTeacherDashboard);
 router.get('/my-course', getTeacherMyCourse);
 router.get('/courses', getTeacherMyCourse);

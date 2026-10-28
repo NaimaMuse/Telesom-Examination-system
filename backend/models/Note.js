@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const noteSchema = new mongoose.Schema(
   {
+    material: {type:Boolean,default:false},
+    academicYear: {type:String,trim:true,default:''},
+    batch: {type:String,trim:true,default:''},
+    archivedAt: {type:Date,default:null},
+    attachment: {filename:String,mime:String,size:Number,data:{type:Buffer,select:false}},
     title: {
       type: String,
       required: [true, 'Note title is required'],

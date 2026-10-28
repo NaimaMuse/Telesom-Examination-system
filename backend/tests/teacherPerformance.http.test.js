@@ -6,12 +6,14 @@ const { app } = require('../server');
 const User=require('../models/User'), Teacher=require('../models/Teacher'), Student=require('../models/Student'), Course=require('../models/Course'), CourseTeacher=require('../models/CourseTeacher'), Enrollment=require('../models/Enrollment'), Exam=require('../models/Exam'), Quiz=require('../models/Quiz'), ExamResult=require('../models/ExamResult'), QuizResult=require('../models/QuizResult');
 const token=require('../utils/generateToken');
 const run=async()=>{
- await mongoose.connect(process.env.MONGODB_URI,{serverSelectionTimeoutMS:5000});
+ const dbName='telesom_performance_test_'+new mongoose.Types.ObjectId();
+ await mongoose.connect(process.env.MONGODB_URI,{dbName,serverSelectionTimeoutMS:10000});
+ assert.strictEqual(mongoose.connection.name,dbName);
  const marker='perf-'+new mongoose.Types.ObjectId(),users=[],courses=[],students=[];let teacher,server;
  try{
   for(const role of ['teacher','student','student']) users.push(await User.create({name:role==='teacher'?'Performance Teacher':`Student ${users.length}`,email:`${marker}-${users.length}@example.test`,role,...(role==='teacher'?{password:'test-password-hash'}:{})}));
   teacher=await Teacher.create({user:users[0]._id,teacherId:marker});
-  for(let i=0;i<3;i++)courses.push(await Course.create({title:`${marker} course ${i}`,courseCode:`${marker}-${i}`}));
+  for(let i=0;i<3;i++)courses.push(await Course.create({title:`${marker} course ${i}`,courseCode:`${marker}-${i}`,academicYear:'2026-2027',semester:''}));
   for(const course of courses.slice(0,2))await CourseTeacher.create({teacher:teacher._id,course:course._id,academicYear:'2026-2027'});
   for(let i=0;i<2;i++)students.push(await Student.create({user:users[i+1]._id,studentId:`${marker}-${i}`,gender:'male'}));
   await Enrollment.create([{student:students[0]._id,course:courses[0]._id,academicYear:'2026-2027'},{student:students[0]._id,course:courses[0]._id,academicYear:'2025-2026'},{student:students[0]._id,course:courses[1]._id,academicYear:'2026-2027'},{student:students[1]._id,course:courses[2]._id,academicYear:'2026-2027'}]);
@@ -19,25 +21,25 @@ const run=async()=>{
   const base=`http://127.0.0.1:${server.address().port}/api`;
   const request=async(path,method='GET',body)=>{const response=await fetch(base+path,{method,headers:{Authorization:`Bearer ${token(users[0]._id)}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return{status:response.status,data:await response.json()};};
   const assessmentIds=[];
-  for(const [i,total] of [10,10,30,50].entries()){
+  for(const [i,total] of [10,10,30,40].entries()){
    const type=i<2?'quiz':'exam';const result=await request(type==='quiz'?'/quizzes':'/teacher/exams','POST',{title:`${marker} assessment ${i}`,course:courses[0]._id,totalMarks:total,passingMarks:total/2,quizCode:`${marker}-${i}`,quizDate:new Date()});
    assert.strictEqual(result.status,201,JSON.stringify(result.data));assessmentIds.push({type,id:result.data.data._id});
   }
-  let result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.status,200);assert.strictEqual(result.data.allocation.allocatedMarks,100);assert.strictEqual(result.data.summary.classAverage,null);assert.strictEqual(result.data.students.length,1);
-  for(const [i,marks] of [8,9,25,45].entries()){
+  let result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.status,200);assert.strictEqual(result.data.allocation.allocatedMarks,90);assert.strictEqual(result.data.summary.classAverage,null);assert.strictEqual(result.data.students.length,1);
+  for(const [i,marks] of [8,9,25,35].entries()){
    const a=assessmentIds[i];result=await request(`/teacher/results/${a.type}/${a.id}`,'PUT',{results:[{studentId:students[0]._id,marksObtained:marks}]});assert.strictEqual(result.status,200,JSON.stringify(result.data));
    assert.strictEqual((await (a.type === 'exam' ? Exam : Quiz).findById(a.id).lean()).status, 'completed', 'Saving every student result completes the assessment');
   }
-  result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.data.summary.classAverage,87);assert.strictEqual(result.data.summary.highestScore,87);assert.strictEqual(result.data.summary.passingStudents,1);assert.strictEqual(result.data.students[0].marksLost,13);assert.strictEqual(result.data.results[0].student,'Student 1');assert.ok(result.data.results.every(r=>r.assessmentName));
-  result=await request('/teacher/performance?courseId='+courses[0]._id+'&assessmentType=quiz');assert.strictEqual(result.data.results.length,2);assert.strictEqual(result.data.summary.classAverage,87);
-  result=await request('/teacher/performance?courseId='+courses[0]._id+'&assessmentId='+encodeURIComponent('quiz:'+assessmentIds[0].id));assert.strictEqual(result.data.results.length,1);assert.strictEqual(result.data.results[0].percentage,80);assert.strictEqual(result.data.students[0].totalMarks,87);
-  result=await request('/teacher/performance?courseId='+courses[0]._id+'&search=missing');assert.strictEqual(result.data.results.length,0);assert.strictEqual(result.data.summary.classAverage,87);
+  result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.data.summary.classAverage,77);assert.strictEqual(result.data.summary.highestScore,77);assert.strictEqual(result.data.summary.passingStudents,0);assert.strictEqual(result.data.students[0].marksLost,null);assert.strictEqual(result.data.results[0].student,'Student 1');assert.ok(result.data.results.every(r=>r.assessmentName));
+  result=await request('/teacher/performance?courseId='+courses[0]._id+'&assessmentType=quiz');assert.strictEqual(result.data.results.length,2);assert.strictEqual(result.data.summary.classAverage,77);
+  result=await request('/teacher/performance?courseId='+courses[0]._id+'&assessmentId='+encodeURIComponent('quiz:'+assessmentIds[0].id));assert.strictEqual(result.data.results.length,1);assert.strictEqual(result.data.results[0].percentage,80);assert.strictEqual(result.data.students[0].totalMarks,77);
+  result=await request('/teacher/performance?courseId='+courses[0]._id+'&search=missing');assert.strictEqual(result.data.results.length,0);assert.strictEqual(result.data.summary.classAverage,77);
   assert.strictEqual((await request('/teacher/performance?courseId='+courses[2]._id)).status,403);
   assert.strictEqual((await request('/teacher/exams','POST',{course:courses[0]._id,title:'Over 100',totalMarks:1,passingMarks:0})).status,400);
   result=await request('/quiz-results','POST',{quiz:assessmentIds[0].id,student:students[1]._id,marksObtained:8});assert.strictEqual(result.status,403);
   result=await request(`/teacher/results/quiz/${assessmentIds[0].id}`,'PUT',{results:[{studentId:students[0]._id,marksObtained:11}]});assert.strictEqual(result.status,400);
   result=await request(`/teacher/results/quiz/${assessmentIds[0].id}`,'PUT',{results:[{studentId:students[0]._id,marksObtained:7}]});assert.strictEqual(result.status,200);
-  result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.data.summary.classAverage,86);
+  result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.data.summary.classAverage,76);
   // Second assigned course also works in the existing Gradebook.
   result=await request('/teacher/exams','POST',{course:courses[1]._id,title:'Second course',totalMarks:20});assert.strictEqual(result.status,201);assert.strictEqual(result.data.data.passingMarks,10);const secondId=result.data.data._id;
   result=await request(`/teacher/results/exam/${secondId}`,'PUT',{results:[{studentId:students[0]._id,marksObtained:15}]});assert.strictEqual(result.status,200,JSON.stringify(result.data));
@@ -47,9 +49,9 @@ const run=async()=>{
   const foreign=await Exam.create({course:courses[2]._id,title:'Foreign exam',totalMarks:100,passingMarks:50});await ExamResult.create({exam:foreign._id,student:students[1]._id,marksObtained:90});
   result=await request('/exam-results');assert.strictEqual(result.status,200);assert.ok(result.data.data.every(row=>row.student.studentId===students[0].studentId));
   const score=await QuizResult.findOne({quiz:assessmentIds[0].id,student:students[0]._id});result=await request('/quiz-results/'+score._id,'DELETE');assert.strictEqual(result.status,200);
-  result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.data.students[0].totalMarks,79);assert.strictEqual(result.data.summary.passingStudents,0);assert.strictEqual(result.data.summary.failingStudents,0);
+  result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.data.students[0].totalMarks,69);assert.strictEqual(result.data.summary.passingStudents,0);assert.strictEqual(result.data.summary.failingStudents,0);
   result=await request('/teacher/exams/'+assessmentIds[3].id,'DELETE');assert.strictEqual(result.status,200);
-  result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.data.allocation.allocatedMarks,50);assert.strictEqual(result.data.students[0].totalMarks,34);assert.strictEqual(result.data.allocation.remainingMarks,50);
+  result=await request('/teacher/performance?courseId='+courses[0]._id);assert.strictEqual(result.data.allocation.allocatedMarks,50);assert.strictEqual(result.data.students[0].totalMarks,34);assert.strictEqual(result.data.allocation.remainingMarks,40);
   const batchUser=await User.create({name:'Batch Student',email:marker+'-batch@example.test',role:'student'});users.push(batchUser);
   const batchStudent=await Student.create({user:batchUser._id,studentId:marker+'-batch',gender:'female',academicYear:'2024-2025'});students.push(batchStudent);
   await Enrollment.create({student:batchStudent._id,course:courses[0]._id,academicYear:'2026-2027'});
@@ -124,7 +126,7 @@ const run=async()=>{
   result=await request('/dashboard/admin');assert.strictEqual(result.status,403,'Admin dashboard rejects teacher access');
   const adminDashboardResponse=await fetch(base+'/dashboard/admin',{headers:{Authorization:'Bearer '+token(overviewAdmin._id)}});assert.strictEqual(adminDashboardResponse.status,200);const adminDashboard=(await adminDashboardResponse.json()).data;
   assert.strictEqual(adminDashboard.totals.students,await Student.countDocuments());assert.strictEqual(adminDashboard.totals.teachers,await Teacher.countDocuments());assert.strictEqual(adminDashboard.totals.courses,await Course.countDocuments());assert.strictEqual(adminDashboard.totals.assessments,await Exam.countDocuments()+await Quiz.countDocuments());assert.ok(adminDashboard.recentStudents.some(s=>String(s._id)===String(batchStudent._id)));assert.ok(adminDashboard.recentStudents.every(s=>s.name&&s.studentId));
-  console.log('Performance HTTP integration passed: shared gradebook marks, 87/100, update/delete recalculation, course isolation, filters, multiple assignments, batch cohorts, participant rows, popup records and concurrent allocation cap.');
+  console.log('Performance HTTP integration passed: shared gradebook marks, 77/90 teacher marks plus automatic attendance, update/delete recalculation, course isolation, filters, multiple assignments, batch cohorts, participant rows, popup records and concurrent allocation cap.');
  }finally{
   if(server)await new Promise(resolve=>server.close(resolve));
   const ids=courses.map(c=>c._id),studentIds=students.map(s=>s._id);

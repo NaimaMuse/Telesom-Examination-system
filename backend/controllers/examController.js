@@ -29,6 +29,9 @@ const controller = createResourceController(Exam, {
   authorizeRead: (req, record) => authorizeCourse(req, record.course?._id || record.course),
   fields: [
     'title',
+    'batch',
+    'visibleToStudents',
+    'marksPublished',
     'examCode',
     'course',
     'type',
@@ -60,6 +63,9 @@ const controller = createResourceController(Exam, {
     const courseId = req.body.course && typeof req.body.course === 'object' ? req.body.course._id : req.body.course;
     if (courseId) {
       extra.course = courseId;
+      const course=await require('../models/Course').findById(courseId);
+      if(!req.body.academicYear)extra.academicYear=course?.academicYear||String(new Date().getFullYear());
+      if(!req.body.semester)extra.semester=course?.semester||'';
     }
     await validateTeacherCourse(req, courseId);
     return extra;

@@ -1,5 +1,6 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../../services/api';
 
 
@@ -11,14 +12,14 @@ export default function StudentQuizzes() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(()=>{
-    const fetch=async()=>{
-      setLoading(true);
-      try{const res=await api.get('/student/quizzes');if(res.data?.quizzes)setQuizzes(res.data.quizzes);}catch(err){setError(err.response?.data?.message || 'Unable to load student data. Please try again.');}finally{setLoading(false);}
-    };
-    fetch();
-  },[]);
-
+  useAutoRefresh(async ({ signal, isCurrent }) => {
+    try {
+      const { data } = await api.get('/student/quizzes', { signal });
+      if (!isCurrent()) return;
+      setQuizzes(data.quizzes || []); setError('');
+    } catch (err) { if (isCurrent()) setError(err.response?.data?.message || 'Data could not refresh. Retrying automatically.'); }
+    finally { if (isCurrent()) setLoading(false); }
+  });
   const graded   = quizzes.filter(q=>q.status==='graded' && matchesPageSearch(search, q.course, q.quiz, q.date, q.grade, q.marks));
   const upcoming = quizzes.filter(q=>q.status==='upcoming' && matchesPageSearch(search, q.course, q.quiz, q.date));
   const avg      = graded.length?Math.round(graded.reduce((a,q)=>a+(q.marks/q.totalMarks)*100,0)/graded.length):0;
