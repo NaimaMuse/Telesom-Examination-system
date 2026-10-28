@@ -1,3 +1,4 @@
+import { usePageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 
@@ -9,7 +10,7 @@ const PLACEHOLDER_COURSES = [
 export default function TeacherCourses() {
   const [courses, setCourses] = useState(PLACEHOLDER_COURSES);
   const [loading, setLoading] = useState(false);
-  const [search,  setSearch]  = useState('');
+  const [search, setSearch] = usePageSearch();
 
   useEffect(() => {
     const fetch = async () => {

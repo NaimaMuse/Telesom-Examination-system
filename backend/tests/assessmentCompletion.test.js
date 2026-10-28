@@ -1,0 +1,10 @@
+const assert = require('assert/strict');
+const { allStudentsGraded } = require('../services/assessmentCompletionService');
+assert.equal(allStudentsGraded(['a', 'b'], [{student:'a',marksObtained:5}], 10), false);
+assert.equal(allStudentsGraded(['a', 'b'], [{student:'a',marksObtained:5},{student:'b',marksObtained:0}], 10), true);
+assert.equal(allStudentsGraded(['a', 'a'], [{student:'a',marksObtained:5}], 10), true);
+assert.equal(allStudentsGraded(['a'], [{student:'other',marksObtained:10}], 10), false);
+assert.equal(allStudentsGraded(['a'], [{student:'a',marksObtained:11}], 10), false);
+assert.equal(allStudentsGraded(['a'], [{student:'a',marksObtained:null}], 10), false);
+assert.equal(allStudentsGraded([], [], 10), false);
+console.log('Assessment completion tests passed: full roster, partial marks, zero scores, duplicate enrollments, invalid scores and empty roster.');

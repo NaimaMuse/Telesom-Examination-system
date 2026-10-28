@@ -104,3 +104,11 @@ const getDashboardOverview = asyncHandler(async (req, res) => {
 module.exports = {
   getDashboardOverview,
 };
+
+module.exports.getAdminDashboard = asyncHandler(async (req,res) => {
+  const [students,teachers,courses,exams,quizzes,recent] = await Promise.all([
+    Student.countDocuments(),Teacher.countDocuments(),Course.countDocuments(),Exam.countDocuments(),Quiz.countDocuments(),
+    Student.find().populate('user','name email isActive').sort({createdAt:-1,_id:-1}).limit(8).lean(),
+  ]);
+  res.json({success:true,data:{totals:{students,teachers,courses,assessments:exams+quizzes},recentStudents:recent.map(student=>({_id:student._id,name:student.user?.name||'Student account unavailable',email:student.user?.email||'',studentId:student.studentId,status:student.user?.isActive===false?'inactive':student.status||'active'}))}});
+});

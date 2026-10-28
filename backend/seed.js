@@ -151,15 +151,6 @@ const seedData = async () => {
         isPrimary: true,
         status: 'active',
       },
-      {
-        teacher: teacherProfile._id,
-        course: course2._id,
-        academicYear: '2025-2026',
-        semester: 'Semester 1',
-        role: 'lecturer',
-        isPrimary: true,
-        status: 'active',
-      },
     ]);
 
     // 6. Enroll Students in Courses

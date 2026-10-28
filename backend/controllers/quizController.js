@@ -1,7 +1,10 @@
+const { assessmentReadScope, authorizeCourse } = require('../services/gradebookIntegrityService');
 const Quiz = require('../models/Quiz');
 const { createResourceController } = require('./resourceController');
 
 const controller = createResourceController(Quiz, {
+  scopeFilter: assessmentReadScope,
+  authorizeRead: (req, record) => authorizeCourse(req, record.course?._id || record.course),
   fields: [
     'title',
     'quizCode',
@@ -21,10 +24,11 @@ const controller = createResourceController(Quiz, {
   beforeCreate: (req) => ({ createdBy: req.user && req.user._id }),
 });
 
+const { assessmentWrites } = require('../services/gradebookIntegrityService');
 module.exports = {
   listQuizzes: controller.list,
   getQuizById: controller.getById,
-  createQuiz: controller.create,
-  updateQuiz: controller.update,
-  deleteQuiz: controller.remove,
+  createQuiz: assessmentWrites(Quiz, controller.create, 'create'),
+  updateQuiz: assessmentWrites(Quiz, controller.update, 'update'),
+  deleteQuiz: assessmentWrites(Quiz, controller.remove, 'remove'),
 };

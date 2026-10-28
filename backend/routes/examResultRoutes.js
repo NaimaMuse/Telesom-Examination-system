@@ -21,6 +21,6 @@ router
   .get(getExamResultById)
   .put(updateExamResult)
   .patch(updateExamResult)
-  .delete(authorizeRoles('admin'), deleteExamResult);
+  .delete(authorizeRoles('admin', 'teacher'), deleteExamResult);
 
 module.exports = router;

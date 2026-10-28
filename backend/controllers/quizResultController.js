@@ -92,10 +92,11 @@ const updateQuizResult = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: result });
 });
 
+const { resultWrite, resultRead } = require('../services/gradebookIntegrityService');
 module.exports = {
-  listQuizResults: controller.list,
-  getQuizResultById: controller.getById,
-  createQuizResult,
-  updateQuizResult,
-  deleteQuizResult: controller.remove,
+  listQuizResults: resultRead('quiz', controller.list),
+  getQuizResultById: resultRead('quiz', controller.getById, true),
+  createQuizResult: resultWrite('quiz', createQuizResult),
+  updateQuizResult: resultWrite('quiz', updateQuizResult),
+  deleteQuizResult: resultWrite('quiz', controller.remove, 'remove'),
 };

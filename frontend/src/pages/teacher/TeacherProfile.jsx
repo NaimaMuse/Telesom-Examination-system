@@ -1,8 +1,10 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
 export default function TeacherProfile() {
+  const [search] = usePageSearch();
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -138,7 +140,8 @@ export default function TeacherProfile() {
           ) : (
             <div className="profile-overview-layout">
               <dl className="profile-fields-grid">
-                {profileFields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                {search && !profileFields.some(([label, value]) => matchesPageSearch(search, label, value)) && <p role="status">No matching profile details.</p>}
+                {profileFields.filter(([label, value]) => matchesPageSearch(search, label, value)).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
               </dl>
               <aside className="profile-course-spotlight">
                 <span className="profile-course-eyebrow">CURRENT ASSIGNMENT</span>

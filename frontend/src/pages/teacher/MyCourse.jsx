@@ -1,3 +1,4 @@
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../services/api';
 
@@ -19,6 +20,7 @@ function formatCourseDate(value) {
 }
 
 export default function MyCourse() {
+  const [search] = usePageSearch();
   const [tab, setTab] = useState('overview');
   const [course, setCourse] = useState(null);
   const [students, setStudents] = useState([]);
@@ -59,14 +61,15 @@ export default function MyCourse() {
   }, []);
 
   const filteredNotes = useMemo(() => {
-    if (!noteSearch.trim()) return notes;
+    const matchingNotes = notes.filter(note => matchesPageSearch(search, note.title, note.description, note.filename));
+    if (!noteSearch.trim()) return matchingNotes;
     const q = noteSearch.toLowerCase();
-    return notes.filter((note) =>
+    return matchingNotes.filter((note) =>
       [note.title, note.description, note.filename].some((value) =>
         String(value || '').toLowerCase().includes(q)
       )
     );
-  }, [notes, noteSearch]);
+  }, [notes, noteSearch, search]);
 
   const handleFileValidation = (file) => {
     if (!file) {
@@ -170,7 +173,7 @@ export default function MyCourse() {
                 <div className="course-block-heading"><h3>Upcoming assessments</h3><span>{upcoming.length}</span></div>
                 {upcoming.length ? (
                   <ul className="course-assessment-list">
-                    {upcoming.slice(0, 4).map((exam, index) => (
+                    {upcoming.filter(exam => matchesPageSearch(search, exam.title, exam.type, exam.examDate, exam.date)).slice(0, 4).map((exam, index) => (
                       <li key={exam._id || index}>
                         <span className="course-assessment-mark" aria-hidden="true">{exam.type === 'quiz' ? 'Q' : 'E'}</span>
                         <span className="course-assessment-copy"><strong>{exam.title || 'Assessment'}</strong><small>{formatCourseDate(exam.examDate || exam.quizDate || exam.date)}</small></span>
@@ -312,17 +315,19 @@ export default function MyCourse() {
     </div>
   );
 
+  const visibleStudents = students.filter(student => matchesPageSearch(search, student.name, student.studentId, student.email, student.status));
+
   const renderStudents = () => (
     <div className="card">
       <div className="card-header">
         <span className="card-title">Students</span>
       </div>
       <div className="card-body">
-        {students.length === 0 ? (
+        {visibleStudents.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
             <div className="empty-state-icon">🎓</div>
-            <h3>No students enrolled</h3>
-            <p>There are no students assigned to this course yet.</p>
+            <h3>{search ? 'No matching students' : 'No students enrolled'}</h3>
+            <p>{search ? 'Try another name, student ID or email.' : 'There are no students assigned to this course yet.'}</p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -336,7 +341,7 @@ export default function MyCourse() {
                 </tr>
               </thead>
               <tbody>
-                {students.map((student) => (
+                {visibleStudents.map((student) => (
                   <tr key={student._id || student.studentId}>
                     <td style={{ fontWeight: 600 }}>{student.name || 'Student'}</td>
                     <td>{student.studentId || '—'}</td>

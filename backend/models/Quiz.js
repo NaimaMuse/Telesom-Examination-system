@@ -22,14 +22,15 @@ const quizSchema = new mongoose.Schema(
     totalMarks: {
       type: Number,
       required: [true, 'Total marks are required'],
-      min: [0, 'Total marks cannot be negative'],
+      min: [0.01, 'Total marks must be positive'],
+      max: [100, 'Assessment maximum cannot exceed 100 marks'],
       default: 20,
     },
     passingMarks: {
       type: Number,
       required: [true, 'Passing marks are required'],
       min: [0, 'Passing marks cannot be negative'],
-      default: 10,
+      default: function () { return Math.round(this.totalMarks * 50) / 100; },
     },
     weightage: {
       type: Number,
@@ -72,6 +73,11 @@ const quizSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+quizSchema.pre('validate', function (next) {
+  if (this.passingMarks > this.totalMarks) this.invalidate('passingMarks', 'Passing marks cannot exceed total marks.');
+  next();
+});
 
 // Indexes
 quizSchema.index({ course: 1, quizDate: 1 });

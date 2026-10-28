@@ -361,7 +361,7 @@ export default function TeacherMgmt() {
           <div className="table-responsive teacher-directory-table-wrap">
             <table className="data-table teacher-directory-table">
               <thead><tr><th>Faculty member</th><th>Course</th><th>Phone</th><th>Status</th>{showDirectoryDetails && <><th>Teacher ID</th><th>Course description</th></>}<th><span className="visually-hidden">Actions</span></th></tr></thead>
-              <tbody>
+              <tbody> 
                 {paginated.map((teacher) => {
                   const assignment = getTeacherAssignment(teacher);
                   const assignedCourse = assignment?.course;

@@ -4,6 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
+router.get('/admin', protect, authorizeRoles('admin'), require('../controllers/dashboardController').getAdminDashboard);
 router.get(
   '/',
   protect,

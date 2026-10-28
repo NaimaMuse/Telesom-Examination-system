@@ -1,3 +1,4 @@
+import { usePageSearch } from '../../context/PageSearchContext';
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import './teacher.css';
@@ -9,7 +10,7 @@ export default function TeacherResults() {
   const [selectedKey, setSelectedKey] = useState('');
   const [assessment, setAssessment] = useState(null);
   const [students, setStudents] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = usePageSearch();
   const [loadingAssessments, setLoadingAssessments] = useState(true);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -87,7 +88,7 @@ export default function TeacherResults() {
       .some((value) => String(value || '').toLowerCase().includes(search.toLowerCase()))
   ));
   const enteredCount = students.filter((student) => student.marksObtained !== '').length;
-  const allEntered = students.length > 0 && enteredCount === students.length;
+  const markedStudents = students.filter(student => String(student.marksObtained).trim() !== '');
   const passedCount = students.filter((student) => (
     student.marksObtained !== '' && Number(student.marksObtained) >= (assessment?.passingMarks ?? Infinity)
   )).length;
@@ -95,11 +96,11 @@ export default function TeacherResults() {
 
   const saveResults = async (event) => {
     event.preventDefault();
-    if (!assessment || !allEntered) {
-      setError('Enter a mark for every enrolled student before saving.');
+    if (!assessment || !markedStudents.length) {
+      setError('Enter marks for at least one student before saving.');
       return;
     }
-    const invalid = students.find((student) => {
+    const invalid = markedStudents.find((student) => {
       const mark = Number(student.marksObtained);
       return !Number.isFinite(mark) || mark < 0 || mark > assessment.totalMarks;
     });
@@ -113,13 +114,13 @@ export default function TeacherResults() {
     setNotice('');
     try {
       const response = await api.put(`/teacher/results/${assessment.type}/${assessment._id}`, {
-        results: students.map((student) => ({
+        results: markedStudents.map((student) => ({
           studentId: student._id,
           marksObtained: Number(student.marksObtained),
           remarks: student.remarks,
         })),
       });
-      setNotice(`Saved results for ${response.data?.savedCount ?? students.length} students.`);
+      setNotice(`Saved results for ${response.data?.savedCount ?? markedStudents.length} students.`);
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Results could not be saved. Please try again.');
     } finally {
@@ -247,7 +248,6 @@ export default function TeacherResults() {
                             max={assessment?.totalMarks}
                             step="0.01"
                             inputMode="decimal"
-                            required
                             aria-label={`Marks for ${student.name}`}
                             value={student.marksObtained}
                             onChange={(event) => updateStudent(student._id, 'marksObtained', event.target.value)}
@@ -278,8 +278,8 @@ export default function TeacherResults() {
               </table>
             </div>
             <div className="results-footer">
-              <span>{allEntered ? 'All enrolled students have marks entered.' : `Enter marks for ${students.length - enteredCount} more student${students.length - enteredCount === 1 ? '' : 's'}.`}</span>
-              <button type="submit" className="btn btn-primary" disabled={saving || !allEntered || !students.length}>
+              <span>{enteredCount} students with marks. Leave non-participants blank.</span>
+              <button type="submit" className="btn btn-primary" disabled={saving || !markedStudents.length}>
                 {saving ? 'Saving results...' : 'Save class results'}
               </button>
             </div>

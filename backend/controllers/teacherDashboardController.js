@@ -12,13 +12,13 @@ const mongoose = require('mongoose');
 
 const getTeacherAssignment = async (userId) => {
   const teacher = await Teacher.findOne({ user: userId }).lean();
-  if (!teacher) return { teacher: null, assignment: null };
+  if (!teacher) return { teacher: null, assignment: null, assignments: [] };
 
-  const assignment = await CourseTeacher.findOne({ teacher: teacher._id, status: 'active' })
+  const assignments = await CourseTeacher.find({ teacher: teacher._id, status: 'active' })
     .populate('course')
     .lean();
 
-  return { teacher, assignment };
+  return { teacher, assignment: assignments[0] || null, assignments };
 };
 
 const formatCourse = (course) => {
@@ -61,17 +61,21 @@ const getTeacherDashboard = async (req, res, next) => {
 
     const courseId = assignment.course._id;
 
-    const [studentCount, totalExams, totalQuizzes, upcomingExams] = await Promise.all([
+    const [studentCount, totalExams, nativeQuizzes, examQuizzes, scheduledExams, scheduledQuizzes] = await Promise.all([
       Enrollment.countDocuments({ course: courseId, status: 'enrolled' }),
-      Exam.countDocuments({ course: courseId }),
+      Exam.countDocuments({ course: courseId, type: { $ne: 'quiz' } }),
       Quiz.countDocuments({ course: courseId }),
+      Exam.countDocuments({ course: courseId, type: 'quiz' }),
       Exam.find({
         course: courseId,
-        status: { $in: ['scheduled', 'ongoing'] },
+        status: { $in: ['upcoming', 'scheduled', 'ongoing'] },
         examDate: { $gte: new Date() },
       }).sort({ examDate: 1 }).lean(),
-      Quiz.find({ course: courseId, status: { $in: ['published', 'draft'] } }).sort({ quizDate: 1 }).lean(),
+      Quiz.find({ course: courseId, status: { $in: ['published', 'draft', 'upcoming', 'scheduled', 'ongoing'] }, quizDate: { $gte: new Date() } }).sort({ quizDate: 1 }).lean(),
     ]);
+
+    const totalQuizzes = nativeQuizzes + examQuizzes;
+    const upcomingExams = [...scheduledExams, ...scheduledQuizzes.map(quiz => ({ ...quiz, type: 'quiz', examDate: quiz.quizDate }))].sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
 
     return res.status(200).json({
       success: true,
@@ -100,16 +104,21 @@ const getTeacherDashboard = async (req, res, next) => {
 
 const getTeacherMyCourse = async (req, res, next) => {
   try {
-    const { teacher, assignment } = await getTeacherAssignment(req.user._id);
+    const { teacher, assignment, assignments } = await getTeacherAssignment(req.user._id);
 
     if (!teacher) {
       return res.status(404).json({ success: false, message: 'Teacher profile not found.' });
     }
 
+    const assignedCourses = (assignments && assignments.length > 0)
+      ? assignments.map((a) => a.course).filter(Boolean).map(formatCourse)
+      : [];
+
     if (!assignment || !assignment.course) {
       return res.status(200).json({
         success: true,
-        course: null,
+        course: assignedCourses[0] || null,
+        courses: assignedCourses,
         students: [],
         upcomingExams: [],
         notes: [],
@@ -148,6 +157,7 @@ const getTeacherMyCourse = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       course: formatCourse(assignment.course),
+      courses: assignedCourses,
       students: formattedStudents,
       upcomingExams: upcomingExams.map((exam) => ({
         _id: exam._id,
@@ -177,31 +187,51 @@ const getTeacherMyCourse = async (req, res, next) => {
 
 const getTeacherStudents = async (req, res, next) => {
   try {
-    const { assignment } = await getTeacherAssignment(req.user._id);
-    if (!assignment || !assignment.course) {
+    const { assignments } = await getTeacherAssignment(req.user._id);
+    const assignedCourseIds = (assignments || []).map((a) => a.course?._id || a.course).filter(Boolean);
+    if (assignedCourseIds.length === 0) {
       return res.status(200).json({ success: true, students: [] });
     }
 
-    const enrollments = await Enrollment.find({ course: assignment.course._id, status: 'enrolled' })
+    const courseFilter = req.query.courseId && assignedCourseIds.some(id => String(id) === String(req.query.courseId))
+      ? req.query.courseId
+      : { $in: assignedCourseIds };
+
+    const enrollments = await Enrollment.find({ course: courseFilter, status: 'enrolled' })
       .populate({
         path: 'student',
         populate: { path: 'user', select: 'name email' },
       })
+      .populate('course', 'courseCode title name')
       .lean();
 
-    return res.status(200).json({
-      success: true,
-      students: enrollments.map((item) => {
-        const student = item.student || {};
+    const uniqueStudents = [];
+    const seen = new Set();
+    for (const item of enrollments) {
+      const student = item.student;
+      if (!student || !student._id) continue;
+      const key = String(student._id);
+      if (!seen.has(key)) {
+        seen.add(key);
         const user = student.user || {};
-        return {
+        const course = item.course || {};
+        uniqueStudents.push({
           _id: student._id,
           name: user.name || 'Student',
           email: user.email || '',
           studentId: student.studentId || '—',
+          courseCode: course.courseCode || course.code || '',
+          courseName: course.title || course.name || '',
+          academicYear: item.academicYear || student.academicYear || '',
+          semester: item.semester || '',
           status: student.status || 'active',
-        };
-      }),
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      students: uniqueStudents,
     });
   } catch (error) {
     next(error);
@@ -210,20 +240,26 @@ const getTeacherStudents = async (req, res, next) => {
 
 const getTeacherExams = async (req, res, next) => {
   try {
-    const { assignment } = await getTeacherAssignment(req.user._id);
-    if (!assignment || !assignment.course) {
-      return res.status(200).json({ success: true, exams: [], quizzes: [] });
-    }
+    const { assignments } = await getTeacherAssignment(req.user._id);
+    const assignedCourseIds = (assignments || []).map((a) => a.course?._id || a.course).filter(Boolean);
 
-    const [exams, quizzes] = await Promise.all([
-      Exam.find({ course: assignment.course._id }).sort({ examDate: 1 }).lean(),
-      Quiz.find({ course: assignment.course._id }).sort({ quizDate: 1 }).lean(),
-    ]);
+    const query = {
+      $or: [
+        { createdBy: req.user._id },
+        ...(assignedCourseIds.length > 0 ? [{ course: { $in: assignedCourseIds } }] : []),
+      ],
+    };
+
+    const exams = await Exam.find(query)
+      .populate('course', 'courseCode title name')
+      .populate('createdBy', 'name email role')
+      .sort({ examDate: 1, createdAt: -1 })
+      .lean();
 
     return res.status(200).json({
       success: true,
+      data: exams,
       exams,
-      quizzes,
     });
   } catch (error) {
     next(error);
@@ -231,39 +267,8 @@ const getTeacherExams = async (req, res, next) => {
 };
 
 const getTeacherPerformance = async (req, res, next) => {
-  try {
-    const { assignment } = await getTeacherAssignment(req.user._id);
-    if (!assignment || !assignment.course) {
-      return res.status(200).json({ success: true, results: [] });
-    }
-
-    const [examResults, quizResults] = await Promise.all([
-      ExamResult.find().populate('exam').populate('student').lean(),
-      QuizResult.find().populate('quiz').populate('student').lean(),
-    ]);
-
-    const combined = [...examResults, ...quizResults].filter((result) => {
-      const targetExam = result.exam && result.exam.course ? String(result.exam.course) : null;
-      const targetQuiz = result.quiz && result.quiz.course ? String(result.quiz.course) : null;
-      return targetExam === String(assignment.course._id) || targetQuiz === String(assignment.course._id);
-    });
-
-    return res.status(200).json({
-      success: true,
-      results: combined.map((result) => ({
-        _id: result._id,
-        student: result.student ? (result.student.user ? result.student.user.name : 'Student') : 'Student',
-        studentId: result.student ? result.student.studentId || '—' : '—',
-        course: assignment.course.title || assignment.course.name || 'Course',
-        examTitle: result.exam?.title || result.quiz?.title || 'Assessment',
-        marks: result.marksObtained ?? 0,
-        totalMarks: result.exam?.totalMarks || result.quiz?.totalMarks || 0,
-        grade: result.grade || '—',
-      })),
-    });
-  } catch (error) {
-    next(error);
-  }
+  try { res.json(await require('../services/teacherPerformanceService').getPerformance(req)); }
+  catch (error) { if (error.statusCode) res.status(error.statusCode); next(error); }
 };
 
 const getTeacherProfile = async (req, res, next) => {
@@ -357,13 +362,15 @@ const updateTeacherProfile = async (req, res, next) => {
 
 const getTeacherAssessments = async (req, res, next) => {
   try {
-    const { assignment } = await getTeacherAssignment(req.user._id);
+    const { assignments } = await getTeacherAssignment(req.user._id);
+    const courseIds = assignments.map(a => a.course?._id).filter(Boolean);
+    const assignment = assignments.find(a => a.course);
     if (!assignment?.course) {
       return res.status(200).json({ success: true, assessments: [] });
     }
 
     const [exams, quizzes] = await Promise.all([
-      Exam.find({ course: assignment.course._id }).sort({ examDate: -1 }).lean(),
+      Exam.find({ course: { $in: courseIds } }).sort({ examDate: -1 }).lean(),
       Quiz.find({ course: assignment.course._id }).sort({ quizDate: -1 }).lean(),
     ]);
 
@@ -394,9 +401,18 @@ const getTeacherAssessments = async (req, res, next) => {
   }
 };
 
+const assignmentForAssessment = async (req, assignments) => {
+  const { assessmentType, assessmentId } = req.params;
+  if (!['exam', 'quiz'].includes(assessmentType) || !mongoose.isValidObjectId(assessmentId)) throw Object.assign(new Error('Invalid assessment.'), { statusCode: 400 });
+  const Model = assessmentType === 'exam' ? Exam : Quiz;
+  const assessment = await Model.findById(assessmentId).select('course').lean();
+  return assessment ? assignments.find(a => String(a.course?._id) === String(assessment.course)) : null;
+};
+
 const getTeacherAssessmentResults = async (req, res, next) => {
   try {
-    const { assignment } = await getTeacherAssignment(req.user._id);
+    const { assignments } = await getTeacherAssignment(req.user._id);
+    const assignment = await assignmentForAssessment(req, assignments);
     const { assessmentType, assessmentId } = req.params;
     if (!assignment?.course) {
       return res.status(404).json({ success: false, message: 'No course is assigned to this teacher.' });
@@ -419,8 +435,9 @@ const getTeacherAssessmentResults = async (req, res, next) => {
       Result.find({ [assessmentType]: assessmentId }).lean(),
     ]);
     const resultByStudent = new Map(results.map((result) => [String(result.student), result]));
+    const seenStudents = new Set();
     const students = enrollments
-      .filter((enrollment) => enrollment.student)
+      .filter(({ student }) => { if (!student || seenStudents.has(String(student._id))) return false; seenStudents.add(String(student._id)); return true; })
       .map(({ student }) => {
         const result = resultByStudent.get(String(student._id));
         return {
@@ -453,7 +470,8 @@ const getTeacherAssessmentResults = async (req, res, next) => {
 
 const saveTeacherAssessmentResults = async (req, res, next) => {
   try {
-    const { assignment, teacher } = await getTeacherAssignment(req.user._id);
+    const { assignments, teacher } = await getTeacherAssignment(req.user._id);
+    const assignment = await assignmentForAssessment(req, assignments);
     const { assessmentType, assessmentId } = req.params;
     const { results } = req.body;
     if (!teacher || !assignment?.course) {
@@ -462,8 +480,8 @@ const saveTeacherAssessmentResults = async (req, res, next) => {
     if (!['exam', 'quiz'].includes(assessmentType) || !mongoose.isValidObjectId(assessmentId)) {
       return res.status(400).json({ success: false, message: 'Invalid assessment.' });
     }
-    if (!Array.isArray(results)) {
-      return res.status(400).json({ success: false, message: 'Results must be a list of student marks.' });
+    if (!Array.isArray(results) || results.length === 0) {
+      return res.status(400).json({ success: false, message: 'Submit marks for at least one student.' });
     }
 
     const Assessment = assessmentType === 'exam' ? Exam : Quiz;
@@ -479,8 +497,8 @@ const saveTeacherAssessmentResults = async (req, res, next) => {
     const enrolledStudentIds = new Set(enrollments.map(({ student }) => String(student)));
     const submittedIds = new Set();
     for (const result of results) {
-      const studentId = String(result.studentId || '');
-      const marks = Number(result.marksObtained);
+      const studentId = String(result?.studentId || '');
+      const marks = result?.marksObtained == null || typeof result.marksObtained === 'boolean' || String(result.marksObtained).trim() === '' ? NaN : Number(result.marksObtained);
       if (!mongoose.isValidObjectId(studentId) || !enrolledStudentIds.has(studentId)) {
         return res.status(403).json({ success: false, message: 'A submitted student is not enrolled in your course.' });
       }
@@ -494,9 +512,6 @@ const saveTeacherAssessmentResults = async (req, res, next) => {
         });
       }
       submittedIds.add(studentId);
-    }
-    if (submittedIds.size !== enrolledStudentIds.size) {
-      return res.status(400).json({ success: false, message: 'Enter marks for every enrolled student before saving.' });
     }
 
     const operations = results.map((result) => {
@@ -538,5 +553,5 @@ module.exports = {
   updateTeacherProfile,
   getTeacherAssessments,
   getTeacherAssessmentResults,
-  saveTeacherAssessmentResults,
+  saveTeacherAssessmentResults: require('../services/gradebookIntegrityService').bulkResultWrite(saveTeacherAssessmentResults),
 };

@@ -51,6 +51,9 @@ const createResourceController = (Model, options) => {
     defaultSort = '-createdAt',
     sortFields = ['createdAt', 'updatedAt'],
     beforeCreate,
+    beforeUpdate,
+    scopeFilter,
+    authorizeRead,
   } = options;
 
   const list = asyncHandler(async (req, res) => {
@@ -70,6 +73,9 @@ const createResourceController = (Model, options) => {
       }
     }
 
+    const scope = scopeFilter ? await scopeFilter(req) : null;
+    const scopedFilters = scope ? { $and: [filters, scope] } : filters;
+
     const page = parsePositiveInteger(query.page, 1, 'page');
     const limit = parsePositiveInteger(query.limit, 25, 'limit', 100);
     const requestedSort = query.sort || defaultSort;
@@ -88,7 +94,7 @@ const createResourceController = (Model, options) => {
       ? { [sortField]: -1 }
       : { [sortField]: 1 };
 
-    let recordsQuery = Model.find(filters)
+    let recordsQuery = Model.find(scopedFilters)
       .sort(sort)
       .skip((page - 1) * limit)
       .limit(limit);
@@ -98,7 +104,7 @@ const createResourceController = (Model, options) => {
 
     const [records, total] = await Promise.all([
       recordsQuery,
-      Model.countDocuments(filters),
+      Model.countDocuments(scopedFilters),
     ]);
     res.status(200).json({
       success: true,
@@ -126,13 +132,14 @@ const createResourceController = (Model, options) => {
       res.status(404);
       throw new Error('Resource not found');
     }
+    if (authorizeRead) await authorizeRead(req, record);
     res.status(200).json({ success: true, data: record });
   });
 
   const create = asyncHandler(async (req, res) => {
     const data = pick(req.body, fields);
     if (beforeCreate) {
-      Object.assign(data, beforeCreate(req));
+      Object.assign(data, await beforeCreate(req));
     }
     const record = await Model.create(data);
     res.status(201).json({ success: true, data: record });
@@ -144,6 +151,9 @@ const createResourceController = (Model, options) => {
       throw new Error('Invalid resource ID');
     }
     const data = pick(req.body, fields);
+    if (beforeUpdate) {
+      Object.assign(data, await beforeUpdate(req));
+    }
     const record = await Model.findByIdAndUpdate(req.params.id, data, {
       new: true,
       runValidators: true,

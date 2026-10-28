@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getTeacherDashboardData } from '../../services/teacherService';
@@ -25,6 +26,7 @@ function formatDate(date, options) {
 }
 
 export default function TeacherDashboard() {
+  const [search] = usePageSearch();
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [upcoming, setUpcoming] = useState([]);
@@ -37,24 +39,44 @@ export default function TeacherDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [calendarView, setCalendarView] = useState('month');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const requestRef = useRef(null);
+  const activeRef = useRef(false);
+  const load = useCallback(async (initial = false) => {
+    if (requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    if (initial === true) setLoading(true);
     try {
-      const data = await getTeacherDashboardData();
+      const data = await getTeacherDashboardData(controller.signal);
+      if (!activeRef.current || controller.signal.aborted) return;
+      setError(null);
       setSummary(data?.summary ?? null);
-      setUpcoming(Array.isArray(data?.upcomingExams) ? data.upcomingExams : []);
+      const next = Array.isArray(data?.upcomingExams) ? data.upcomingExams : [];
+      setUpcoming(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
     } catch (err) {
-      setError('Teacher dashboard data is currently unavailable.');
-      setSummary(null);
-      setUpcoming([]);
+      if (!activeRef.current || controller.signal.aborted) return;
+      setError('Dashboard could not refresh. Retrying automatically.');
     } finally {
-      setLoading(false);
+      if (requestRef.current === controller) requestRef.current = null;
+      if (activeRef.current && !controller.signal.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
+    activeRef.current = true;
+    load(true);
+    const refresh = () => { if (!document.hidden) load(); };
+    const interval = setInterval(refresh, 5000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      activeRef.current = false;
+      requestRef.current?.abort();
+      requestRef.current = null;
+      clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, [load]);
 
   useEffect(() => {
@@ -67,7 +89,8 @@ export default function TeacherDashboard() {
     setCalendarMonth(new Date(firstUpcoming.date.getFullYear(), firstUpcoming.date.getMonth(), 1));
   }, [upcoming]);
 
-  const examsByDate = upcoming.reduce((groups, exam) => {
+  const matchingExams = upcoming.filter(exam => matchesPageSearch(search, exam.title, exam.type, exam.course?.title, exam.course?.courseCode, exam.examDate, exam.date));
+  const examsByDate = matchingExams.reduce((groups, exam) => {
     const date = parseExamDate(exam.examDate || exam.date);
     if (!date) return groups;
     const key = dateKey(date);
@@ -92,7 +115,7 @@ export default function TeacherDashboard() {
     key: dateKey(date),
     currentMonth: date.getMonth() === calendarMonth.getMonth(),
   }));
-  const selectedExams = examsByDate[selectedDate] || [];
+  const selectedExams = search.trim() ? matchingExams : examsByDate[selectedDate] || [];
   const todayKey = dateKey(new Date());
 
   const greeting = () => {

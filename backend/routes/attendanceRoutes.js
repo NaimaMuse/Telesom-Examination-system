@@ -12,6 +12,11 @@ const { authorizeRoles } = require('../middleware/roleMiddleware');
 const router = express.Router();
 router.use(protect, authorizeRoles('admin', 'teacher'));
 
+const register = require('../controllers/attendanceRegisterController');
+router.get('/register', authorizeRoles('admin'), register.getRegister);
+router.put('/register', authorizeRoles('admin'), register.saveRegister);
+router.get('/report', authorizeRoles('admin'), register.getReport);
+
 router
   .route('/')
   .get(listAttendance)
