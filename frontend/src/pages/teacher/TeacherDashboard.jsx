@@ -1,3 +1,6 @@
+import {MakeupClasses} from '../../components/AcademyWorkspace';
+import {TeachingWorkspaceShortcut} from '../../components/TeacherContracts';
+import TelesomLogo from '../../components/TelesomLogo';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -118,28 +121,9 @@ export default function TeacherDashboard() {
   const selectedExams = search.trim() ? matchingExams : examsByDate[selectedDate] || [];
   const todayKey = dateKey(new Date());
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
-
   return (
     <div className="teacher-scope">
-      <section className="teacher-dashboard-welcome">
-        <div className="teacher-hero-mark" aria-hidden="true">
-          <span>🎓</span>
-        </div>
-        <div className="page-header-left">
-          <h1>{greeting()}, {user?.name?.split(' ')[0] || 'Teacher'}! <span aria-hidden="true">☀️</span></h1>
-          <p>Here’s what’s happening with your courses, exams, and classes today.</p>
-        </div>
-        <div className="teacher-dashboard-actions">
-          <Link to="/teacher/my-course" className="btn btn-primary"><span aria-hidden="true">▤</span> My Course</Link>
-          <Link to="/teacher/exams" className="btn btn-secondary"><span aria-hidden="true">▣</span> Manage Assessments</Link>
-        </div>
-      </section>
+      <div className="teacher-dashboard-shortcuts"><MakeupClasses role="teacher" compact /><TeachingWorkspaceShortcut /></div>
 
       <section className="teacher-dashboard-metrics" aria-label="Course totals">
         {[

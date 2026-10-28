@@ -11,6 +11,7 @@ const { asyncHandler } = require('./resourceController');
 
 const getDashboardOverview = asyncHandler(async (req, res) => {
   const now = new Date();
+  if(req.user?.role==='teacher')return require('./teacherDashboardController').getTeacherDashboard(req,res,error=>{throw error;});
   if (req.user && req.user.role === 'student') {
     const student = await Student.findOne({ user: req.user._id }).populate(
       'user',
@@ -23,7 +24,10 @@ const getDashboardOverview = asyncHandler(async (req, res) => {
     const enrollments = await Enrollment.find({
       student: student._id,
       status: 'enrolled',
-    }).select('course');
+    }).select('course academicYear semester batch');
+    const scopes=enrollments.map(e=>({course:e.course,academicYear:e.academicYear,...(e.semester?{semester:e.semester}:{}),$or:[{batch:e.batch||''},{batch:{$exists:false}},{batch:''}]}));
+    const scope=scopes.length?{$or:scopes}:{_id:null};
+    const progress=await require('../services/academicProgressService').getStudentProgress(student._id);
     const courseIds = enrollments.map((enrollment) => enrollment.course);
     const [
       examResults,
@@ -32,11 +36,12 @@ const getDashboardOverview = asyncHandler(async (req, res) => {
       upcomingExams,
       upcomingQuizzes,
     ] = await Promise.all([
-      ExamResult.countDocuments({ student: student._id }),
-      QuizResult.countDocuments({ student: student._id }),
+      Promise.resolve(progress.activities.filter(a=>a._id.startsWith('exam:')&&a.status==='Completed').length),
+      Promise.resolve(progress.activities.filter(a=>a._id.startsWith('quiz:')&&a.status==='Completed').length),
       Attendance.countDocuments({ student: student._id }),
       Exam.find({
-        course: { $in: courseIds },
+        ...scope,
+        visibleToStudents:true,
         examDate: { $gte: now },
         status: 'scheduled',
       })
@@ -44,7 +49,8 @@ const getDashboardOverview = asyncHandler(async (req, res) => {
         .sort({ examDate: 1 })
         .limit(5),
       Quiz.find({
-        course: { $in: courseIds },
+        ...scope,
+        visibleToStudents:true,
         quizDate: { $gte: now },
         status: 'published',
       })

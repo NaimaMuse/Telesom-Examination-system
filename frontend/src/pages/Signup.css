@@ -114,12 +114,12 @@
 
 .perk-bullet.gold-bullet {
   background-color: var(--telesom-gold);
-  box-shadow: 0 2px 6px rgba(214, 139, 41, 0.3);
+  box-shadow: 0 2px 6px rgba(215, 152, 47, 0.3);
 }
 
 .perk-bullet.green-bullet {
   background-color: var(--telesom-green);
-  box-shadow: 0 2px 6px rgba(34, 153, 72, 0.3);
+  box-shadow: 0 2px 6px rgba(49, 180, 74, 0.3);
 }
 
 .perk-card h5 {
@@ -153,7 +153,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(34, 153, 72, 0.18);
+  box-shadow: 0 4px 14px rgba(49, 180, 74, 0.18);
 }
 
 .signup-success-view h3 {

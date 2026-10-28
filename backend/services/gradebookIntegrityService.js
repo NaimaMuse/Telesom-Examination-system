@@ -51,8 +51,12 @@ const assessmentWrites = (Model, handler, action) => asyncHandler(async (req, re
       const total = Number(req.body.totalMarks ?? existing?.totalMarks ?? Model.schema.path('totalMarks').defaultValue);
       if (!Number.isFinite(total) || total <= 0 || total > 100 || Math.abs(total * 100 - Math.round(total * 100)) > 1e-7) fail('Assessment maximum must be between 0.01 and 100, with at most two decimals.');
       const rows = [...await Exam.find({ course }).lean(), ...await Quiz.find({ course }).lean()];
-      const other = rows.filter(row => !(existing && String(row._id) === String(existing._id)) && row.status !== 'cancelled').reduce((sum, row) => sum + row.totalMarks, 0);
-      if ((req.body.status ?? existing?.status) !== 'cancelled' && round(other + total) > 100) fail(`Course allocations cannot exceed 100 marks. Available: ${round(100 - other)}.`);
+      const year=req.body.academicYear??existing?.academicYear??(await Course.findById(course).select('academicYear').lean())?.academicYear;
+      const batch=req.body.batch??existing?.batch??'';
+      const sameYear=rows.filter(row=>row.status!=='cancelled'&&!(existing&&String(row._id)===String(existing._id))&&(!year||!row.academicYear||row.academicYear===year));
+      const groups=batch?[batch]:[...new Set(['',...sameYear.map(row=>row.batch||'')])];
+      const changed=!existing||total!==existing.totalMarks||(req.body.batch!==undefined&&req.body.batch!==existing.batch)||(req.body.academicYear!==undefined&&req.body.academicYear!==existing.academicYear)||(existing.status==='cancelled'&&req.body.status!=='cancelled');
+      if(changed&&(req.body.status??existing?.status)!=='cancelled')for(const group of groups){const other=sameYear.filter(row=>!row.batch||row.batch===group).reduce((sum,row)=>sum+row.totalMarks,0);if(round(other+total)>90)fail('Teacher assessment allocations cannot exceed 90 marks per course, year and batch. Available: '+Math.max(0,round(90-other))+'.');}
       if (existing && await Result.exists({ [type]: existing._id, marksObtained: { $gt: total } })) fail('Maximum marks cannot be lower than an existing student score.');
       if (req.body.passingMarks == null) {
         const previousMaximum = existing?.totalMarks;
@@ -95,7 +99,7 @@ const resultWrite = (type, handler, action = 'save') => asyncHandler(async (req,
     if (!current || current.status === 'cancelled') fail('Assessment is unavailable.', 404);
     if (!req.params.assessmentId) {
       const student = req.body.student || existing?.student;
-      if (!await Enrollment.exists({ student, course: current.course, status: 'enrolled' })) fail('Student is not enrolled in the assessment course.', 403);
+      if (!await Enrollment.exists({ student, course: current.course, status: 'enrolled',...(current.academicYear?{academicYear:current.academicYear}:{}),...(current.batch?{batch:current.batch}:{}) })) fail('Student is not enrolled in the assessment course.', 403);
       if (existing && req.body.student && String(req.body.student) !== String(existing.student)) fail('A saved result cannot be moved to another student.');
     }
     const result = await capture(handler, req);

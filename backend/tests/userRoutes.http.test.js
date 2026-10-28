@@ -23,8 +23,9 @@ const stamp = Date.now();
 const adminEmail = `userctrl.admin.${stamp}@telesom.local`;
 const studentEmail = `userctrl.student.${stamp}@telesom.local`;
 const teacherEmail = `userctrl.teacher.${stamp}@telesom.local`;
-const studentId = `TST-${stamp}`;
-const teacherId = `TCH-${stamp}`;
+let studentId;
+let teacherId;
+let teacherPassword;
 
 const createdIds = {
   adminUser: null,
@@ -192,10 +193,11 @@ const run = async () => {
   });
   createdIds.studentUser = createdStudent.json?.data?.user?._id;
   createdIds.studentProfile = createdStudent.json?.data?.student?._id;
+  studentId = createdStudent.json?.data?.student?.studentId;
   assert(
     createdStudent.status === 201 &&
       createdStudent.json?.data?.user?.role === 'student' &&
-      createdStudent.json?.data?.student?.studentId === studentId &&
+      /^TL-\d{4}-\d{2,}$/.test(studentId) &&
       createdStudent.json?.data?.user?.password === undefined,
     'Admin can create a student account'
   );
@@ -234,6 +236,8 @@ const run = async () => {
   });
   createdIds.teacherUser = createdTeacher.json?.data?.user?._id;
   createdIds.teacherProfile = createdTeacher.json?.data?.teacher?._id;
+  teacherId = createdTeacher.json?.data?.teacher?.teacherId;
+  teacherPassword = createdTeacher.json?.data?.credentials?.temporaryPassword;
   const teacherResponseHasNoPassword =
     createdTeacher.json?.data?.user?.password === undefined &&
     createdTeacher.json?.data?.teacher &&
@@ -250,7 +254,7 @@ const run = async () => {
     '+password'
   );
   const teacherHashMatches = storedTeacherUser?.password
-    ? await bcrypt.compare('TeacherPass1', storedTeacherUser.password)
+    ? await bcrypt.compare(teacherPassword, storedTeacherUser.password)
     : false;
   assert(
     teacherHashMatches,
@@ -258,7 +262,7 @@ const run = async () => {
   );
 
   const teacherLogin = await requestJson('POST', '/api/auth/login', {
-    body: { email: teacherEmail, password: 'TeacherPass1' },
+    body: { email: teacherEmail, password: teacherPassword },
   });
   assert(
     teacherLogin.status === 200 && teacherLogin.json?.user?.role === 'teacher',

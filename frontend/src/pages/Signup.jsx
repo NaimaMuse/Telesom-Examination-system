@@ -22,7 +22,7 @@ export default function SignupPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    studentId: 'STD-' + Math.floor(1000 + Math.random() * 9000),
+    studentId: '',
     phone: '',
     department: DEPARTMENTS[0],
     password: '',
@@ -46,12 +46,6 @@ export default function SignupPage() {
     setError('');
   };
 
-  // Generate new random Student ID
-  const handleRegenerateId = () => {
-    const newId = 'STD-' + Math.floor(1000 + Math.random() * 9000);
-    setFormData((prev) => ({ ...prev, studentId: newId }));
-  };
-
   // Password strength calculation
   const getPasswordStrength = (pwd) => {
     if (!pwd) return { score: 0, label: 'Empty', color: '#cbd5e1' };
@@ -63,9 +57,9 @@ export default function SignupPage() {
     if (/[^A-Za-z0-9]/.test(pwd)) score++;
 
     if (score <= 2) return { score: 1, label: 'Weak', color: '#ef4444' };
-    if (score <= 3) return { score: 2, label: 'Fair', color: '#f59e0b' };
+    if (score <= 3) return { score: 2, label: 'Fair', color: 'var(--brand-gold)' };
     if (score <= 4) return { score: 3, label: 'Good', color: '#10b981' };
-    return { score: 4, label: 'Strong', color: '#229948' };
+    return { score: 4, label: 'Strong', color: 'var(--brand-green)' };
   };
 
   const strength = getPasswordStrength(formData.password);
@@ -84,10 +78,6 @@ export default function SignupPage() {
       return;
     }
 
-    if (isStudent && !formData.studentId.trim()) {
-      setError('Please specify a Student ID.');
-      return;
-    }
 
     if (!formData.password) {
       setError('Please enter a secure password.');
@@ -112,16 +102,16 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      await signup({
+      const registered = await signup({
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim(),
-        studentId: isStudent ? formData.studentId.trim().toUpperCase() : undefined,
         department: formData.department,
         password: formData.password,
         role: role,
       });
 
+      setFormData(prev => ({...prev, studentId: registered.user?.studentId || ''}));
       setSuccess(true);
     } catch (err) {
       const msg =
@@ -172,7 +162,7 @@ export default function SignupPage() {
           {success ? (
             <div className="signup-success-view">
               <div className="success-icon-wrap">
-                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#229948" strokeWidth="2.5">
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" strokeWidth="2.5">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                   <polyline points="22 4 12 14.01 9 11.01"/>
                 </svg>
@@ -260,44 +250,7 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                {/* Student ID (Auto-generator & manual edit) */}
-                {isStudent && (
-                  <div className="form-field-group">
-                    <div className="label-row">
-                      <label htmlFor="studentId">Student ID Number *</label>
-                      <button
-                        type="button"
-                        className="regenerate-id-btn"
-                        onClick={handleRegenerateId}
-                        title="Generate a new Student ID"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
-                        </svg>
-                        Auto-generate
-                      </button>
-                    </div>
-                    <div className="input-with-icon gold-focus">
-                      <svg className="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="4" width="18" height="16" rx="3"/>
-                        <circle cx="9" cy="10" r="2"/>
-                        <line x1="15" y1="8" x2="17" y2="8"/>
-                        <line x1="15" y1="12" x2="17" y2="12"/>
-                        <line x1="7" y1="16" x2="17" y2="16"/>
-                      </svg>
-                      <input
-                        id="studentId"
-                        name="studentId"
-                        type="text"
-                        value={formData.studentId}
-                        onChange={handleChange}
-                        placeholder="e.g. STD-7237"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-                )}
+                {isStudent && <div className="form-field-group"><label>Student ID</label><p className="field-hint">Assigned automatically after registration (TL-YYYY-01).</p></div>}
 
                 {/* Email & Phone side by side */}
                 <div className="form-row-two-col">
@@ -462,7 +415,7 @@ export default function SignupPage() {
                   </label>
                 </div>
 
-                {/* Submit Button: Brand Telesom Gold (#D68B29) */}
+                {/* Submit Button: Brand Telesom Gold (var(--brand-gold)) */}
                 <button
                   type="submit"
                   className="btn-auth-primary gold-btn"

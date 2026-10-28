@@ -10,7 +10,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
-router.use(protect, authorizeRoles('admin', 'teacher'));
+router.use(protect, authorizeRoles('admin'));
 
 const register = require('../controllers/attendanceRegisterController');
 router.get('/register', authorizeRoles('admin'), register.getRegister);

@@ -23,9 +23,9 @@ export default function ProtectedRoute({ children, roles }) {
   if (roles && user && !roles.includes(user.role)) {
     // Redirect to the correct role dashboard
     const roleHome = {
-      admin:   '/admin/dashboard',
-      teacher: '/teacher/dashboard',
-      student: '/student/dashboard',
+      admin:   '/admin',
+      teacher: '/teacher',
+      student: '/student',
     };
     return <Navigate to={roleHome[user.role] || '/login'} replace />;
   }

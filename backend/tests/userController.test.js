@@ -4,7 +4,8 @@ const { createStudent, createTeacher } = require('../controllers/userController'
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
-const Counter = require('../models/Counter');
+const studentIds = require('../services/studentIdService');
+studentIds.nextStudentId = async () => 'TL-2026-01';
 
 const runTests = async () => {
   let passed = 0;
@@ -62,9 +63,6 @@ const runTests = async () => {
   const origTeacherCreate = Teacher.create;
   const origUserDelete = User.findByIdAndDelete;
   const origStartSession = mongoose.startSession;
-  const origCounterFindOneAndUpdate = Counter.findOneAndUpdate;
-  let studentSequence = 2000;
-
   mongoose.startSession = async () => ({
     startTransaction() {},
     async commitTransaction() {},
@@ -75,7 +73,6 @@ const runTests = async () => {
   User.findOne = () => Promise.resolve(null);
   Student.findOne = () => Promise.resolve(null);
   Student.exists = () => Promise.resolve(null);
-  Counter.findOneAndUpdate = async () => ({ sequence: ++studentSequence });
   Teacher.findOne = () => Promise.resolve(null);
   User.findByIdAndDelete = () => Promise.resolve();
 
@@ -107,7 +104,7 @@ const runTests = async () => {
     assert(
       result.statusCode === 400 &&
         result.nextCalled &&
-        /name, email, and gender/i.test(result.nextError.message),
+        /gender/i.test(result.nextError.message),
       'Student creation rejects missing required fields'
     );
   }
@@ -147,25 +144,6 @@ const runTests = async () => {
   }
 
   {
-    let existsChecks = 0;
-    Student.exists = async () => (++existsChecks === 1 ? { _id: 'legacy' } : null);
-    const { req, res, next, getResult } = createMock({
-      name: 'Amina Student',
-      email: 'amina@student.telesom.com',
-      gender: 'female',
-    });
-    await createStudent(req, res, next);
-    const result = getResult();
-    assert(
-      result.statusCode === 201 &&
-        result.responseBody?.data?.student?.studentId === 'STD-2002' &&
-        existsChecks === 2,
-      'Student ID generation skips IDs already used by existing students'
-    );
-    Student.exists = () => Promise.resolve(null);
-  }
-
-  {
     let createdUserPayload = null;
     User.create = async (docs) => {
       const payload = Array.isArray(docs) ? docs[0] : docs;
@@ -192,10 +170,10 @@ const runTests = async () => {
         result.responseBody?.success === true &&
         result.responseBody?.data?.user?.role === 'student' &&
         result.responseBody?.data?.user?.email === 'amina@student.telesom.com' &&
-        result.responseBody?.data?.student?.studentId === 'STD-2003' &&
+        result.responseBody?.data?.student?.studentId === 'TL-2026-01' &&
         createdUserPayload.password === undefined &&
         result.responseBody?.data?.user?.password === undefined,
-      'Student account is created without a password and returns safe data'
+      'Student account ignores manual ID, assigns a server ID and returns safe data'
     );
   }
 
@@ -258,94 +236,17 @@ const runTests = async () => {
   }
 
   {
-    const { req, res, next, getResult } = createMock({
-      name: 'Hassan Teacher',
-      email: 'hassan@telesom.com',
-      teacherId: 'TCH-10',
-    });
-    await createTeacher(req, res, next);
-    const result = getResult();
-    assert(
-      result.statusCode === 400 && /password/i.test(result.nextError.message),
-      'Teacher creation rejects missing required fields'
-    );
+    const {req,res,next,getResult}=createMock({name:'Teacher'});
+    await createTeacher(req,res,next);
+    assert(getResult().statusCode===400, 'Teacher creation requires a name and registered email');
   }
-
   {
-    const { req, res, next, getResult } = createMock({
-      name: 'Hassan Teacher',
-      email: 'hassan@telesom.com',
-      password: 'short',
-      teacherId: 'TCH-10',
-    });
-    await createTeacher(req, res, next);
-    const result = getResult();
-    assert(
-      result.statusCode === 400 &&
-        result.nextError.message === 'Password must be at least 8 characters long',
-      'Teacher creation rejects short passwords'
-    );
-  }
-
-  {
-    Teacher.findOne = () => Promise.resolve({ teacherId: 'TCH-10' });
-    const { req, res, next, getResult } = createMock({
-      name: 'Hassan Teacher',
-      email: 'hassan@telesom.com',
-      password: 'TeacherPass1',
-      teacherId: 'tch-10',
-    });
-    await createTeacher(req, res, next);
-    const result = getResult();
-    assert(
-      result.statusCode === 409 &&
-        result.nextError.message === 'Teacher ID already exists',
-      'Teacher creation rejects duplicate Teacher ID'
-    );
-    Teacher.findOne = () => Promise.resolve(null);
-  }
-
-  {
-    let createdUserPayload = null;
-    User.create = async (docs) => {
-      const payload = Array.isArray(docs) ? docs[0] : docs;
-      createdUserPayload = payload;
-      const created = {
-        _id: new mongoose.Types.ObjectId(),
-        ...payload,
-      };
-      return Array.isArray(docs) ? [created] : created;
-    };
-
-    const plainPassword = 'TeacherPass1';
-    const { req, res, next, getResult } = createMock({
-      name: 'Hassan Teacher',
-      email: '  Hassan@Telesom.com ',
-      password: plainPassword,
-      teacherId: 'tch-10',
-      department: 'Networking',
-    });
-    await createTeacher(req, res, next);
-    const result = getResult();
-
-    const storedHash = createdUserPayload?.password;
-    const hashMatches = storedHash
-      ? await bcrypt.compare(plainPassword, storedHash)
-      : false;
-    const responseHasNoPassword =
-      result.responseBody?.data?.user?.password === undefined &&
-      !('password' in (result.responseBody?.data?.teacher || {}));
-
-    assert(
-      result.statusCode === 201 &&
-        result.responseBody?.data?.user?.role === 'teacher' &&
-        result.responseBody?.data?.user?.email === 'hassan@telesom.com' &&
-        result.responseBody?.data?.teacher?.teacherId === 'TCH-10' &&
-        hashMatches &&
-        storedHash !== plainPassword &&
-        responseHasNoPassword,
-      'Teacher account hashes the password and never returns it'
-    );
+    let stored;
+    User.create=async docs=>{const data=Array.isArray(docs)?docs[0]:docs;stored={_id:new mongoose.Types.ObjectId(),...data};return Array.isArray(docs)?[stored]:stored;};
+    const {req,res,next,getResult}=createMock({name:'Hassan Teacher',email:' Hassan@Telesom.com ',password:'ignored',teacherId:'IGNORED'});
+    await createTeacher(req,res,next);
+    const result=getResult(), data=result.responseBody?.data, password=data?.credentials?.temporaryPassword;
+    assert(result.statusCode===201 && password?.length>=20 && await bcrypt.compare(password,stored.password) && stored.mustChangePassword && data.credentials.email==='hassan@telesom.com' && /^TCH-[A-F0-9]{12}$/.test(data.teacher.teacherId) && !data.user.password && !data.teacher.password, 'Teacher receives generated one-time credentials and only a hash is stored');
   }
 
   User.findOne = origUserFindOne;
@@ -357,7 +258,6 @@ const runTests = async () => {
   Teacher.create = origTeacherCreate;
   User.findByIdAndDelete = origUserDelete;
   mongoose.startSession = origStartSession;
-  Counter.findOneAndUpdate = origCounterFindOneAndUpdate;
 
   console.log(`\nTests finished: ${passed} passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);

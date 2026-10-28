@@ -1,0 +1,92 @@
+require('dotenv').config({path:require('path').join(__dirname,'../.env')});
+const assert=require('assert'),mongoose=require('mongoose'),crypto=require('crypto'),bcrypt=require('bcryptjs');
+const names=['User','Teacher','Student','Course','CourseTeacher','Enrollment','TeacherContract','TeachingLesson','CourseOutline','Exam','Quiz','ExamResult','QuizResult','Note'];
+const models=Object.fromEntries(names.map(n=>[n,require('../models/'+n)]));
+const {app}=require('../server'),token=require('../utils/generateToken');
+const cs=require('../services/teacherContractService');
+const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let server;
+(async()=>{
+  await mongoose.connect(process.env.MONGODB_URI,{dbName,serverSelectionTimeoutMS:10000});assert.strictEqual(mongoose.connection.name,dbName);
+  await Promise.all(Object.values(models).map(m=>m.init()));
+  const password=await bcrypt.hash('Workspace-test-123!',4);
+  const admin=await models.User.create({name:'Workspace Admin',email:'admin@workspace.test',role:'admin',password});
+  const teacherUser=await models.User.create({name:'Workspace Teacher',email:'teacher@workspace.test',role:'teacher',password});
+  const otherUser=await models.User.create({name:'Other Teacher',email:'other@workspace.test',role:'teacher',password});
+  const teacher=await models.Teacher.create({user:teacherUser._id,teacherId:'WORK-1'});
+  const other=await models.Teacher.create({user:otherUser._id,teacherId:'WORK-2'});
+  const course=await models.Course.create({title:'Networking',description:'Existing course description',courseCode:'NET',academicYear:'2026',semester:'S1',credits:3});
+  const foreign=await models.Course.create({title:'Other course',courseCode:'OTHER',academicYear:'2026'});
+  await models.CourseTeacher.create([{teacher:teacher._id,course:course._id,academicYear:'2026',semester:'S1'},{teacher:other._id,course:foreign._id,academicYear:'2026'}]);
+  const students=[];
+  for(const [i,batch] of ['Batch A','Batch B'].entries()){
+    const user=await models.User.create({name:'Student '+batch,email:'student'+i+'@workspace.test',role:'student'});
+    const student=await models.Student.create({user:user._id,studentId:'TL-2026-0'+(i+1),gender:'female',academicYear:'2026',batch});
+    await models.Enrollment.create({student:student._id,course:course._id,academicYear:'2026',batch,semester:'S1'});students.push({user,student});
+  }
+  const today=cs.teachingDay(),start=cs.teachingDay(new Date(Date.now()-7*86400000));
+  const contract=await cs.createContract(admin,{teacher:teacher._id,course:course._id,academicYear:'2026',batch:'Batch A',startDate:start,totalDays:30});
+  server=process.env.WORKSPACE_UI_PREVIEW==='1'?app.listen(0,'localhost'):app.listen(0);await new Promise(resolve=>server.on('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/api`;
+  const request=async(method,path,body,user=teacherUser)=>{
+    const response=await fetch(base+path,{method,headers:{Authorization:'Bearer '+token(user._id),...(body instanceof FormData?{}:{'Content-Type':'application/json'})},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
+    return {status:response.status,body:(response.headers.get('content-type')||'').includes('json')?await response.json():Buffer.from(await response.arrayBuffer())};
+  };
+  const scope={courseId:String(course._id),academicYear:'2026',batch:'Batch A'},query='?'+new URLSearchParams(scope),otherQuery='?'+new URLSearchParams({...scope,batch:'Batch B'});
+  let result=await request('GET','/teacher/my-course'+query);
+  assert.strictEqual(result.status,200);assert.strictEqual(result.body.course.description,'Existing course description');assert.strictEqual(result.body.course.credits,3);
+  assert.strictEqual(result.body.course.batch,'Batch A');assert.strictEqual(result.body.course.academicYear,'2026');assert.strictEqual(result.body.students.length,1);assert.strictEqual(result.body.students[0].studentId,students[0].student.studentId);assert.strictEqual(result.body.contract.remainingContractDays,30);
+  assert.strictEqual((await request('GET','/teacher/my-course'+query.replace('2026','2027'))).status,403);
+  assert.strictEqual((await request('GET','/teacher/my-course?courseId='+foreign._id)).status,403);
+  assert.strictEqual((await request('GET','/teacher/my-course'+query,null,otherUser)).status,403);
+  assert.strictEqual((await request('GET','/teacher/my-course'+query,null,students[0].user)).status,403);
+  result=await request('GET','/teacher/my-course'+otherQuery);assert.strictEqual(result.body.students.length,1);assert.strictEqual(result.body.students[0].studentId,students[1].student.studentId);assert.strictEqual(result.body.contract,null);
+  result=await request('POST','/academy/outlines',{contract:contract._id,title:'Existing outline',description:'Topics'});assert.strictEqual(result.status,201);const outline=result.body.outline;
+  const pdf=Buffer.from('%PDF-1.4\nExisting course document\n%%EOF');
+  let body=new FormData();body.append('file',new Blob([pdf],{type:'application/pdf'}),'outline.pdf');assert.strictEqual((await request('PUT','/academy/outlines/'+outline._id+'/document',body)).status,200);
+  const lessons=[];for(let i=0;i<2;i++){result=await request('POST','/academy/outlines/'+outline._id+'/lessons',{title:'Lesson '+i,plannedDate:today});assert.strictEqual(result.status,201);lessons.push(result.body.lesson);}
+  const complete=lesson=>request('PUT','/teacher-contracts/'+contract._id+'/lessons/'+lesson._id+'/status',{status:'completed'});
+  await Promise.all(lessons.map(complete));
+  result=await request('GET','/teacher/my-course'+query);assert.strictEqual(result.body.contract.completedTeachingDays,1);assert.strictEqual(result.body.contract.remainingContractDays,29);assert.strictEqual(result.body.lessonProgress.percentage,100);
+  const historyBefore=(await models.TeachingLesson.findById(lessons[0]._id)).history.length;
+  assert.strictEqual((await request('PATCH','/academy/outlines/'+outline._id+'/lessons/'+lessons[0]._id,{title:'Updated lesson title'})).status,200);
+  assert.strictEqual((await request('PATCH','/academy/outlines/'+outline._id+'/lessons/'+lessons[0]._id,{plannedDate:start})).status,400);
+  assert.strictEqual((await models.TeachingLesson.findById(lessons[0]._id)).history.length,historyBefore);
+  for(const lesson of lessons)await request('PUT','/teacher-contracts/'+contract._id+'/lessons/'+lesson._id+'/status',{status:'planned'});
+  result=await request('GET','/teacher/my-course'+query);assert.strictEqual(result.body.contract.remainingContractDays,30);assert.strictEqual(result.body.lessonProgress.percentage,0);
+  assert.strictEqual((await request('PATCH','/academy/outlines/'+outline._id+'/lessons/'+lessons[0]._id,{plannedDate:start})).status,200);
+  result=await request('GET','/academy/outlines/'+outline._id+'/document');assert.strictEqual(result.status,200);assert(result.body.equals(pdf),'Uploaded outline must be preserved');
+  const privateNote=await models.Note.create({title:'Private note',content:'Not a learning material',course:course._id,createdBy:teacherUser._id});
+  body=new FormData();for(const [key,value]of Object.entries(scope))body.append(key,value);body.append('title','Network learning material');body.append('description','Real learning document');body.append('file',new Blob([pdf],{type:'application/pdf'}),'learning.pdf');
+  result=await request('POST','/teacher/materials',body);assert.strictEqual(result.status,201,JSON.stringify(result.body));const note=result.body.note;
+  result=await request('GET','/teacher/my-course'+query);assert.strictEqual(result.body.notes.length,1);assert.strictEqual(result.body.notes[0]._id,note._id);assert.strictEqual(result.body.notes[0].hasAttachment,true);
+  assert.strictEqual((await request('GET','/teacher/my-course'+otherQuery)).body.notes.length,0);
+  assert.strictEqual((await request('GET','/teacher/materials/'+note._id+'/file',null,otherUser)).status,404);
+  result=await request('GET','/teacher/materials/'+note._id+'/file');assert(result.body.equals(pdf));
+  body=new FormData();body.append('title','Updated learning title');body.append('description','Updated description');
+  result=await request('PUT','/teacher/materials/'+note._id,body);assert.strictEqual(result.status,200);assert.strictEqual(result.body.note.filename,'learning.pdf');
+  result=await request('GET','/teacher/materials/'+note._id+'/file');assert(result.body.equals(pdf),'Editing metadata must preserve the document');
+  result=await request('GET','/student/notes',null,students[0].user);assert.strictEqual(result.body.notes.length,1);
+  assert.strictEqual((await request('GET','/student/notes',null,students[1].user)).body.notes.length,0);
+  assert.strictEqual((await request('GET','/student/materials/'+note._id+'/file',null,students[1].user)).status,404);
+  assert((await request('GET','/student/materials/'+note._id+'/file',null,students[0].user)).body.equals(pdf));
+  const globalExam=await models.Exam.create({title:'Shared exam',course:course._id,academicYear:'2026',semester:'S1',type:'assignment',totalMarks:20,examDate:new Date(Date.now()+86400000),createdBy:teacherUser._id});
+  await models.Exam.create({title:'Batch B only',course:course._id,academicYear:'2026',semester:'S1',batch:'Batch B',type:'quiz',totalMarks:30,examDate:new Date(Date.now()+86400000)});
+  await models.Quiz.create({title:'Native quiz A',quizCode:'QA',course:course._id,academicYear:'2026',batch:'Batch A',totalMarks:20,quizDate:new Date(Date.now()+86400000),status:'published'});
+  result=await request('GET','/teacher/my-course'+query);assert.deepStrictEqual(result.body.assessments.map(a=>a.title).sort(),['Native quiz A','Shared exam']);assert.strictEqual(result.body.upcomingExams.length,2);
+  result=await request('GET','/teacher/results/assessments'+query);assert.strictEqual(result.status,200);assert.strictEqual(result.body.assessments.length,2);
+  result=await request('GET','/teacher/results/exam/'+globalExam._id+query);assert.strictEqual(result.body.students.length,1);assert.strictEqual(result.body.students[0]._id,String(students[0].student._id));
+  assert.strictEqual((await request('PUT','/teacher/results/exam/'+globalExam._id+query,{results:[{studentId:students[1].student._id,marksObtained:18}]})).status,403);
+  assert.strictEqual((await request('PUT','/teacher/results/exam/'+globalExam._id+query,{results:[{studentId:students[0].student._id,marksObtained:18}]})).status,200);
+  assert.strictEqual((await request('GET','/teacher/results/exam/'+globalExam._id+query)).body.students[0].marksObtained,18);
+  await request('DELETE','/teacher/materials/'+note._id);assert(await models.Note.exists({_id:note._id,archivedAt:{$ne:null}}));assert(await models.Note.exists({_id:privateNote._id}));
+  assert.strictEqual((await request('GET','/teacher/my-course'+query)).body.notes.length,0);
+  assert.strictEqual(await models.CourseOutline.countDocuments(),1);assert.strictEqual(await models.TeacherContract.countDocuments(),1);assert.strictEqual(await models.TeachingLesson.countDocuments(),2);
+  if(process.env.WORKSPACE_UI_PREVIEW==='1'){
+    console.log('WORKSPACE_PREVIEW_PORT='+server.address().port);
+    await new Promise(resolve=>{process.once('SIGINT',resolve);process.once('SIGTERM',resolve);});
+  }
+  console.log('My Course integration passed: course/year/batch isolation, shared contract/outlines, same-day completion and reversal, schedule edits, preserved documents/history, persistent materials and scoped assessment marks.');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
+  if(server)await new Promise(resolve=>server.close(resolve));
+  if(mongoose.connection.readyState===1&&mongoose.connection.name===dbName)for(const model of Object.values(models).reverse())await model.deleteMany({});
+  await mongoose.disconnect();
+});

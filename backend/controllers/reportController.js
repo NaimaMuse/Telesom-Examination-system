@@ -81,6 +81,15 @@ const getStudentPerformanceReport = asyncHandler(async (req, res) => {
     }
   }
 
+  if(req.user.role==='teacher'){
+    const teacher=await require('../models/Teacher').findOne({user:req.user._id});
+    const assignments=teacher?await require('../models/CourseTeacher').find({teacher:teacher._id,status:'active'}).select('course').lean():[];
+    const allowed=assignments.map(a=>a.course);
+    if(!await Enrollment.exists({student:studentId,course:{$in:allowed},status:'enrolled'}))throw Object.assign(new Error('Student is not enrolled in your assigned courses.'),{statusCode:403});
+    // Return only the authorized course totals, never the student's unrelated records.
+    const progress=await require('../services/academicProgressService').getStudentProgress(studentId,{publishedOnly:false});
+    return res.json({success:true,data:{student:{studentId:student.studentId,name:student.user?.name},courses:progress.courses.filter(c=>allowed.map(String).includes(String(c.courseId)))}});
+  }
   const [enrollments, examResults, quizResults, attendance] = await Promise.all([
     Enrollment.find({ student: studentId }).populate(
       'course',

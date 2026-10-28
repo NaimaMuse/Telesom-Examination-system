@@ -88,6 +88,7 @@ const getTeacherDetails = asyncHandler(async (req, res) => {
   }
 
   const teacher = await Teacher.findById(req.params.id)
+    .select('+profilePicture')
     .populate('user', 'name email role isActive')
     .lean();
   if (!teacher) {

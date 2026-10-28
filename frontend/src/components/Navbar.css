@@ -172,14 +172,14 @@
   align-items: center;
   justify-content: center;
   transition: background-color var(--transition), transform 0.1s ease, box-shadow var(--transition);
-  box-shadow: 0 2px 4px rgba(34, 153, 72, 0.15);
+  box-shadow: 0 2px 4px rgba(49, 180, 74, 0.15);
   border: 1px solid transparent;
 }
 
 .btn-nav-login:hover {
   background-color: var(--telesom-green-hover);
   color: #ffffff;
-  box-shadow: 0 4px 10px rgba(34, 153, 72, 0.25);
+  box-shadow: 0 4px 10px rgba(49, 180, 74, 0.25);
 }
 
 .btn-nav-login:active {
@@ -200,14 +200,14 @@
   align-items: center;
   justify-content: center;
   transition: background-color var(--transition), transform 0.1s ease, box-shadow var(--transition);
-  box-shadow: 0 2px 4px rgba(214, 139, 41, 0.18);
+  box-shadow: 0 2px 4px rgba(215, 152, 47, 0.18);
   border: 1px solid transparent;
 }
 
 .btn-nav-signup:hover {
   background-color: var(--telesom-gold-hover);
   color: #ffffff;
-  box-shadow: 0 4px 10px rgba(214, 139, 41, 0.28);
+  box-shadow: 0 4px 10px rgba(215, 152, 47, 0.28);
 }
 
 .btn-nav-signup:active {

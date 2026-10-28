@@ -1,3 +1,5 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../../services/api';
 
@@ -32,14 +34,14 @@ function CourseModal({ initial, onSave, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <section className="modal-box course-form-modal" role="dialog" aria-modal="true" aria-labelledby="course-form-title" onClick={(event) => event.stopPropagation()}>
-        <header className="modal-header course-form-header">
-          <div><span className="course-page-kicker">COURSE CATALOG</span><h2 className="modal-title" id="course-form-title">{initial?._id ? 'Edit course' : 'Add course'}</h2></div>
+      <section className="modal-box course-form-modal teacher-form-modal" role="dialog" aria-modal="true" aria-labelledby="course-form-title" onClick={(event) => event.stopPropagation()}>
+        <header className="modal-header course-form-header teacher-form-header">
+          <div><span className="teacher-form-eyebrow">COURSE CATALOG</span><h2 className="modal-title" id="course-form-title">{initial?._id ? 'Edit course' : 'Add course'}</h2></div>
           <button type="button" className="modal-close" aria-label="Close course form" onClick={onClose}>×</button>
         </header>
         <form onSubmit={submit}>
           <div className="modal-body course-form-body">
-            <div className="course-form-grid">
+            <div className="course-form-grid teacher-form-grid">
               {COURSE_FIELDS.map((field) => (
                 <div className={`form-group ${field.type === 'textarea' ? 'course-form-wide' : ''}`} key={field.key}>
                   <label className="form-label" htmlFor={`course-${field.key}`}>{field.label}{field.required ? ' *' : ''}</label>
@@ -48,7 +50,7 @@ function CourseModal({ initial, onSave, onClose }) {
                       {field.options.map((option) => <option value={option} key={option}>{option[0].toUpperCase() + option.slice(1)}</option>)}
                     </select>
                   ) : field.type === 'textarea' ? (
-                    <textarea id={`course-${field.key}`} className="form-control" rows="3" value={form[field.key] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))} />
+                    <textarea id={`course-${field.key}`} className="form-control" rows="2" value={form[field.key] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))} />
                   ) : (
                     <input id={`course-${field.key}`} className="form-control" type={field.type} min={field.type === 'number' ? 1 : undefined} required={field.required} value={form[field.key] ?? ''} onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))} />
                   )}
@@ -76,21 +78,24 @@ function ConfirmModal({ course, onConfirm, onCancel, loading }) {
 }
 
 export default function CourseMgmt() {
+  const [search] = usePageSearch();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchCourses = useCallback(async () => {
-    setLoading(true);
+  const fetchCourses = useCallback(async (background = false, context = {}) => {
+    if (!background) setLoading(true);
     setError('');
     try {
-      const response = await api.get('/courses', { params: { limit: 100 } });
+      const response = await api.get('/courses', { signal: context.signal, params: { limit: 100 } });
+      if (context.isCurrent && !context.isCurrent()) return;
       const rows = response.data?.data || response.data?.courses || response.data;
       setCourses(Array.isArray(rows) ? rows.map((course) => ({
         ...course,
@@ -98,21 +103,26 @@ export default function CourseMgmt() {
         status: course.status || (course.isActive ? 'active' : 'inactive'),
       })) : []);
     } catch (requestError) {
-      setCourses([]);
+      if (context.isCurrent && !context.isCurrent()) return;
+      if (!background) setCourses([]);
       setError(requestError.response?.data?.message || 'Courses could not be loaded. Check the connection and try again.');
     } finally {
-      setLoading(false);
+      if (!background && (!context.isCurrent || context.isCurrent())) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchCourses(); }, [fetchCourses]);
+
+
+  useAutoRefresh(async context => {
+    await Promise.all([fetchCourses(!context.initial, context)]);
+  }, { enabled: !showModal && !deleting });
 
   const activeCount = courses.filter((course) => course.status === 'active').length;
   const inactiveCount = courses.filter((course) => course.status === 'inactive').length;
   const averageCredits = courses.length ? (courses.reduce((sum, course) => sum + (Number(course.credits) || 0), 0) / courses.length).toFixed(1) : '0';
   const filtered = useMemo(() => courses.filter((course) => (
-    statusFilter === 'all' || course.status === statusFilter
-  )), [courses, statusFilter]);
+    (statusFilter === 'all' || course.status === statusFilter) && matchesPageSearch(search, course.title, course.name, course.courseCode, course.description, course.academicYear)
+  )), [courses, statusFilter, search]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 

@@ -1,5 +1,6 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import api from '../../services/api';
 
 const STATUS_BADGE = {
@@ -19,15 +20,15 @@ function formatAssessmentDate(value) {
     : date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onClose }) {
+function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onClose, fixedScope }) {
   const [form, setForm] = useState(() => {
     if (initial) {
       return {
         ...initial,
         course: typeof initial.course === 'object' ? initial.course?._id : initial.course || '',
-        date: initial.examDate ? String(initial.examDate).slice(0, 10) : (initial.date || ''),
+        date: (initial.examDate||initial.quizDate) ? String(initial.examDate||initial.quizDate).slice(0,10) : (initial.date||''),
         duration: initial.durationMinutes || initial.duration || 60,
-        totalMarks: initial.totalMarks ?? (typeVal === 'quiz' ? 20 : 100),
+        totalMarks: initial.totalMarks ?? (typeVal === 'quiz' ? 20 : 90),
         status: initial.status || 'upcoming',
       };
     }
@@ -36,7 +37,10 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
       course: assignedCourses[0]?._id || '',
       date: new Date().toISOString().slice(0, 10),
       duration: typeVal === 'quiz' ? 30 : 60,
-      totalMarks: typeVal === 'quiz' ? 20 : 100,
+      totalMarks: typeVal === 'quiz' ? 20 : 90,
+      marksPublished:false,
+      visibleToStudents:false,
+      batch:fixedScope?.batch||'',
       status: 'upcoming',
     };
   });
@@ -179,13 +183,18 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
                   value={form.status || 'upcoming'}
                   onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
                 >
+                  <option value="draft">Draft</option>
                   <option value="upcoming">Upcoming</option>
                   <option value="scheduled">Scheduled</option>
-                  <option value="ongoing">In Progress (Ongoing)</option>
+                  <option value="ongoing" disabled={!!initial?.nativeQuiz}>In Progress (Ongoing)</option>
+                  {initial?.nativeQuiz&&<option value="published">Published</option>}
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
+              <div className="form-group"><label className="form-label">Batch (leave empty for all batches)</label><input readOnly={!!fixedScope} className="form-control" value={form.batch||''} onChange={e=>setForm(p=>({...p,batch:e.target.value}))}/></div>
+<div className="form-group"><label className="form-label">Publish marks</label><select className="form-control" value={form.marksPublished?'published':'unpublished'} onChange={e=>setForm(p=>({...p,marksPublished:e.target.value==='published'}))}><option value="unpublished">Unpublished marks</option><option value="published">Publish marks to students</option></select></div>
+              <div className="form-group"><label className="form-label">Student visibility</label><select className="form-control" value={form.visibleToStudents?'visible':'hidden'} onChange={e=>setForm(p=>({...p,visibleToStudents:e.target.value==='visible'}))}><option value="hidden">Hidden from students</option><option value="visible">Visible to students</option></select></div>
             </div>
           </div>
           <div className="modal-footer">
@@ -224,7 +233,9 @@ function ConfirmModal({ message, onConfirm, onCancel, loading }) {
   );
 }
 
-export default function TeacherExams() {
+export default function TeacherExams({scope,onEditingChange,onChange}) {
+  const scopeParams=scope?Object.fromEntries(['courseId','academicYear','batch','contractId'].map(k=>[k,scope[k]||''])):null;
+  const scopeIdentity=JSON.stringify(scopeParams);
   const [search] = usePageSearch();
   const [tab, setTab] = useState('exams'); // 'exams' | 'quizzes' | 'assessments'
   const [items, setItems] = useState([]);
@@ -235,47 +246,47 @@ export default function TeacherExams() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  useEffect(()=>{onEditingChange?.(showModal||deleting);},[showModal,deleting,onEditingChange]);
+  useEffect(()=>()=>onEditingChange?.(false),[onEditingChange]);
   // Fetch teacher's assigned courses (strictly assigned to this teacher)
-  const fetchAssignedCourses = useCallback(async () => {
+  const fetchAssignedCourses = useCallback(async (context = {}) => {
     try {
-      const res = await api.get('/teacher/courses');
+      if(scope){setAssignedCourses([{...scope.course,academicYear:scope.academicYear,batch:scope.batch}]);return;}
+      const res = await api.get('/teacher/courses', {signal:context.signal});
+      if (context.isCurrent && !context.isCurrent()) return;
       const courses = res.data?.courses || (res.data?.course ? [res.data.course] : []);
       if (Array.isArray(courses)) {
         setAssignedCourses(courses);
       }
     } catch (err) {
+      if (context.isCurrent && !context.isCurrent()) return;
       console.warn('[TeacherExams] Could not fetch assigned courses:', err.message);
       setAssignedCourses([]);
     }
-  }, []);
+  }, [scopeIdentity]);
 
   // Fetch assessments / exams from backend API
-  const fetchAssessments = useCallback(async (spinner = false) => {
+  const fetchAssessments = useCallback(async (spinner = false, context = {}) => {
     if (spinner) setLoading(true);
     try {
-      const res = await api.get('/exams');
+      if(scope){const response=await api.get('/teacher/my-course',{signal:context.signal,params:scopeParams});if(!context.isCurrent||context.isCurrent())setItems(response.data.assessments||[]);return;}
+      const [res,native] = await Promise.all([api.get('/exams', {signal:context.signal,params:{limit:100}}),api.get('/quizzes',{signal:context.signal,params:{limit:100}})]);
+      if (context.isCurrent && !context.isCurrent()) return;
       const list = res.data?.data || res.data?.exams || res.data || [];
       if (Array.isArray(list)) {
-        setItems(list);
+        setItems([...list,...(native.data?.data||[]).map(q=>({...q,nativeQuiz:true,type:'quiz',examDate:q.quizDate}))]);
       }
     } catch (err) {
+      if (context.isCurrent && !context.isCurrent()) return;
       console.warn('[TeacherExams] Could not fetch exams:', err.message);
     } finally {
-      if (spinner) setLoading(false);
+      if (spinner && (!context.isCurrent || context.isCurrent())) setLoading(false);
     }
-  }, []);
+  }, [scopeIdentity]);
 
-  useEffect(() => {
-    fetchAssignedCourses();
-    fetchAssessments(true);
-
-    // Auto-refresh every 5 seconds to keep teacher and admin views synced
-    const interval = setInterval(() => {
-      fetchAssessments(false);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [fetchAssignedCourses, fetchAssessments]);
+  useAutoRefresh(async context => {
+    await Promise.all([fetchAssignedCourses(context), fetchAssessments(context.initial, context)]);
+  }, { enabled: !showModal && !deleting, deps:[scopeIdentity] });
 
   // Categorize items
   const exams = items.filter((item) =>
@@ -283,19 +294,24 @@ export default function TeacherExams() {
   );
   const quizzes = items.filter((item) => item.type === 'quiz');
   const assessments = items.filter((item) =>
-    ['assessment', 'assignment'].includes(item.type)
+    ['assessment', 'assignment', 'other'].includes(item.type)
   );
 
   const data = (tab === 'exams' ? exams : tab === 'quizzes' ? quizzes : assessments).filter(item => matchesPageSearch(search, item.title, item.type, item.status, item.course?.title, item.course?.courseCode, item.examDate, item.date));
   const typeVal = tab === 'exams' ? 'exam' : tab === 'quizzes' ? 'quiz' : 'assessment';
 
   const scheduledCount = items.filter((a) =>
-    ['upcoming', 'scheduled', 'ongoing'].includes(a.status)
+    ['upcoming', 'scheduled', 'ongoing', 'published'].includes(a.status)
   ).length;
   const completedCount = items.filter((a) => a.status === 'completed').length;
 
   const handleSave = async (form) => {
     const payload = {
+      marksPublished:form.marksPublished===true,
+      visibleToStudents:form.visibleToStudents===true,
+      batch:form.batch||'',
+      academicYear:assignedCourses.find(c=>c._id===form.course)?.academicYear||String(new Date().getFullYear()),
+      semester:assignedCourses.find(c=>c._id===form.course)?.semester||'',
       title: form.title,
       course: form.course,
       type: form.type || typeVal,
@@ -303,18 +319,21 @@ export default function TeacherExams() {
       date: form.date,
       durationMinutes: form.duration ? Number(form.duration) : 60,
       duration: form.duration ? Number(form.duration) : 60,
-      totalMarks: form.totalMarks ? Number(form.totalMarks) : (typeVal === 'quiz' ? 20 : 100),
+      totalMarks: form.totalMarks ? Number(form.totalMarks) : (typeVal === 'quiz' ? 20 : 90),
       ...(editTarget && editTarget.totalMarks > 0 ? { passingMarks: Math.round((editTarget.passingMarks / editTarget.totalMarks) * Number(form.totalMarks) * 100) / 100 } : {}),
       status: form.status || 'upcoming',
     };
 
-    if (editTarget && editTarget._id) {
+    if (editTarget?.nativeQuiz) {
+      await api.put(`/quizzes/${editTarget._id}`,{...payload,quizDate:payload.examDate});
+    } else if (editTarget && editTarget._id) {
       await api.put(`/exams/${editTarget._id}`, payload);
     } else {
       await api.post('/exams', payload);
     }
 
     await fetchAssessments(false);
+    onChange?.();
     setShowModal(false);
     setEditTarget(null);
   };
@@ -323,8 +342,10 @@ export default function TeacherExams() {
     if (!deleteTarget || !deleteTarget._id) return;
     setDeleting(true);
     try {
-      await api.delete(`/exams/${deleteTarget._id}`);
+      if(deleteTarget.nativeQuiz)await api.put(`/quizzes/${deleteTarget._id}`,{status:'cancelled'});
+      else await api.delete(`/exams/${deleteTarget._id}`);
       await fetchAssessments(false);
+      onChange?.();
     } catch (err) {
       console.error('[TeacherExams] Delete error:', err);
     } finally {
@@ -476,7 +497,7 @@ export default function TeacherExams() {
                     <th>Date</th>
                     <th>Duration</th>
                     <th>Marks</th>
-                    <th>Status</th>
+                    <th>Status</th><th>Visibility</th>
                     <th><span className="visually-hidden">Actions</span></th>
                   </tr>
                 </thead>
@@ -531,7 +552,7 @@ export default function TeacherExams() {
                             {assessment.status || 'upcoming'}
                           </span>
                         </td>
-                        <td>
+                        <td>{assessment.visibleToStudents?'Visible':'Hidden'}</td><td>
                           <div className="assessment-row-actions">
                             <button
                               type="button"
@@ -572,6 +593,7 @@ export default function TeacherExams() {
           initial={editTarget}
           assignedCourses={assignedCourses}
           typeVal={typeVal}
+          fixedScope={scope}
           onSave={handleSave}
           onClose={() => {
             setShowModal(false);

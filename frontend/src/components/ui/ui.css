@@ -5,8 +5,8 @@
 
 /* ── Fallback variables (in case global theme isn't loaded) ── */
 :root {
-  --telesom-green: #229948;
-  --telesom-gold: #d68b29;
+  --telesom-green: var(--brand-green);
+  --telesom-gold: var(--brand-gold);
   --telesom-navy: #180d41;
   --telesom-teal: #0d9488;
   --telesom-red: #ef4444;
@@ -154,7 +154,7 @@
   padding: 2px 7px;
   border-radius: 20px;
 }
-.stats-card-trend--up   { background: var(--telesom-green-light); color: #166534; }
+.stats-card-trend--up   { background: var(--telesom-green-light); color: var(--brand-green-deep); }
 .stats-card-trend--down { background: var(--telesom-red-light);   color: #991b1b; }
 
 /* ================================================================
@@ -217,7 +217,7 @@
 
 .table-search-input:focus {
   border-color: var(--telesom-green);
-  box-shadow: 0 0 0 3px rgba(34, 153, 72, 0.12);
+  box-shadow: 0 0 0 3px rgba(49, 180, 74, 0.12);
   background: #fff;
 }
 
@@ -472,7 +472,7 @@
 .badge--md { font-size: 12px; padding: 4px 10px; }
 
 /* Color variants */
-.badge--green  { background: var(--telesom-green-light, #d1fae5); color: #166534; }
+.badge--green  { background: var(--telesom-green-light, #d1fae5); color: var(--brand-green-deep); }
 .badge--gold   { background: var(--telesom-gold-light,  #fef3c7); color: #92400e; }
 .badge--navy   { background: var(--telesom-navy-light,  #e0e7ff); color: #3730a3; }
 .badge--teal   { background: var(--telesom-teal-light,  #ccfbf1); color: #115e59; }
@@ -635,7 +635,7 @@
 }
 .btn-primary:hover:not(:disabled) {
   background: #1a7d3a;
-  box-shadow: 0 2px 8px rgba(34, 153, 72, 0.35);
+  box-shadow: 0 2px 8px rgba(49, 180, 74, 0.35);
 }
 
 .btn-danger {

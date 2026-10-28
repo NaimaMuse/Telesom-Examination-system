@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 
 const examSchema = new mongoose.Schema(
   {
+    batch: {type:String,trim:true,default:''},
+    marksPublished: {type:Boolean,default:false},
+    visibleToStudents: {type:Boolean,default:false},
     title: {
       type: String,
       required: [true, 'Exam title is required'],
@@ -20,7 +23,7 @@ const examSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: {
-        values: ['midterm', 'final', 'practical', 'supplementary', 'quiz', 'assignment', 'assessment', 'exam'],
+        values: ['midterm', 'final', 'practical', 'supplementary', 'quiz', 'assignment', 'assessment', 'exam', 'other'],
         message: '{VALUE} is not a valid exam type',
       },
       default: 'final',
@@ -30,7 +33,7 @@ const examSchema = new mongoose.Schema(
       required: [true, 'Total marks are required'],
       min: [0.01, 'Total marks must be positive'],
       max: [100, 'Assessment maximum cannot exceed 100 marks'],
-      default: 100,
+      default: 90,
     },
     passingMarks: {
       type: Number,
@@ -76,7 +79,7 @@ const examSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ['scheduled', 'upcoming', 'ongoing', 'completed', 'cancelled'],
+        values: ['draft', 'scheduled', 'upcoming', 'ongoing', 'completed', 'cancelled'],
         message: '{VALUE} is not a valid exam status',
       },
       default: 'scheduled',

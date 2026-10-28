@@ -11,8 +11,8 @@ import './ui.css';
 
 /* ─────────────── Colour helpers ─────────────── */
 const DEFAULT_COLORS = [
-  '#229948', '#e5a319', '#32a85b', '#ba741d', '#1b823d',
-  '#fef9c3', '#14532d', '#d68b29', '#166534', '#92400e',
+  'var(--brand-green)', 'var(--brand-gold)', 'var(--brand-green)', 'var(--brand-gold-hover)', 'var(--brand-green-hover)',
+  'var(--brand-gold-soft)', 'var(--brand-green-deep)', 'var(--brand-gold)', 'var(--brand-green-deep)', '#92400e',
 ];
 
 const getColor = (item, idx) => item.color || DEFAULT_COLORS[idx % DEFAULT_COLORS.length];
@@ -88,8 +88,8 @@ const LineChart = ({ data, height = 220 }) => {
       >
         <defs>
           <linearGradient id="lineAreaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#229948" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#229948" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="var(--brand-green)" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="var(--brand-green)" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
@@ -122,7 +122,7 @@ const LineChart = ({ data, height = 220 }) => {
         <polyline
           points={polyline}
           fill="none"
-          stroke="#229948"
+          stroke="var(--brand-green)"
           strokeWidth="2.5"
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -131,7 +131,7 @@ const LineChart = ({ data, height = 220 }) => {
         {/* Data points */}
         {points.map((p, i) => (
           <g key={i}>
-            <circle cx={p.x} cy={p.y} r="4.5" fill="#229948" />
+            <circle cx={p.x} cy={p.y} r="4.5" fill="var(--brand-green)" />
             <circle cx={p.x} cy={p.y} r="2.5" fill="#fff" />
             <text
               x={p.x}

@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 
 const quizSchema = new mongoose.Schema(
   {
+    batch: {type:String,trim:true,default:''},
+    marksPublished: {type:Boolean,default:false},
+    visibleToStudents: {type:Boolean,default:false},
     title: {
       type: String,
       required: [true, 'Quiz title is required'],
@@ -59,7 +62,7 @@ const quizSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ['draft', 'published', 'completed', 'cancelled'],
+        values: ['draft', 'scheduled', 'upcoming', 'published', 'completed', 'cancelled'],
         message: '{VALUE} is not a valid quiz status',
       },
       default: 'draft',

@@ -2,7 +2,16 @@ const assert = require('assert');
 const { app } = require('../server');
 
 const protectedPaths = [
+  '/api/teacher/materials',
+  '/api/teacher/my-course',
+  '/api/teacher-contracts',
+  '/api/notifications',
   '/api/students',
+  '/api/student/courses',
+  '/api/student/results',
+  '/api/student/quizzes',
+  '/api/student/notes',
+  '/api/student/attendance',
   '/api/teachers',
   '/api/courses',
   '/api/enrollments',
@@ -42,6 +51,12 @@ const run = async () => {
       assert.strictEqual(response.status, 401, `${path} must require auth`);
     }
 
+    for (const role of ['admin','teacher','student']) {
+      const registration = await fetch(baseUrl+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role,name:'Blocked',email:'blocked@example.com'})});
+      assert.strictEqual(registration.status,403,'Public account creation must be disabled');
+    }
+    const password = await fetch(baseUrl+'/api/auth/password',{method:'PUT',headers:{'Content-Type':'application/json'},body:'{}'});
+    assert.strictEqual(password.status,401,'Password changes require authentication');
     const health = await fetch(`${baseUrl}/api/health`);
     assert.strictEqual(health.status, 503, 'health reports missing DB readiness');
 

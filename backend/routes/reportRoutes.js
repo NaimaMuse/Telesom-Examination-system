@@ -15,7 +15,7 @@ router.get('/marks-overview', authorizeRoles('admin'), require('../controllers/m
 
 router.get('/assessment-overview', authorizeRoles('admin'), require('../controllers/assessmentOverviewController').getAssessmentOverview);
 
-router.get('/academic-summary', getAcademicSummary);
+router.get('/academic-summary', authorizeRoles('admin'), getAcademicSummary);
 router.get(
   '/students/:studentId',
   authorizeRoles('admin', 'teacher', 'student'),

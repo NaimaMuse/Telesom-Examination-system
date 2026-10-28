@@ -21,7 +21,7 @@ async function loadMarksOverview() {
       const teacherUsers=assignments.filter(a=>String(a.course)===id).map(a=>teacherMap.get(String(a.teacher))).filter(Boolean);
       const rows=[...courseExams.map(a=>({...a,storageType:'exam',assessmentType:a.type==='quiz'?'quiz':'exam'})),...courseQuizzes.map(a=>({...a,storageType:'quiz',assessmentType:'quiz'}))];
       const examIds=new Set(courseExams.map(a=>String(a._id))),quizIds=new Set(courseQuizzes.map(a=>String(a._id)));
-      const report=calculatePerformance({course,assessments:rows,enrollments:enrollments.filter(e=>String(e.course)===id),results:[...examResults.filter(r=>examIds.has(String(r.exam))).map(r=>({...r,storageType:'exam',assessmentId:r.exam})),...quizResults.filter(r=>quizIds.has(String(r.quiz))).map(r=>({...r,storageType:'quiz',assessmentId:r.quiz}))]});
+      const report=calculatePerformance({course,attendance:await require('../models/Attendance').find({course:course._id}).lean(),assessments:rows,enrollments:enrollments.filter(e=>String(e.course)===id),results:[...examResults.filter(r=>examIds.has(String(r.exam))).map(r=>({...r,storageType:'exam',assessmentId:r.exam})),...quizResults.filter(r=>quizIds.has(String(r.quiz))).map(r=>({...r,storageType:'quiz',assessmentId:r.quiz}))]});
       const teacherIds=[...new Set([...teacherUsers.map(t=>String(t._id)),...rows.map(a=>String(a.createdBy||'')).filter(Boolean)])];
       for(const student of filterPerformanceReport(report, { type: 'all' }).students){student.batches.forEach(batch=>batches.add(batch));students.push({...student,key:id+':'+student._id,teacherIds,teachers:teacherUsers.map(t=>t.name),allocatedMarks:report.allocation.allocatedMarks});}
       assessments.push(...report.assessments.map(a=>({...a,courseId:course._id})));

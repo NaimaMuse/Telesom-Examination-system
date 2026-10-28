@@ -1,11 +1,13 @@
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch } from '../../context/PageSearchContext';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import './teacher.css';
 
 const assessmentKey = (assessment) => `${assessment.type}:${assessment._id}`;
 
-export default function TeacherResults() {
+export default function TeacherResults({scope,onEditingChange}) {
+  const scopeIdentity=JSON.stringify(scope||{});
   const [assessments, setAssessments] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [assessment, setAssessment] = useState(null);
@@ -16,66 +18,30 @@ export default function TeacherResults() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [dirty, setDirty] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    const loadAssessments = async () => {
-      setLoadingAssessments(true);
+  useEffect(()=>{onEditingChange?.(dirty||saving);},[dirty,saving,onEditingChange]);
+  useEffect(()=>()=>onEditingChange?.(false),[onEditingChange]);
+  useAutoRefresh(async ({ signal, isCurrent }) => {
+    try {
+      const response = await api.get('/teacher/results/assessments', { signal,params:scope });
+      if (!isCurrent()) return;
+      const rows = Array.isArray(response.data?.assessments) ? response.data.assessments : [];
+      setAssessments(rows);
+      const selected = rows.find(item => assessmentKey(item) === selectedKey) || rows[0];
+      if (!selected) { setSelectedKey(''); setAssessment(null); setStudents([]); return; }
+      if (assessmentKey(selected) !== selectedKey) { setSelectedKey(assessmentKey(selected)); return; }
+      const roster = await api.get('/teacher/results/' + selected.type + '/' + selected._id, { signal,params:scope });
+      if (!isCurrent()) return;
+      setAssessment(roster.data?.assessment || null);
+      setStudents((roster.data?.students || []).map(student => ({ ...student, marksObtained:student.marksObtained == null ? '' : String(student.marksObtained), remarks:student.remarks || '' })));
       setError('');
-      try {
-        const response = await api.get('/teacher/results/assessments');
-        if (!active) return;
-        const rows = Array.isArray(response.data?.assessments) ? response.data.assessments : [];
-        setAssessments(rows);
-        if (rows.length) setSelectedKey(assessmentKey(rows[0]));
-      } catch (requestError) {
-        if (active) setError(requestError.response?.data?.message || 'Assessments could not be loaded.');
-      } finally {
-        if (active) setLoadingAssessments(false);
-      }
-    };
-    loadAssessments();
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!selectedKey) {
-      setAssessment(null);
-      setStudents([]);
-      return undefined;
-    }
-
-    let active = true;
-    const selected = assessments.find((item) => assessmentKey(item) === selectedKey);
-    if (!selected) return undefined;
-
-    const loadRoster = async () => {
-      setLoadingRoster(true);
-      setError('');
-      setNotice('');
-      try {
-        const response = await api.get(`/teacher/results/${selected.type}/${selected._id}`);
-        if (!active) return;
-        setAssessment(response.data?.assessment || null);
-        setStudents((response.data?.students || []).map((student) => ({
-          ...student,
-          marksObtained: student.marksObtained == null ? '' : String(student.marksObtained),
-          remarks: student.remarks || '',
-        })));
-      } catch (requestError) {
-        if (!active) return;
-        setError(requestError.response?.data?.message || 'The student roster could not be loaded.');
-        setAssessment(null);
-        setStudents([]);
-      } finally {
-        if (active) setLoadingRoster(false);
-      }
-    };
-    loadRoster();
-    return () => { active = false; };
-  }, [selectedKey, assessments]);
+    } catch (err) { if (isCurrent()) setError(err.response?.data?.message || 'Results could not refresh. Retrying automatically.'); }
+    finally { if (isCurrent()) { setLoadingAssessments(false); setLoadingRoster(false); } }
+  }, { enabled: !dirty && !saving, deps: [selectedKey,scopeIdentity] });
 
   const updateStudent = (studentId, field, value) => {
+    setDirty(true);
     setStudents((current) => current.map((student) => (
       student._id === studentId ? { ...student, [field]: value } : student
     )));
@@ -119,7 +85,8 @@ export default function TeacherResults() {
           marksObtained: Number(student.marksObtained),
           remarks: student.remarks,
         })),
-      });
+      },{params:scope});
+      setDirty(false);
       setNotice(`Saved results for ${response.data?.savedCount ?? markedStudents.length} students.`);
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Results could not be saved. Please try again.');
@@ -158,13 +125,13 @@ export default function TeacherResults() {
             id="results-assessment"
             className="form-control"
             value={selectedKey}
-            disabled={loadingAssessments || assessments.length === 0}
-            onChange={(event) => setSelectedKey(event.target.value)}
+            disabled={saving || loadingAssessments || assessments.length === 0}
+            onChange={(event) => {setDirty(false);setLoadingRoster(true);setSelectedKey(event.target.value);}}
           >
             <option value="">{loadingAssessments ? 'Loading assessments...' : 'Select an assessment'}</option>
             {assessments.map((item) => (
               <option key={assessmentKey(item)} value={assessmentKey(item)}>
-                {item.type === 'quiz' ? 'Quiz' : 'Exam'} · {item.title} · {item.totalMarks} marks
+                {item.assessmentType|| (item.type === 'quiz' ? 'Quiz' : 'Exam')} · {item.title} · {item.totalMarks} marks
               </option>
             ))}
           </select>
@@ -243,6 +210,7 @@ export default function TeacherResults() {
                         <td>
                           <input
                             className="form-control results-mark-input"
+                            disabled={saving}
                             type="number"
                             min="0"
                             max={assessment?.totalMarks}
@@ -263,6 +231,7 @@ export default function TeacherResults() {
                         <td>
                           <input
                             className="form-control results-remarks-input"
+                            disabled={saving}
                             type="text"
                             maxLength="250"
                             aria-label={`Remarks for ${student.name}`}
@@ -278,7 +247,7 @@ export default function TeacherResults() {
               </table>
             </div>
             <div className="results-footer">
-              <span>{enteredCount} students with marks. Leave non-participants blank.</span>
+              <span>{dirty ? 'Unsaved marks. Live updates resume after saving.' : `${enteredCount} students with marks. Leave non-participants blank.`}</span>{dirty && <button type="button" className="btn btn-secondary" disabled={saving} onClick={()=>{setLoadingRoster(true);setDirty(false);}}>Discard changes</button>}
               <button type="submit" className="btn btn-primary" disabled={saving || !markedStudents.length}>
                 {saving ? 'Saving results...' : 'Save class results'}
               </button>

@@ -1,0 +1,10 @@
+const assert=require('assert');
+const {attendanceScore,calculateCourseMarks}=require('../services/academicProgressService');
+const records=[{date:'2026-10-01',status:'present'},{date:'2026-10-01',status:'present'},{date:'2026-10-02',status:'absent'},{date:'2026-10-03',status:'late'},{date:'2026-10-04',status:'excused'}];
+assert.deepStrictEqual(attendanceScore(records),{presentSessions:1,eligibleSessions:3,attendancePercentage:33.33,attendanceMarks:3.33});
+const assessments=[{_id:'a',kind:'exam',totalMarks:60,status:'completed'},{_id:'b',kind:'quiz',totalMarks:30,status:'completed'}];
+const results=[{kind:'exam',assessment:'a',marksObtained:55},{kind:'exam',assessment:'a',marksObtained:55},{kind:'quiz',assessment:'b',marksObtained:25}];
+let marks=calculateCourseMarks(assessments,results,records);assert.strictEqual(marks.teacherMarks,80);assert.strictEqual(marks.finalMarks,83.33);assert.strictEqual(marks.completedAssessments,2);assert(marks.complete);
+marks=calculateCourseMarks([{_id:'a',kind:'exam',totalMarks:100,status:'completed'}],[{kind:'exam',assessment:'a',marksObtained:100}],[{date:'2026-10-01',status:'present'}]);assert.strictEqual(marks.teacherMarks,90);assert.strictEqual(marks.finalMarks,100);assert(marks.legacyNormalization);
+assert.strictEqual(calculateCourseMarks(assessments,[{kind:'exam',assessment:'a',marksObtained:200}],[]).teacherMarks,0);
+console.log('Academic marks passed: 90 + 10, distinct attendance days, duplicate scores, excused/late eligibility and preserved legacy scores.');

@@ -7,21 +7,21 @@
 
 :root {
   /* ── Telesom Academy Brand Colors (from official site) ── */
-  --telesom-green:         #229948; /* Main brand green - "Log in" button & branding */
-  --telesom-green-hover:   #1b823d;
-  --telesom-green-active:  #166f33;
-  --telesom-green-light:   #edf8f0;
-  --telesom-green-lighter: #f4fbf6;
-  --telesom-green-border:  #b6e3c5;
-  --telesom-green-glow:    rgba(34, 153, 72, 0.2);
+  --telesom-green:         var(--brand-green); /* Main brand green - "Log in" button & branding */
+  --telesom-green-hover:   var(--brand-green-hover);
+  --telesom-green-active:  var(--brand-green-active);
+  --telesom-green-light:   var(--brand-green-soft);
+  --telesom-green-lighter: var(--brand-green-tint);
+  --telesom-green-border:  var(--brand-green-border);
+  --telesom-green-glow:    rgba(49, 180, 74, 0.2);
 
-  --telesom-gold:          #d68b29; /* Main brand gold/amber - "Sign Up" button & accents */
-  --telesom-gold-hover:    #ba741d;
-  --telesom-gold-active:   #a16113;
-  --telesom-gold-light:    #fef7eb;
-  --telesom-gold-lighter:  #fffaf2;
-  --telesom-gold-border:   #f7d8a8;
-  --telesom-gold-glow:     rgba(214, 139, 41, 0.22);
+  --telesom-gold:          var(--brand-gold); /* Main brand gold/amber - "Sign Up" button & accents */
+  --telesom-gold-hover:    var(--brand-gold-hover);
+  --telesom-gold-active:   var(--brand-gold-active);
+  --telesom-gold-light:    var(--brand-gold-soft);
+  --telesom-gold-lighter:  var(--brand-gold-tint);
+  --telesom-gold-border:   var(--brand-gold-border);
+  --telesom-gold-glow:     rgba(215, 152, 47, 0.22);
 
   --telesom-navy:          #180d41; /* Midnight Indigo/Navy - "We Are Now a Pearson" */
   --telesom-navy-light:    #2d1b6b;
@@ -53,7 +53,7 @@
   --color-error:           #dc2626;
   --color-error-bg:        #fef2f2;
   --color-error-border:    #fecaca;
-  --color-success:         #16a34a;
+  --color-success:         var(--brand-green);
   --color-success-bg:      #f0fdf4;
   --color-success-border:  #bbf7d0;
 

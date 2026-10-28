@@ -64,6 +64,10 @@ const protect = async (req, res, next) => {
       return next(new Error('Account is inactive, please contact administrator'));
     }
 
+    if ((decoded.authVersion || 0) !== (user.authVersion || 0)) {
+      res.status(401); return next(new Error('Session expired. Please sign in again.'));
+    }
+
     // 8. Attach authenticated user to request object
     req.user = user;
     next();

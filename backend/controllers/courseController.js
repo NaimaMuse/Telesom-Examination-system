@@ -2,6 +2,8 @@ const Course = require('../models/Course');
 const { createResourceController } = require('./resourceController');
 
 const controller = createResourceController(Course, {
+  scopeFilter:async req=>{const scope=await require('../services/gradebookIntegrityService').assessmentReadScope(req);return scope?{_id:scope.course}:null;},
+  authorizeRead:(req,record)=>require('../services/gradebookIntegrityService').authorizeCourse(req,record._id),
   fields: [
     'courseCode',
     'title',

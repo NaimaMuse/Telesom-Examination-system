@@ -38,6 +38,7 @@ const teacherSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    profilePicture: {type:String,default:'',maxlength:3000000,select:false},
     status: {
       type: String,
       enum: {

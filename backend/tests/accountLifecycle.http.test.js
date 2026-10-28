@@ -1,0 +1,47 @@
+require('dotenv').config({path:require('path').join(__dirname,'../.env')});
+const assert=require('assert'),crypto=require('crypto'),mongoose=require('mongoose'),bcrypt=require('bcryptjs');
+const User=require('../models/User'),Teacher=require('../models/Teacher'),Student=require('../models/Student'),Sequence=require('../models/Sequence');
+const generateToken=require('../utils/generateToken');
+const {app}=require('../server');
+const testDbName='telesom_auth_test_'+crypto.randomBytes(6).toString('hex');
+const created=[];
+let server;
+(async()=>{
+ await mongoose.connect(process.env.MONGODB_URI,{dbName:testDbName,serverSelectionTimeoutMS:10000});
+ assert.strictEqual(mongoose.connection.name,testDbName);
+ const admin=await User.create({name:'Test Admin',email:'admin@test.example',role:'admin',password:await bcrypt.hash('Test-admin-password!',12),isActive:true});created.push([User,admin._id]);
+ server=app.listen(0);await new Promise(resolve=>server.on('listening',resolve));
+ const base=`http://127.0.0.1:${server.address().port}/api`;
+ const request=async(method,path,body,token)=>{const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},body:body?JSON.stringify(body):undefined});return {status:response.status,body:await response.json()};};
+ const adminToken=generateToken(admin._id);
+ for(const role of ['admin','teacher','student'])assert.strictEqual((await request('POST','/auth/register',{name:'Blocked',email:'blocked@test.example',role})).status,403);
+ const teacher=await request('POST','/users/teachers',{name:'Test Teacher',email:'teacher@test.example',password:'ignore-me',teacherId:'IGNORED'},adminToken);
+ assert.strictEqual(teacher.status,201);created.push([User,teacher.body.data.user._id],[Teacher,teacher.body.data.teacher._id]);
+ const temporary=teacher.body.data.credentials.temporaryPassword;
+ assert(temporary.length>=20);assert.notStrictEqual(temporary,'ignore-me');
+ let login=await request('POST','/auth/login',{email:'teacher@test.example',password:temporary,role:'teacher'});
+ assert.strictEqual(login.status,200);assert.strictEqual(login.body.user.mustChangePassword,true);
+ const oldToken=login.body.token;
+ assert.strictEqual((await request('POST','/auth/login',{email:'teacher@test.example',password:'wrong',role:'teacher'})).status,401);
+ assert.strictEqual((await request('POST','/auth/login',{email:'teacher@test.example',password:temporary,role:'admin'})).status,401);
+ assert.strictEqual((await request('PUT','/auth/password',{currentPassword:'wrong',newPassword:'New-teacher-pass!'},oldToken)).status,400);
+ assert.strictEqual((await request('PUT','/auth/password',{currentPassword:temporary,newPassword:'short'},oldToken)).status,400);
+ const changed=await request('PUT','/auth/password',{currentPassword:temporary,newPassword:'New-teacher-pass!'},oldToken);
+ assert.strictEqual(changed.status,200);assert(changed.body.token);assert.strictEqual(changed.body.user.mustChangePassword,false);
+ assert.strictEqual((await request('GET','/profile',null,oldToken)).status,401,'Previous sessions must expire');
+ assert.strictEqual((await request('GET','/profile',null,changed.body.token)).status,200,'New session must work');
+ assert.strictEqual((await request('POST','/auth/login',{email:'teacher@test.example',password:temporary,role:'teacher'})).status,401);
+ login=await request('POST','/auth/login',{email:'teacher@test.example',password:'New-teacher-pass!',role:'teacher'});assert.strictEqual(login.status,200);
+ const student=await request('POST','/users/students',{name:'Test Student',email:'student@test.example',gender:'female'},adminToken);
+ assert.strictEqual(student.status,201);created.push([User,student.body.data.user._id],[Student,student.body.data.student._id]);
+ const studentId=student.body.data.student.studentId;assert.match(studentId,/^TL-\d{4}-\d{2,}$/);
+ const studentLogin=await request('POST','/auth/login',{studentId,role:'student'});assert.strictEqual(studentLogin.status,200);
+ assert.strictEqual((await request('POST','/auth/login',{studentId:'UNKNOWN',role:'student'})).status,401);
+ assert.strictEqual((await request('POST','/users/teachers',{name:'Blocked',email:'blocked@test.example'},studentLogin.body.token)).status,403);
+ assert.strictEqual((await request('PUT','/auth/password',{currentPassword:'anything',newPassword:'Something-new!'},studentLogin.body.token)).status,403);
+ console.log('Account lifecycle integration passed in an isolated database: closed signup, generated teacher credentials, password change and session revocation, role checks, automatic student ID login.');
+})().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{
+ if(server)await new Promise(resolve=>server.close(resolve));
+ if(mongoose.connection.readyState===1&&mongoose.connection.name===testDbName){for(const [Model,id]of created.reverse())await Model.deleteOne({_id:id});await Sequence.deleteMany({_id:{$regex:'^student-id:'}});}
+ await mongoose.disconnect();
+});

@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/Login';
-import SignupPage from './pages/Signup';
 import RoleRedirect from './pages/RoleRedirect';
 import DashboardLayout from './components/DashboardLayout';
 
@@ -28,7 +27,7 @@ export default function App() {
 
           {/* Public Authentication Pages */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signup" element={<Navigate to="/login" replace />} />
 
           {/* Protected base redirect based on role */}
           <Route
