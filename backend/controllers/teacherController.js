@@ -65,6 +65,25 @@ const updateTeacherProfile = asyncHandler(async (req, res) => {
     throw new Error('Teacher account not found');
   }
 
+  if (req.body.teacherId !== undefined) {
+    const teacherId = String(req.body.teacherId).trim().toUpperCase();
+    if (!teacherId) { res.status(400); throw new Error('Teacher ID is required'); }
+    const duplicate = await Teacher.findOne({teacherId, _id: {$ne: teacher._id}});
+    if (duplicate) { res.status(409); throw new Error('Teacher ID already exists'); }
+    teacher.teacherId = teacherId;
+  }
+  if (req.body.gender !== undefined) {
+    if (req.body.gender && !['male', 'female'].includes(req.body.gender)) { res.status(400); throw new Error('Invalid gender'); }
+    teacher.gender = req.body.gender || undefined;
+  }
+  if (req.body.status !== undefined) {
+    if (!['active', 'on_leave', 'inactive'].includes(req.body.status)) { res.status(400); throw new Error('Invalid teacher status'); }
+    teacher.status = req.body.status;
+  }
+  for (const field of ['department', 'qualification', 'specialization']) {
+    if (req.body[field] !== undefined) teacher[field] = String(req.body[field]).trim();
+  }
+  await teacher.validate();
   user.name = normalizedName;
   user.email = normalizedEmail;
   await user.save();

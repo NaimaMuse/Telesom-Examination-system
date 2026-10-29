@@ -231,7 +231,11 @@ const createTeacher = async (req, res, next) => {
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const normalizedTeacherId = 'TCH-' + crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase();
-    const temporaryPassword = crypto.randomBytes(18).toString('base64url');
+    if (req.body.password !== undefined && (typeof req.body.password !== 'string' || req.body.password.length < 8 || req.body.password.length > 128 || Buffer.byteLength(req.body.password, 'utf8') > 72)) {
+      res.status(400);
+      return next(new Error('Initial password must be 8–128 characters and at most 72 UTF-8 bytes.'));
+    }
+    const temporaryPassword = req.body.password ?? crypto.randomBytes(18).toString('base64url');
     const normalizedGender = normalizeGender(gender);
 
     if (!normalizedEmail || !normalizedTeacherId) {

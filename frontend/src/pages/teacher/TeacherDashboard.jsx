@@ -1,5 +1,4 @@
-import {MakeupClasses} from '../../components/AcademyWorkspace';
-import {TeachingWorkspaceShortcut} from '../../components/TeacherContracts';
+import api from '../../services/api';
 import TelesomLogo from '../../components/TelesomLogo';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -32,6 +31,8 @@ export default function TeacherDashboard() {
   const [search] = usePageSearch();
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
+  const [contracts, setContracts] = useState([]);
+  const [contractsError, setContractsError] = useState('');
   const [upcoming, setUpcoming] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,7 +51,16 @@ export default function TeacherDashboard() {
     requestRef.current = controller;
     if (initial === true) setLoading(true);
     try {
-      const data = await getTeacherDashboardData(controller.signal);
+      const [dashboardResult, contractResult] = await Promise.allSettled([
+        getTeacherDashboardData(controller.signal),
+        api.get('/teacher-contracts', {signal: controller.signal}),
+      ]);
+      if (!activeRef.current || controller.signal.aborted) return;
+      if (contractResult.status === 'fulfilled') {
+        setContracts(previous=>JSON.stringify(previous)===JSON.stringify(contractResult.value.data.contracts||[])?previous:contractResult.value.data.contracts||[]); setContractsError('');
+      } else { setContractsError('Contracts could not refresh. Retrying automatically.'); }
+      if (dashboardResult.status === 'rejected') throw dashboardResult.reason;
+      const data = dashboardResult.value;
       if (!activeRef.current || controller.signal.aborted) return;
       setError(null);
       setSummary(data?.summary ?? null);
@@ -92,6 +102,9 @@ export default function TeacherDashboard() {
     setCalendarMonth(new Date(firstUpcoming.date.getFullYear(), firstUpcoming.date.getMonth(), 1));
   }, [upcoming]);
 
+  const matchingContracts=contracts.filter(contract=>matchesPageSearch(search,contract.course?.title,contract.course?.name,contract.batch,contract.academicYear));
+  const contractsByDate=matchingContracts.reduce((groups,contract)=>{const key=String(contract.startDate||'').slice(0,10);if(key)groups[key]=[...(groups[key]||[]),contract];return groups;},{});
+  const selectedContracts=contractsByDate[selectedDate]||[];
   const matchingExams = upcoming.filter(exam => matchesPageSearch(search, exam.title, exam.type, exam.course?.title, exam.course?.courseCode, exam.examDate, exam.date));
   const examsByDate = matchingExams.reduce((groups, exam) => {
     const date = parseExamDate(exam.examDate || exam.date);
@@ -120,10 +133,11 @@ export default function TeacherDashboard() {
   }));
   const selectedExams = search.trim() ? matchingExams : examsByDate[selectedDate] || [];
   const todayKey = dateKey(new Date());
+  const nextAssessments = [...matchingExams].filter(exam=>{const date=parseExamDate(exam.examDate||exam.date);return date&&dateKey(date)>=todayKey;}).sort((a,b)=>parseExamDate(a.examDate||a.date)-parseExamDate(b.examDate||b.date)).slice(0,3);
 
   return (
     <div className="teacher-scope">
-      <div className="teacher-dashboard-shortcuts"><MakeupClasses role="teacher" compact /><TeachingWorkspaceShortcut /></div>
+
 
       <section className="teacher-dashboard-metrics" aria-label="Course totals">
         {[
@@ -139,6 +153,28 @@ export default function TeacherDashboard() {
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="teacher-contracts-home" aria-labelledby="teacher-contracts-home-title">
+        <header><div><span>TEACHING WORKSPACE</span><h2 id="teacher-contracts-home-title">Your teaching contracts</h2></div><Link to="/teacher/my-course?tab=outline">My course →</Link></header>
+        {contractsError && <p role="status" className="teacher-contracts-message">{contractsError}</p>}
+        {loading && !contracts.length ? <p className="teacher-contracts-message">Loading contracts…</p> : !contracts.length ? <p className="teacher-contracts-message">Your teaching contract will appear here when your administrator creates it.</p> : <div className={`teacher-home-contract-grid ${contracts.length === 1 ? 'single-contract' : ''}`}>
+          {contracts.filter(contract => matchesPageSearch(search,contract.course?.title,contract.course?.name,contract.batch,contract.academicYear,contract.contractStatus)).slice(0,3).map(contract => {
+            const params = new URLSearchParams({tab:'outline',courseId:String(contract.course?._id || contract.course),academicYear:contract.academicYear,batch:contract.batch,contractId:contract._id});
+            return <article key={contract._id}>
+              <div className="teacher-home-contract-top"><span>{contract.academicYear} / {contract.batch}</span><span className="teacher-home-contract-status">{contract.contractStatus}</span></div>
+              <h3>{contract.course?.title || contract.course?.name || 'Assigned course'}</h3>
+              <p>{contract.startDate} · {contract.endDate || 'No end date'}</p>
+              <dl><div><dt>Total days</dt><dd>{contract.totalContractDays}</dd></div><div><dt>Completed</dt><dd>{contract.completedTeachingDays}</dd></div><div><dt>Remaining</dt><dd>{contract.remainingContractDays}</dd></div></dl>
+              <Link to={'/teacher/my-course?'+params.toString()}>View contract &amp; outline →</Link>
+            </article>;
+          })}
+          <aside className="teacher-next-assessments" aria-labelledby="teacher-next-assessments-title">
+            <div className="teacher-next-heading"><h3 id="teacher-next-assessments-title">Upcoming assessments</h3><Link to="/teacher/exams">View all →</Link></div>
+            {nextAssessments.length ? <ul>{nextAssessments.map(exam=><li key={exam._id||exam.title}><span className="teacher-next-date">{formatDate(parseExamDate(exam.examDate||exam.date),{day:'numeric',month:'short'})}</span><div><strong>{exam.title}</strong><p>{exam.course?.title||'Assigned course'}</p></div><span className="teacher-next-type">{exam.type||'Exam'}</span></li>)}</ul> : <p className="teacher-next-empty">No upcoming assessments scheduled.</p>}
+          </aside>
+          {search && !contracts.some(contract => matchesPageSearch(search,contract.course?.title,contract.course?.name,contract.batch,contract.academicYear,contract.contractStatus)) && <p className="teacher-contracts-message">No contracts match your search.</p>}
+        </div>}
       </section>
 
       {error && (
@@ -191,20 +227,22 @@ export default function TeacherDashboard() {
             })}
             {calendarDays.map(({ date, key, currentMonth }) => {
               const dayExams = examsByDate[key] || [];
+              const dayContracts = contractsByDate[key] || [];
               const selected = selectedDate === key;
               return (
                 <button type="button" role="gridcell" key={key}
-                  className={`teacher-calendar-day ${currentMonth || calendarView !== 'month' ? '' : 'is-outside'} ${key === todayKey ? 'is-today' : ''} ${selected ? 'is-selected' : ''} ${dayExams.length ? 'has-exams' : ''}`}
-                  aria-label={`${formatDate(date, { weekday: 'long', month: 'long', day: 'numeric' })}${dayExams.length ? `, ${dayExams.length} exam${dayExams.length === 1 ? '' : 's'}` : ''}`}
+                  className={`teacher-calendar-day ${currentMonth || calendarView !== 'month' ? '' : 'is-outside'} ${key === todayKey ? 'is-today' : ''} ${selected ? 'is-selected' : ''} ${dayExams.length ? 'has-exams' : ''} ${dayContracts.length ? 'has-contract-start' : ''}`}
+                  aria-label={`${formatDate(date, { weekday: 'long', month: 'long', day: 'numeric' })}${dayExams.length ? `, ${dayExams.length} exam${dayExams.length === 1 ? '' : 's'}` : ''}${dayContracts.length ? ', '+dayContracts.length+' contract starts' : ''}`}
                   aria-pressed={selected} onClick={() => setSelectedDate(key)}>
                   <span>{calendarView === 'day' ? formatDate(date, { weekday: 'long', day: 'numeric' }) : date.getDate()}</span>
+                  {dayContracts.length > 0 && <span className="contract-start-marker" title="Contract starts" aria-hidden="true">★</span>}
                   {dayExams.length > 0 && <span className="calendar-day-markers" aria-hidden="true">{dayExams.slice(0, 3).map((exam, index) => <i key={exam._id || index} />)}</span>}
                   {calendarView !== 'month' && dayExams.length > 0 && <span className="calendar-cell-event">{dayExams[0].title}</span>}
                 </button>
               );
             })}
           </div>
-          <div className="teacher-calendar-legend"><span><i /> Exam scheduled</span><button type="button" onClick={() => { const today = new Date(); setSelectedDate(todayKey); setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); }}>Today</button></div>
+          <div className="teacher-calendar-legend"><span><i /> Exam scheduled</span><span className="contract-start-legend">★ Contract starts</span><button type="button" onClick={() => { const today = new Date(); setSelectedDate(todayKey); setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); }}>Today</button></div>
         </div>
 
         <aside className="teacher-schedule-side" aria-live="polite">
@@ -213,16 +251,16 @@ export default function TeacherDashboard() {
             <div><span>{formatDate(selectedLocalDate, { weekday: 'long' })}</span><strong>{formatDate(selectedLocalDate, { month: 'long', day: 'numeric', year: 'numeric' })}</strong></div>
           </div>
           <div className="teacher-agenda-card">
-            <h3><span aria-hidden="true">◷</span> Exam schedule</h3>
-            {loading ? <p className="calendar-agenda-empty">Loading exam dates...</p> : selectedExams.length === 0 ? (
-              <div className="agenda-empty-state"><span className="agenda-empty-icon" aria-hidden="true">▦</span><p>{upcoming.length ? 'No exams scheduled for this day.' : 'No upcoming exams have been scheduled.'}</p></div>
-            ) : selectedExams.map((exam, index) => (
-              <div className="calendar-agenda-item" key={exam._id || index}>
-                <span className="calendar-agenda-type">E</span>
-                <div><strong>{exam.title || 'Exam'}</strong><small>{exam.type || 'Exam'}{exam.courseCode ? ` · ${exam.courseCode}` : ''}</small></div>
+            <h3><span aria-hidden="true">▤</span> Contract schedule</h3>
+            {loading ? <p className="calendar-agenda-empty">Loading contracts…</p> : selectedContracts.length === 0 ? (
+              <div className="agenda-empty-state"><span className="agenda-empty-icon" aria-hidden="true">▤</span><p>No contracts start on this day. Select a date marked with a star.</p></div>
+            ) : selectedContracts.map(contract => (
+              <div className="calendar-agenda-item" key={contract._id}>
+                <span className="calendar-agenda-type">★</span>
+                <div><strong>{contract.course?.title||contract.course?.name||'Teaching contract'}</strong><small>{contract.academicYear} / {contract.batch}</small><small>{contract.totalContractDays} teaching days · {contract.contractStatus}</small></div>
               </div>
             ))}
-            <Link to="/teacher/exams" className="calendar-agenda-link">Manage assessments <span aria-hidden="true">→</span></Link>
+            <Link to="/teacher/my-course?tab=outline" className="calendar-agenda-link">View teaching contracts <span aria-hidden="true">→</span></Link>
           </div>
         </aside>
       </section>

@@ -372,12 +372,7 @@ export default function TeacherExams({scope,onEditingChange,onChange}) {
 
   return (
     <div className="teacher-scope teacher-assessments-page">
-      <section className="assessments-hero">
-        <div className="assessments-hero-copy">
-          <span className="assessment-kicker">TEACHING WORKSPACE</span>
-          <h1>Exams &amp; Quizzes</h1>
-          <p>Plan assessments, quizzes, and exams for your assigned courses.</p>
-        </div>
+      <section className="assessment-page-toolbar">
         <button
           type="button"
           className="assessment-create-button"

@@ -16,22 +16,6 @@ function StatCard({ icon, label, value, color, trend }) {
   );
 }
 
-// Simple inline bar chart
-function BarChart({ data }) {
-  const max = Math.max(...data.map(d => d.value), 1);
-  return (
-    <div className="bar-chart">
-      {data.map((d, i) => (
-        <div key={i} className="bar-col">
-          <div className="bar-value">{d.value}</div>
-          <div className="bar-fill" style={{ height: `${(d.value / max) * 80}px` }} />
-          <div className="bar-label">{d.label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function AdminDashboard() {
   const [stats,setStats] = useState(null);
   const [recent,setRecent] = useState([]);
@@ -39,7 +23,7 @@ export default function AdminDashboard() {
   const [error,setError] = useState('');
   const [revision,setRevision] = useState(0);
   const [search] = usePageSearch();
-  const visibleRecent = recent.filter(student => matchesPageSearch(search,student.name,student.studentId,student.email));
+  const visibleRecent = recent.filter(student => matchesPageSearch(search,student.title,student.description));
   useEffect(() => {
     let active=true,busy=false;
     const controller=new AbortController();
@@ -48,7 +32,7 @@ export default function AdminDashboard() {
       try {
         const {data}=await api.get('/dashboard/admin',{signal:controller.signal});
         if(!active)return;
-        setStats(data.data.totals);setRecent(data.data.recentStudents||[]);setError('');
+        setStats(data.data.totals);setRecent(data.data.recentActivities||[]);setError('');
       }catch(error){if(active)setError(error.response?.data?.message||'Dashboard could not refresh. Retrying automatically; previously loaded data may be out of date.');}
       finally{busy=false;if(active)setLoading(false);}
     };
@@ -58,13 +42,6 @@ export default function AdminDashboard() {
     window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
     return()=>{active=false;controller.abort();clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);};
   },[revision]);
-
-  const chartData = [
-    { label: 'Students',  value: stats?.students ?? 0 },
-    { label: 'Teachers',  value: stats?.teachers ?? 0 },
-    { label: 'Courses',   value: stats?.courses ?? 0 },
-    { label: 'Assessments', value: stats?.assessments ?? 0 },
-  ];
 
   return (
     <>
@@ -77,25 +54,7 @@ export default function AdminDashboard() {
         <StatCard icon="📝" label="Total Assessments"     value={stats?.assessments}    color="gold"   />
       </div>
 
-      <div className="grid-2">
-        {/* Overview chart */}
-        <div className="card card--accent">
-          <div className="card-header">
-            <span className="card-title">System Overview</span>
-            <span className="badge badge-info">Live</span>
-          </div>
-          <div className="card-body">
-            {loading ? (
-              <div className="spinner-wrap"><div className="spinner" /></div>
-            ) : (
-              stats ? <BarChart data={chartData} /> : <div className="empty-state">Dashboard data unavailable.</div>
-            )}
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem', textAlign: 'center' }}>
-              Current records in the system.
-            </p>
-          </div>
-        </div>
-
+      <div className="grid-2 admin-dashboard-panels">
         {/* Quick actions */}
         <div className="card">
           <div className="card-header">
@@ -115,44 +74,30 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Recent students */}
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">Recent Students</span>
-          <Link to="/admin/students" className="btn btn-sm btn-secondary">View All</Link>
-        </div>
-        <div className="table-responsive">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Student ID</th>
-                <th>Email</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!visibleRecent.length && <tr><td colSpan={5} style={{textAlign:'center',padding:30,color:'var(--text-muted)'}}>{loading ? 'Loading students…' : search ? 'No recent students match your search.' : error ? 'Student records unavailable.' : 'No students registered yet.'}</td></tr>}
-              {visibleRecent.map((s, i) => (
-                <tr key={s._id}>
-                  <td>{i + 1}</td>
-                  <td style={{ fontWeight: 600 }}>{s.name}</td>
-                  <td><code>{s.studentId}</code></td>
-                  <td>{s.email}</td>
-                  <td>
-                    <span className={`badge badge-${s.status === 'active' ? 'success' : 'muted'}`}>
-                      {s.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
+        <section className="card" aria-labelledby="recent-activities-title">
+          <div className="card-header">
+            <span className="card-title" id="recent-activities-title">Recent Activities</span>
+          </div>
+          <div className="card-body">
+            {!visibleRecent.length ? (
+              <div className="empty-state" role="status">
+                {loading ? 'Loading activities…' : search ? 'No activities match your search.' : error ? 'Recent activities unavailable.' : 'No recent activities yet.'}
+              </div>
+            ) : (
+              <ul className="admin-activity-list">
+                {visibleRecent.slice(0,3).map(student => (
+                  <li key={student.id}>
+                    <span className="admin-activity-dot" aria-hidden="true" />
+                    <div className="admin-activity-content">
+                      <Link to={student.to}>{student.title}</Link>
+                      <p>{student.description}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
       </div>
     </>
   );

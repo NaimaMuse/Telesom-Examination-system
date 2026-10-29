@@ -51,6 +51,17 @@ async function getReport(type,query={}) {
   } else if(type==='batches') {
     rows=batches.map(b=>{const cohort=enrollments.filter(e=>e.academicYear===b.academicYear&&e.batch===b.name&&e.status==='enrolled');return {batch:b.name,academicYear:b.academicYear,date:day(b.createdAt),status:b.status,enrolledStudents:new Set(cohort.map(e=>String(e.student))).size,courses:new Set(cohort.map(e=>String(e.course?._id))).size};});
   }
+  const contractsForTeacher = f.teacher ? await Contract.find({teacher:f.teacher,status:'active'}).sort({createdAt:-1,_id:-1}).lean() : [];
+  const teacherScopes = [
+    ...assignments.filter(a=>String(a.teacher)===f.teacher&&a.status==='active').map(a=>({course:String(a.course),academicYear:a.academicYear,batch:a.batch||''})),
+    ...contractsForTeacher.map(c=>({course:String(c.course),academicYear:c.academicYear,batch:c.batch||''})),
+    ...rows.filter(r=>r.teacherKey===f.teacher).map(r=>({course:r.courseKey,academicYear:r.academicYear,batch:r.batch})),
+  ];
+  const scopedCourses = f.teacher ? courses.filter(c=>teacherScopes.some(scope=>scope.course===String(c._id))) : courses;
+  const matchingScopes = teacherScopes.filter(scope=>!f.course||scope.course===f.course);
+  const scopedEnrollments = enrollments.filter(e=>matchingScopes.some(scope=>scope.course===String(e.course?._id)&&(!scope.academicYear||scope.academicYear===e.academicYear)&&(!scope.batch||scope.batch===e.batch)));
+  const optionBatches = f.teacher ? [...new Set([...matchingScopes.map(scope=>scope.batch),...scopedEnrollments.map(e=>e.batch)].filter(Boolean))].sort() : [...new Set([...batches.map(b=>b.name),...enrollments.map(e=>e.batch).filter(Boolean)])];
+  const optionYears = f.teacher ? [...new Set([...matchingScopes.map(scope=>scope.academicYear),...scopedEnrollments.map(e=>e.academicYear)].filter(Boolean))].sort() : [...new Set([...batches.map(b=>b.academicYear),...enrollments.map(e=>e.academicYear)])].sort();
   rows=rows.filter(r=>(!f.teacher||r.teacherKey===f.teacher)&&(!f.course||r.courseKey===f.course)&&(!f.batch||r.batch===f.batch)&&(!f.academicYear||r.academicYear===f.academicYear)&&(!f.status||String(r.status).toLowerCase()===f.status.toLowerCase())&&(!f.assessmentType||r.assessmentType===f.assessmentType)&&(!f.from||(r.date&&r.date>=f.from))&&(!f.to||(r.date&&r.date<=f.to)));
   cards={Records:rows.length};
   if(['activities','exams','upcoming'].includes(type))cards={Exams:rows.filter(r=>!['quiz','assessment','assignment','other'].includes(r.assessmentType)).length,Quizzes:rows.filter(r=>r.assessmentType==='quiz').length,Assessments:rows.filter(r=>['assessment','assignment','other'].includes(r.assessmentType)).length,Upcoming:rows.filter(r=>r.date>=teachingDay()&&!['completed','cancelled','draft'].includes(r.status)).length,Completed:rows.filter(r=>r.status==='completed').length};
@@ -66,6 +77,11 @@ async function getReport(type,query={}) {
   }
   // Internal filter keys are not exposed as report columns.
   rows=rows.map(({courseKey,teacherKey,studentKey,...row})=>row);
-  return {rows,cards,charts,options:{courses:courses.map(c=>({_id:c._id,name:label(c)})),teachers:teachers.map(t=>({_id:t._id,name:t.user?.name||t.teacherId})),batches:[...new Set([...batches.map(b=>b.name),...enrollments.map(e=>e.batch).filter(Boolean)])],academicYears:[...new Set([...batches.map(b=>b.academicYear),...enrollments.map(e=>e.academicYear)])].sort()},filters:f};
+  const yearBatches = [...new Map((f.teacher ? [...matchingScopes,...scopedEnrollments.map(e=>({academicYear:e.academicYear,batch:e.batch}))] : [...batches.map(b=>({academicYear:b.academicYear,batch:b.name})),...enrollments.map(e=>({academicYear:e.academicYear,batch:e.batch}))]).filter(pair=>pair.academicYear&&pair.batch).map(pair=>[JSON.stringify([pair.academicYear,pair.batch]),{academicYear:pair.academicYear,batch:pair.batch}])).values()].sort((a,b)=>b.academicYear.localeCompare(a.academicYear)||a.batch.localeCompare(b.batch));
+  const defaultScope = teacherScopes.find(scope=>scope.course&&scope.academicYear&&scope.batch&&scopedCourses.some(course=>String(course._id)===scope.course)) || teacherScopes.find(scope=>scope.course&&scopedCourses.some(course=>String(course._id)===scope.course));
+  const defaultCourse = defaultScope?.course || String(scopedCourses[0]?._id || '');
+  const defaultPair = yearBatches.find(pair=>pair.academicYear===defaultScope?.academicYear&&pair.batch===defaultScope?.batch) || yearBatches[0];
+  const teacherDefault = f.teacher ? {course:defaultCourse,academicYear:defaultPair?.academicYear||defaultScope?.academicYear||'',batch:defaultPair?.batch||''} : null;
+  return {rows,cards,charts,options:{courses:scopedCourses.map(c=>({_id:c._id,name:label(c)})),teachers:teachers.map(t=>({_id:t._id,name:t.user?.name||t.teacherId})),batches:optionBatches,academicYears:optionYears,yearBatches,teacherDefault},filters:f};
 }
 module.exports={getReport,types};

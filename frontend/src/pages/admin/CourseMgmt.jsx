@@ -7,7 +7,7 @@ const COURSE_FIELDS = [
   { key: 'courseCode', label: 'Course code', type: 'text' },
   { key: 'name', label: 'Course name', type: 'text', required: true },
   { key: 'credits', label: 'Credit hours', type: 'number', required: true },
-  { key: 'academicYear', label: 'Academic year', type: 'text' },
+  { key: 'academicYear', label: 'Year / Batch', type: 'batch', required: true },
   { key: 'description', label: 'Description', type: 'textarea' },
   { key: 'status', label: 'Status', type: 'select', options: ['active', 'inactive', 'archived'] },
 ];
@@ -16,11 +16,24 @@ const PAGE_SIZE = 8;
 
 function CourseModal({ initial, onSave, onClose }) {
   const [form, setForm] = useState({ credits: 3, status: 'active', ...(initial || {}) });
+  const [batches, setBatches] = useState([]);
+  const [batchesLoading, setBatchesLoading] = useState(true);
+  const [batchError, setBatchError] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    api.get('/academy/batches', {signal: controller.signal})
+      .then(({data}) => { if (!controller.signal.aborted) setBatches((data.batches || []).filter(batch => batch.status === 'active' || (batch.name === initial?.batch && batch.academicYear === initial?.academicYear))); })
+      .catch(() => { if (!controller.signal.aborted) setBatchError('Could not load years and batches. Close and reopen this form to retry.'); })
+      .finally(() => { if (!controller.signal.aborted) setBatchesLoading(false); });
+    return () => controller.abort();
+  }, [initial]);
+  const selectedBatch = batches.find(batch => batch.name === form.batch && batch.academicYear === form.academicYear);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const submit = async (event) => {
     event.preventDefault();
+    if (!selectedBatch) { setError('Select an existing year / batch.'); return; }
     setSaving(true);
     setError('');
     try {
@@ -45,7 +58,16 @@ function CourseModal({ initial, onSave, onClose }) {
               {COURSE_FIELDS.map((field) => (
                 <div className={`form-group ${field.type === 'textarea' ? 'course-form-wide' : ''}`} key={field.key}>
                   <label className="form-label" htmlFor={`course-${field.key}`}>{field.label}{field.required ? ' *' : ''}</label>
-                  {field.type === 'select' ? (
+                  {field.key === 'courseCode' ? (
+                    <input id="course-courseCode" className="form-control" type="text" readOnly value={initial?.courseCode || ''} placeholder="Generated automatically when saved" />
+                  ) : field.type === 'batch' ? (
+                    <><select id={`course-${field.key}`} className="form-control" required disabled={batchesLoading || !!batchError || !batches.length} value={selectedBatch?._id || ''} onChange={event => {
+                      const batch = batches.find(item => item._id === event.target.value);
+                      setForm(current => ({...current, academicYear: batch?.academicYear || '', batch: batch?.name || ''}));
+                    }}><option value="">{batchesLoading ? 'Loading years / batches…' : batchError ? 'Years / batches unavailable' : batches.length ? 'Select year / batch' : 'No active batches available'}</option>{batches.map(batch => <option key={batch._id} value={batch._id}>{batch.academicYear} / {batch.name}</option>)}</select>
+                    {batchError && <p role="alert" className="course-form-error">{batchError}</p>}
+                    {!batchesLoading && !batchError && !batches.length && <p>Create a batch in Years &amp; Batches first.</p>}</>
+                  ) : field.type === 'select' ? (
                     <select id={`course-${field.key}`} className="form-control" value={form[field.key] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))}>
                       {field.options.map((option) => <option value={option} key={option}>{option[0].toUpperCase() + option.slice(1)}</option>)}
                     </select>
@@ -119,7 +141,6 @@ export default function CourseMgmt() {
 
   const activeCount = courses.filter((course) => course.status === 'active').length;
   const inactiveCount = courses.filter((course) => course.status === 'inactive').length;
-  const averageCredits = courses.length ? (courses.reduce((sum, course) => sum + (Number(course.credits) || 0), 0) / courses.length).toFixed(1) : '0';
   const filtered = useMemo(() => courses.filter((course) => (
     (statusFilter === 'all' || course.status === statusFilter) && matchesPageSearch(search, course.title, course.name, course.courseCode, course.description, course.academicYear)
   )), [courses, statusFilter, search]);
@@ -128,11 +149,11 @@ export default function CourseMgmt() {
 
   const saveCourse = async (form) => {
     const payload = {
-      courseCode: String(form.courseCode || '').trim().toUpperCase(),
       name: String(form.name || '').trim(),
       title: String(form.name || '').trim(),
       credits: Number(form.credits) || 3,
       academicYear: String(form.academicYear || '').trim(),
+      batch: String(form.batch || '').trim(),
       description: String(form.description || '').trim(),
       status: form.status || 'active',
     };
@@ -161,7 +182,6 @@ export default function CourseMgmt() {
       <section className="course-summary-grid" aria-label="Course statistics">
         <article><span className="course-summary-icon all" aria-hidden="true">▤</span><div><strong>{courses.length}</strong><span>Total courses</span></div></article>
         <article><span className="course-summary-icon active" aria-hidden="true">✓</span><div><strong>{activeCount}</strong><span>Active courses</span></div></article>
-        <article><span className="course-summary-icon credits" aria-hidden="true">◷</span><div><strong>{averageCredits}</strong><span>Average credits</span></div></article>
         <article><span className="course-summary-icon inactive" aria-hidden="true">Ⅱ</span><div><strong>{inactiveCount}</strong><span>Inactive courses</span></div></article>
       </section>
 

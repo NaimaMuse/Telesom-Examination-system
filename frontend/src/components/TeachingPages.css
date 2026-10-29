@@ -84,3 +84,28 @@
 .ms-page .ms-summary > button.green,.ms-page .ms-summary > button.blue,.ms-page .ms-summary > button.purple { background: var(--brand-green-tint); border-color: var(--brand-green-border); color: var(--brand-green-deep); }.ms-page .tp-icon.green,.ms-page .tp-icon.blue,.ms-page .tp-icon.purple { background: var(--brand-green-soft); color: var(--brand-green-active); }.ms-page .ms-tabs button[aria-pressed="true"] { background: var(--brand-green); }.ms-page .ms-summary > button.amber { background: var(--brand-gold-tint); border-color: var(--brand-gold-border); color: var(--brand-gold-active); }
 @media(max-width:700px) { .ms-admin-page .ms-filter-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }.ms-heading { flex-wrap: wrap; }.ms-schedule-button { margin-left: 0; }.ms-next-class { flex-wrap: wrap; }.ms-next-class > div { min-width: 160px; } }
 @media(max-width:480px) { .ms-admin-page .ms-filter-fields,.ms-dialog-dates { grid-template-columns: 1fr; } }
+
+/* Compact makeup scheduling dialog. */
+.ms-dialog.ms-schedule-dialog { width: min(700px,calc(100vw - 32px)); max-height: 88dvh; padding: 0; border: 1px solid #bfdcc8; border-radius: 14px; background: #fff; overflow-y: auto; scrollbar-width: thin; box-shadow: 0 22px 65px #153d3233; }
+.ms-dialog.ms-schedule-dialog > header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; margin: 0; background: #22743b; border-bottom: 3px solid #d5a137; }
+.ms-schedule-dialog .ms-dialog-kicker { color: #e4eedf; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+.ms-dialog.ms-schedule-dialog header h2 { margin: 5px 0 0; color: #fff; font-size: 20px; }
+.ms-dialog.ms-schedule-dialog header button { flex-shrink: 0; width: 32px; height: 32px; background: #ffffff20; color: #fff; border: 1px solid #ffffff70; }
+.ms-dialog.ms-schedule-dialog > p { padding: 12px 20px; margin: 0; background: #f5f9f6; color: #607368; font-size: 11px; line-height: 1.5; border-bottom: 1px solid #dfebe3; }
+.ms-schedule-dialog > form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 18px 20px 0; }
+.ms-schedule-dialog .makeup-schedule-scope { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; grid-column: 1 / -1; }
+.ms-schedule-dialog label { display: flex; flex-direction: column; min-width: 0; gap: 6px; margin: 0; color: #365441; font-size: 11px; font-weight: 700; }
+.ms-schedule-dialog :is(input,select,textarea) { width: 100%; min-width: 0; margin: 0; padding: 8px 10px; min-height: 36px; border: 1px solid #c8dbce; border-radius: 7px; background: #fbfdfb; color: #365441; font: inherit; font-size: 12px; font-weight: 400; }
+.ms-schedule-dialog :is(input,select,textarea):focus { outline: 2px solid #d5a137; outline-offset: 2px; }
+.ms-schedule-dialog :is(input,select):disabled { background: #f2f5f3; color: #7a8b80; }
+.ms-schedule-dialog .ms-dialog-dates { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 14px; border: 1px solid #ead7a6; border-radius: 9px; background: #fff8e7; }
+.ms-schedule-dialog form > :is(p,.ms-selected-lesson,.academy-error) { grid-column: 1 / -1; font-size: 11px; line-height: 1.5; margin: 0; }
+.ms-schedule-dialog form > p[role="status"] { padding: 12px; border: 1px solid #ead7a6; border-radius: 8px; background: #fff8e7; color: #806222; }
+.ms-schedule-dialog form > label:has(textarea) { grid-column: 1 / -1; }
+.ms-schedule-dialog textarea { min-height: 65px; resize: vertical; }
+.ms-schedule-dialog .ms-selected-lesson { padding: 12px; border: 1px solid #c8dbce; border-radius: 8px; background: #edf6f0; }
+.ms-schedule-dialog form > footer { grid-column: 1 / -1; position: sticky; bottom: 0; z-index: 1; display: flex; justify-content: flex-end; gap: 10px; margin: 0 -20px; padding: 13px 20px; background: #fff; border-top: 1px solid #dce7df; }
+.ms-schedule-dialog footer .btn { padding: 8px 14px; font-size: 12px; border-radius: 7px; }
+.ms-schedule-dialog footer .btn-primary { background: #22743b; color: #fff; border-color: #22743b; }
+.ms-schedule-dialog footer .btn-secondary { background: #fff8e7; color: #805b15; border-color: #e5c574; }
+@media(max-width:520px) { .ms-schedule-dialog > form,.ms-schedule-dialog .makeup-schedule-scope,.ms-schedule-dialog .ms-dialog-dates { grid-template-columns: 1fr; } .ms-dialog.ms-schedule-dialog header h2 { font-size: 17px; } }

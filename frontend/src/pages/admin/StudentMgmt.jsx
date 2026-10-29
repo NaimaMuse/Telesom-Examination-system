@@ -534,7 +534,7 @@ export default function StudentMgmt() {
                   <th>Course</th>
                   <th>Batch / Year</th>
                   <th>Status</th>
-                  {showAllDetails && <><th>Student ID</th><th>Email</th><th>Gender</th><th>Address</th><th>Semester</th></>}
+                  {showAllDetails && <><th>Student ID</th><th>Email</th><th>Gender</th><th>Address</th></>}
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -551,7 +551,7 @@ export default function StudentMgmt() {
                         {s.status || 'active'}
                       </span>
                     </td>
-                    {showAllDetails && <><td><code>{s.studentId || '—'}</code></td><td>{s.email || '—'}</td><td>{s.gender || '—'}</td><td>{s.address || '—'}</td><td>{getStudentEnrollment(s)?.semester || '—'}</td></>}
+                    {showAllDetails && <><td><code>{s.studentId || '—'}</code></td><td>{s.email || '—'}</td><td>{s.gender || '—'}</td><td>{s.address || '—'}</td></>}
                     <td>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button type="button" className="student-row-edit" onClick={() => { const enrollment = getStudentEnrollment(s); setEditTarget({ ...s, course: enrollment?.course?._id || enrollment?.course || '' }); setShowModal(true); }}>Edit</button>

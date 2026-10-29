@@ -119,7 +119,7 @@ export default function MyCourse({outlinePage=false}) {
 
   const renderOverview = () => <CourseOverview course={course} contract={workspace?.contract} lessonProgress={workspace?.lessonProgress} students={students} notes={notes.filter(note=>matchesPageSearch(search,note.title,note.description,note.filename))} upcoming={upcoming.filter(exam=>matchesPageSearch(search,exam.title,exam.type,exam.course?.title))} onTab={setTab}/>;
   const renderNotes = () => (
-    <div className="card">
+    <div className="card study-notes-panel">
       <div className="card-header">
         <span className="card-title">Study Notes</span>
       </div>
@@ -283,6 +283,8 @@ export default function MyCourse({outlinePage=false}) {
 
   if(!outlinePage&&tab==='outline')return <Navigate to={outlineUrl()} replace/>;
   if(outlinePage)return <div className="teacher-scope teacher-course-page dedicated-outline-page">
+    {course&&<section className="co-course-meta" aria-label="Course details">{[['calendar','blue','Batch / Academic Year',[course.batch,course.academicYear].filter(Boolean).join(' · ')||'Not specified'],['star','amber','Credits',course.credits],['users','blue','Enrolled Students',students.length]].map(([icon,tone,label,value])=><div key={label}><span className={'tp-icon '+tone}><TeachingIcon name={icon}/></span><span><small>{label}</small><strong>{value??'Not specified'}</strong></span></div>)}</section>}
+    <nav className="course-tabs planner-navigation" aria-label="Course sections">{[['overview','grid','Overview'],['outline','book','Course Outline'],['notes','folder','Study Notes']].map(([key,icon,label])=><button type="button" key={key} className={'course-tab '+(key==='outline'?'active':'')} aria-current={key==='outline'?'page':undefined} disabled={hasDraft&&key!=='outline'} onClick={()=>{if(key==='outline')return;const next=new URLSearchParams(params);next.set('tab',key);navigate('/teacher/my-course?'+next.toString());}}><TeachingIcon name={icon} size={18}/><span>{label}</span></button>)}</nav>
     {error&&<p className="profile-save-error" role="alert">{error}</p>}
     {loading?<div className="card course-loading"><div className="spinner-wrap"><div className="spinner"/></div></div>:workspace?.contract?<TeacherContracts key={workspace.scope.contractId} combined controlledContractId={workspace.scope.contractId} workspaceMode="outline" onContractUpdate={updateContract} onEditingChange={setChildBusy}/>:<section className="outline-start"><TeachingIcon name="book" size={32}/><h2>{course?'Teaching contract not configured':'No assigned course available'}</h2><p>{course?'Ask your administrator to assign a teaching contract before adding outlines and lessons.':'Your assigned course will appear here when it is available.'}</p></section>}
   </div>;
@@ -290,6 +292,7 @@ export default function MyCourse({outlinePage=false}) {
   return (
     <div className="teacher-scope teacher-course-page">
       {course&&<section className="co-course-meta" aria-label="Course details">{[['calendar','blue','Batch / Academic Year',[course.batch,course.academicYear].filter(Boolean).join(' · ')||'Not specified'],['star','amber','Credits',course.credits],['users','blue','Enrolled Students',students.length]].map(([icon,tone,label,value])=><div key={label}><span className={'tp-icon '+tone}><TeachingIcon name={icon}/></span><span><small>{label}</small><strong>{value??'Not specified'}</strong></span></div>)}</section>}
+
       {error && (
         <div className="course-page-error" role="alert">
           <span aria-hidden="true">!</span>
@@ -297,7 +300,6 @@ export default function MyCourse({outlinePage=false}) {
         </div>
       )}
 
-      {workspace?.course&&<section className="course-workspace-selector"><label>Assigned course / batch / academic year<select className="form-control" disabled={hasDraft} value={workspace.cohorts.find(c=>String(c.courseId)===String(workspace.scope.courseId)&&c.batch===workspace.scope.batch&&c.academicYear===workspace.scope.academicYear)?.key||''} onChange={e=>changeCohort(e.target.value)}>{workspace.cohorts.map(c=><option key={c.key} value={c.key}>{c.courseName} · {c.batch||'No batch assigned'} · {c.academicYear}</option>)}</select></label>{workspace.contracts.length>1&&<label>Teaching contract<select className="form-control" disabled={hasDraft} value={workspace.scope.contractId} onChange={e=>{setLoading(true);setParams(previous=>{const next=new URLSearchParams(previous);for(const key of ['courseId','academicYear','batch'])next.set(key,workspace.scope[key]);next.set('contractId',e.target.value);return next;});}}>{workspace.contracts.map(c=><option key={c._id} value={c._id}>{c.startDate} · {c.status}</option>)}</select></label>}<div className="course-cohort-badges"><span>{course.batch||'No batch assigned'}</span><span>{course.academicYear}</span></div></section>}
       {hasDraft&&<p className="course-draft-hint" role="status">Save or cancel your changes before switching course or tab.</p>}
       <div className="course-tabs" role="tablist" aria-label="Course sections">
         {['overview', 'outline', 'notes'].map((nextTab) => (

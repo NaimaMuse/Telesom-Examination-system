@@ -97,22 +97,6 @@ export default function TeacherResults({scope,onEditingChange}) {
 
   return (
     <div className="teacher-scope teacher-results-page">
-      <section className="results-page-hero">
-        <span className="results-hero-icon" aria-hidden="true">▤</span>
-        <div className="results-hero-copy">
-          <span className="results-kicker">TEACHING WORKSPACE</span>
-          <h1>Results &amp; Marks</h1>
-          <p>Review student performance and submit class marks.</p>
-        </div>
-        {assessment && (
-          <div className="results-hero-progress" aria-live="polite">
-            <div><strong>{enteredCount}<span>/{students.length}</span></strong><small>marks entered</small></div>
-            <div className="results-progress-track" role="progressbar" aria-label="Marks entered" aria-valuemin="0" aria-valuemax={students.length} aria-valuenow={enteredCount}>
-              <span style={{ width: `${completion}%` }} />
-            </div>
-          </div>
-        )}
-      </section>
 
       <section className="results-toolbar card results-selection-panel" aria-label="Assessment selection">
         <div className="results-select-heading">
@@ -143,14 +127,6 @@ export default function TeacherResults({scope,onEditingChange}) {
           </div>
         )}
       </section>
-
-      {assessment && (
-        <section className="results-summary-grid" aria-label="Class grading summary">
-          <article className="results-summary-item"><span className="results-summary-icon roster" aria-hidden="true">♙</span><div><strong>{students.length}</strong><span>Enrolled students</span></div></article>
-          <article className="results-summary-item"><span className="results-summary-icon entered" aria-hidden="true">✓</span><div><strong>{enteredCount}<small> / {students.length}</small></strong><span>Marks entered</span></div></article>
-          <article className="results-summary-item"><span className="results-summary-icon passing" aria-hidden="true">↗</span><div><strong>{passedCount}</strong><span>At or above pass mark</span></div></article>
-        </section>
-      )}
 
       {error && <div className="results-message results-message-error" role="alert">{error}</div>}
       {notice && <div className="results-message results-message-success" role="status">{notice}</div>}
@@ -191,12 +167,12 @@ export default function TeacherResults({scope,onEditingChange}) {
                     <th>Student ID</th>
                     <th>Mark / {assessment?.totalMarks}</th>
                     <th>Result</th>
-                    <th>Remarks</th>
+
                   </tr>
                 </thead>
                 <tbody>
                   {visibleStudents.length === 0 ? (
-                    <tr><td className="results-no-matches" colSpan="5">No students match “{search}”.</td></tr>
+                    <tr><td className="results-no-matches" colSpan="4">No students match “{search}”.</td></tr>
                   ) : visibleStudents.map((student) => {
                     const mark = student.marksObtained === '' ? null : Number(student.marksObtained);
                     const passed = mark !== null && mark >= (assessment?.passingMarks ?? 0);
@@ -228,18 +204,7 @@ export default function TeacherResults({scope,onEditingChange}) {
                             </span>
                           )}
                         </td>
-                        <td>
-                          <input
-                            className="form-control results-remarks-input"
-                            disabled={saving}
-                            type="text"
-                            maxLength="250"
-                            aria-label={`Remarks for ${student.name}`}
-                            placeholder="Optional feedback"
-                            value={student.remarks}
-                            onChange={(event) => updateStudent(student._id, 'remarks', event.target.value)}
-                          />
-                        </td>
+
                       </tr>
                     );
                   })}

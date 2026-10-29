@@ -5,6 +5,7 @@ const Lesson = require('../models/TeachingLesson');
 const Teacher = require('../models/Teacher');
 const Assignment = require('../models/CourseTeacher');
 const Course = require('../models/Course');
+const Batch = require('../models/Batch');
 const service = require('../services/teacherContractService');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
@@ -13,8 +14,8 @@ const router = express.Router();
 router.use(protect,authorizeRoles('admin','teacher'));
 const populated = query => query.populate({path:'teacher',populate:{path:'user',select:'name email'}}).populate('course','title name courseCode');
 router.get('/options',authorizeRoles('admin'),asyncHandler(async(req,res)=>{
-  const [teachers,courses,assignments]=await Promise.all([Teacher.find().populate('user','name').lean(),Course.find().select('title name courseCode academicYear').lean(),Assignment.find({status:'active'}).lean()]);
-  res.json({teachers:teachers.map(t=>({_id:t._id,name:t.user?.name||t.teacherId,teacherId:t.teacherId})),courses,assignments});
+  const [teachers,courses,assignments,batches]=await Promise.all([Teacher.find().populate('user','name').lean(),Course.find().select('title name courseCode academicYear').lean(),Assignment.find({status:'active'}).lean(),Batch.find({status:'active'}).sort({academicYear:-1,name:1}).lean()]);
+  res.json({teachers:teachers.map(t=>({_id:t._id,name:t.user?.name||t.teacherId,teacherId:t.teacherId})),courses,assignments,batches});
 }));
 router.get('/',asyncHandler(async(req,res)=>{
   const filters={};

@@ -48,14 +48,17 @@ router.get('/profile-picture/:teacherId',asyncHandler(async(req,res)=>{
   if(req.user.role!=='admin'&&String(teacher.user)!==String(req.user._id))fail('Access denied.',403);
   res.json({picture:teacher.profilePicture||''});
 }));
-router.put('/profile-picture',authorizeRoles('teacher'),upload.single('file'),asyncHandler(async(req,res)=>{
-  const teacher=await teacherFor(req.user),file=req.file;
+const saveProfilePicture = asyncHandler(async(req,res)=>{
+  const teacher=req.params.teacherId ? await Teacher.findById(id(req.params.teacherId)) : await teacherFor(req.user),file=req.file;
+  if(!teacher)fail('Teacher not found.',404);
   if(!file||file.size>2*1024*1024)fail('Select a PNG, JPEG or WebP image up to 2 MB.');
   const b=file.buffer;
   const type=b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'image/png':b[0]===255&&b[1]===216&&b[2]===255?'image/jpeg':b.toString('ascii',0,4)==='RIFF'&&b.toString('ascii',8,12)==='WEBP'?'image/webp':null;
   if(!type||type!==file.mimetype)fail('Only valid PNG, JPEG and WebP images are supported.');
   teacher.profilePicture=`data:${type};base64,${b.toString('base64')}`;await teacher.save();res.json({picture:teacher.profilePicture});
-}));
+});
+router.put('/profile-picture',authorizeRoles('teacher'),upload.single('file'),saveProfilePicture);
+router.put('/profile-picture/:teacherId',authorizeRoles('admin'),upload.single('file'),saveProfilePicture);
 router.delete('/profile-picture',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{const teacher=await teacherFor(req.user);teacher.profilePicture='';await teacher.save();res.json({picture:''});}));
 router.get('/outlines',asyncHandler(async(req,res)=>{
   let filter={};
@@ -146,7 +149,7 @@ router.get('/outlines/:id/document',asyncHandler(async(req,res)=>{
   if(!outline.document?.data)fail('No document uploaded.',404);
   res.set('Content-Type',outline.document.mime).set('Content-Disposition',`attachment; filename="${encodeURIComponent(outline.document.name)}"`).set('X-Content-Type-Options','nosniff').send(outline.document.data);
 }));
-router.get('/missed-lessons',authorizeRoles('admin'),asyncHandler(async(req,res)=>res.json({lessons:await Lesson.find({status:'planned',$or:[{plannedDate:{$lt:contractService.teachingDay()}},{plannedDate:null}]}).populate({path:'teacher',populate:{path:'user',select:'name'}}).populate('course','title name').sort('plannedDate').lean()})));
+router.get('/missed-lessons',authorizeRoles('admin'),asyncHandler(async(req,res)=>res.json({lessons:await Lesson.find({status:'planned',$or:[{plannedDate:{$lt:contractService.teachingDay()}},{plannedDate:null}]}).populate({path:'teacher',populate:{path:'user',select:'name'}}).populate('course','title name').populate('contract','academicYear').sort('plannedDate').lean()})));
 router.get('/makeup-classes',authorizeRoles('admin','teacher','student'),asyncHandler(async(req,res)=>{
   let filter=req.user.role==='teacher'?{teacher:(await teacherFor(req.user))._id}:{};
   if(req.user.role==='student'){const student=await Student.findOne({user:req.user._id});const enrollments=student?await Enrollment.find({student:student._id,status:'enrolled'}).lean():[];if(!enrollments.length)return res.json({classes:[]});filter={$or:enrollments.map(e=>({course:e.course,batch:e.batch||'',academicYear:e.academicYear}))};}

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './dashboard.css';
+import './dashboard-theme.css';
 import { PageSearchContext } from '../context/PageSearchContext';
 
 // ─── Admin Pages ───────────────────────────────────────────────
@@ -228,7 +229,10 @@ export default function DashboardLayout({ role }) {
   const search = pageSearch.path === location.pathname ? pageSearch.query : '';
   const setSearch = query => setPageSearch({ path: location.pathname, query });
 
-  const navSections = NAV[role] || [];
+  const staffSidebar = role === 'admin' || role === 'teacher';
+  const navSections = staffSidebar
+    ? [{ section: 'Navigation', items: NAV[role].flatMap(section => section.items) }]
+    : NAV[role] || [];
   const userRole = role.toUpperCase();
   const pageMeta = getPageMeta(location.pathname);
   const firstName = user?.name?.split(' ')[0] || 'User';
@@ -271,24 +275,24 @@ export default function DashboardLayout({ role }) {
       />
 
       {/* ── Sidebar ── */}
-      <aside className={`dash-sidebar ${role === 'teacher' ? 'teacher-sidebar' : ''} ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`dash-sidebar ${staffSidebar ? 'admin-sidebar' : ''} ${sidebarOpen ? 'open' : ''}`}>
         {/* Brand */}
         <div className="sidebar-brand">
           <TelesomLogo size="lg" showText={false} />
           <div className="sidebar-brand-text">
             <strong>Telesom</strong>
-            <span>Academy Portal</span>
+            <span>{staffSidebar ? (role === 'admin' ? 'Admin' : 'Teacher') : 'Academy Portal'}</span>
           </div>
         </div>
 
         {/* Role badge */}
-        <div className="sidebar-role-badge">{userRole}</div>
+        {!staffSidebar && <div className="sidebar-role-badge">{userRole}</div>}
 
         {/* Navigation */}
         <nav className="sidebar-nav">
           {navSections.map((section) => (
             <div key={section.section}>
-              <div className="sidebar-section-label">{section.section}</div>
+              {!staffSidebar && <div className="sidebar-section-label">{section.section}</div>}
               {section.items.map((item) => (
                 item.logout ? (
                   <button
@@ -323,11 +327,11 @@ export default function DashboardLayout({ role }) {
         </nav>
 
         {/* Footer */}
-        <div className="sidebar-footer">
+        {!staffSidebar && <div className="sidebar-footer">
           <button className="btn-logout" onClick={handleLogout}>
             <span>🚪</span> Sign Out
           </button>
-        </div>
+        </div>}
       </aside>
 
       {/* ── Main ── */}
@@ -353,7 +357,7 @@ export default function DashboardLayout({ role }) {
           </div>
 
           <div className="topbar-right">
-            <div className="topbar-search">
+            <div className={`topbar-search ${staffSidebar ? 'admin-topbar-search' : ''}`}>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>🔍</span>
               <input
                 type="text"
@@ -366,14 +370,18 @@ export default function DashboardLayout({ role }) {
 
             <NotificationBell key={user?._id || user?.id} userId={user?._id || user?.id} onNavigate={() => setDataVersion(value => value + 1)} />
 
-            <NavLink
+            {staffSidebar ? (
+              <button type="button" className="topbar-profile topbar-signout" onClick={handleLogout}>
+                Sign Out
+              </button>
+            ) : <NavLink
               to={profilePath}
               className="topbar-profile"
               aria-label="My profile"
               style={{ textDecoration: 'none' }}
             >
               <span className="topbar-profile-name" style={{ display: 'inline' }}>{userRole}</span>
-            </NavLink>
+            </NavLink>}
           </div>
         </header>
 

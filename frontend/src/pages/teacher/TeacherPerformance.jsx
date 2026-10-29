@@ -71,6 +71,7 @@ export default function TeacherPerformance() {
         const { data } = await api.get('/teacher/performance', { params: { courseId: courseId || undefined, assessmentType: 'all', assessmentId: assessmentId || undefined, batch: batch || undefined, search: search || undefined }, signal: controller.signal });
         if (!active) return;
         setReport(data); setCourses(data.courses || []); setError('');
+        if (!courseId && data.course?._id) setCourseId(String(data.course._id));
         setSelectedStudentId(current => data.students?.some(student => String(student._id) === current) ? current : null);
         if (assessmentId && data.selectedAssessmentId !== assessmentId) setAssessmentId('');
       } catch (err) {
@@ -88,6 +89,9 @@ export default function TeacherPerformance() {
   }, [courseId, assessmentId, search, revision, batch]);
 
   const summary = report?.summary, allocation = report?.allocation, students = report?.students || [];
+  const rankedStudents=students.filter(student=>student.hasMarks&&Number.isFinite(student.totalMarks)).slice().sort((a,b)=>b.totalMarks-a.totalMarks||String(a.student).localeCompare(String(b.student)));
+  const highestStudent=rankedStudents[0];
+  const lowestStudent=rankedStudents.length?rankedStudents.slice().sort((a,b)=>a.totalMarks-b.totalMarks||String(a.student).localeCompare(String(b.student)))[0]:null;
   const selectedStudent = students.find(student => String(student._id) === selectedStudentId);
   const selectedAssessment = report?.assessments?.find(item => item._id === assessmentId);
   const hasAssessmentFilter = !!report?.hasAssessmentFilter;
@@ -97,16 +101,15 @@ export default function TeacherPerformance() {
 
   return <div className="performance-page">
     {error && <div role="alert" className="performance-alert error">{error} <button className="performance-button" onClick={() => setRevision(value => value + 1)}>Retry</button></div>}
-    <div className="performance-report-action"><button type="button" className="performance-button primary" disabled={!ready || !report?.course?._id} onClick={() => setShowReport(true)}>▤ View report & Excel</button></div>
     <section className="performance-stats" aria-label="Course summary" aria-live="polite">
-      <div className="performance-stat"><span>Class average</span><strong>{ready && summary?.classAverage != null ? summary.classAverage + '%' : '—'}</strong><small>{summary?.recordedStudents || 0} students with marks{summary?.provisional ? ' · provisional' : ''}</small></div>
-      <div className="performance-stat"><span>Highest score</span><strong>{ready && summary?.highestScore != null ? summary.highestScore : '—'}<em>/100</em></strong><small>Overall course marks</small></div>
+      <div className="performance-stat performance-ranked highest"><span>Highest student</span><strong className="performance-ranked-name">{ready?highestStudent?.student||'No marks yet':'—'}</strong><small>{ready&&highestStudent?(highestStudent.courseName||report?.course?.title||highestStudent.course):'Students with saved marks'}</small><b className="performance-ranked-score">{ready&&highestStudent?highestStudent.totalMarks:'—'}<em>/100</em></b></div>
+      <div className="performance-stat performance-ranked lowest"><span>Lowest student</span><strong className="performance-ranked-name">{ready?lowestStudent?.student||'No marks yet':'—'}</strong><small>{ready&&lowestStudent?(lowestStudent.courseName||report?.course?.title||lowestStudent.course):'Students with saved marks'}</small><b className="performance-ranked-score">{ready&&lowestStudent?lowestStudent.totalMarks:'—'}<em>/100</em></b></div>
       <div className="performance-stat success"><span>Passing students</span><strong>{ready ? summary?.passingStudents || 0 : '—'}</strong><small>Completed results</small></div>
       <div className="performance-stat"><span>Failing students</span><strong>{ready ? summary?.failingStudents || 0 : '—'}</strong><small>{summary?.incompleteStudents || 0} incomplete results excluded</small></div>
     </section>
     <section className="performance-panel">
       <div className="performance-filters">
-        <label>Course<select value={courseId || report?.course?._id || ''} onChange={changeCourse}>{!courses.length && <option value="">{loading ? 'Loading courses…' : 'No assigned courses'}</option>}{courses.map(course => <option key={course._id} value={course._id}>{course.courseCode} · {course.title}</option>)}</select></label>
+        <label>Course{courses.length<=1?<input className="performance-assigned-course" readOnly value={report?.course ? [report.course.courseCode,report.course.title||report.course.name].filter(Boolean).join(' · ') : loading?'Loading assigned course…':'No assigned course'}/>:<select value={courseId || report?.course?._id || ''} onChange={changeCourse}>{!courses.length && <option value="">{loading ? 'Loading courses…' : 'No assigned courses'}</option>}{courses.map(course => <option key={course._id} value={course._id}>{course.courseCode} · {course.title}</option>)}</select>}</label>
         <label>Year / Batch<select disabled={loading} value={batch} onChange={event => { setBatch(event.target.value); closeDetails(); }}><option value="">All batches</option>{(report?.batches || []).map(year => <option key={year} value={year}>{year}</option>)}{batch && !report?.batches?.includes(batch) && <option value={batch}>{batch}</option>}</select></label>
         <label>Assessment<select disabled={loading} value={assessmentId} onChange={event => { setAssessmentId(event.target.value); closeDetails(); }}><option value="">All assessments</option>{(report?.assessments || []).map(assessment => <option key={assessment._id} value={assessment._id}>{assessment.title}</option>)}</select></label>
       </div>

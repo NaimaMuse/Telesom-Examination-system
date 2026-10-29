@@ -42,6 +42,7 @@ const courseSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    batch: { type: String, trim: true, default: '' },
     academicYear: {
       type: String,
       trim: true,

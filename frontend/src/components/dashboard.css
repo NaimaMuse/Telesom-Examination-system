@@ -1265,6 +1265,7 @@
   margin-bottom: 0.8rem;
 }
 .admin-dashboard-stats .stat-card {
+  border: 1px solid var(--primary);
   min-height: 84px;
   padding: 0.55rem 0.7rem;
   gap: 0.6rem;
@@ -1891,3 +1892,201 @@ select.form-control { cursor: pointer; }
 .course-assessment-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }.course-assessment-tabs button { padding: 10px 16px; border: 1px solid #dcecdf; border-radius: 8px; color: #577361; background: #fff; font-size: 12px; cursor: pointer; }.course-assessment-tabs button.active { border-color: #31B44A; background: #edf8ef; color: #207a31; font-weight: 750; }.course-assessment-tabs button:disabled { opacity: .6; cursor: not-allowed; }
 .mycourse-assessment-panel .results-page-hero { display: none; }.mycourse-assessment-panel .assessments-hero { padding: 18px; }.mycourse-assessment-panel .assessments-hero h1 { font-size: 21px; }
 @media(max-width:650px) { .course-workspace-selector { gap: 12px; padding: 14px; }.course-workspace-selector label { min-width: 100%; }.course-contract-summary { padding: 13px; }.course-contract-summary .contract-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }.course-contract-progress { flex-direction: column; align-items: stretch; gap: 8px; } }
+
+/* Simple admin dashboard panels */
+.admin-dashboard-panels { align-items: start; }
+.admin-dashboard-panels .card { margin-bottom: 0; }
+.admin-dashboard-panels .card-header { background: #fff; }
+.admin-activity-list { display: grid; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.admin-activity-list li { display: flex; gap: 12px; padding: 14px 16px; border: 1px solid var(--primary); border-radius: 10px; background: #fffdf7; }
+.admin-activity-dot { flex: 0 0 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: var(--primary); }
+.admin-activity-content { min-width: 0; overflow-wrap: anywhere; }
+.admin-activity-content a { color: var(--text-primary); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+.admin-activity-content a:hover { text-decoration: underline; }
+.admin-activity-content p { margin: 3px 0; font-size: 0.8rem; color: var(--text-muted); }
+.admin-activity-content time { font-size: 0.7rem; color: var(--text-muted); }
+
+.topbar-search.admin-topbar-search { border-color: var(--accent-gold); }
+.topbar-search.admin-topbar-search:focus-within { border-color: var(--accent-gold); box-shadow: 0 0 0 3px rgba(216, 153, 36, 0.15); }
+.topbar-signout { font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); cursor: pointer; white-space: nowrap; }
+.topbar-signout:hover { background: var(--primary-light); }
+.topbar-signout:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 3px; }
+
+.admin-dashboard-panels .quick-action-link {
+  background: var(--accent-gold-muted);
+  border-color: var(--accent-gold);
+}
+.admin-dashboard-panels .quick-action-link:hover {
+  background: var(--accent-gold-light, #fff3cc);
+  border-color: var(--accent-gold-dark);
+}
+.admin-dashboard-panels .quick-action-link:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 3px;
+}
+
+/* Subtle borders for the admin navigation. */
+.admin-sidebar .sidebar-nav { padding: 0.75rem; }
+.admin-sidebar .sidebar-link {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  padding: 0.6rem 0.75rem;
+}
+.admin-sidebar .sidebar-link.active { border-color: var(--accent-gold); }
+
+/* Student directory: green and gold accents with a clear table hierarchy. */
+.student-management-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 22px 24px; margin-bottom: 18px; border: 1px solid #cde6d4;
+  border-left: 4px solid var(--accent-gold); border-radius: 12px;
+  background: linear-gradient(110deg, #eaf6ee 0%, #fffdf6 100%);
+}
+.student-directory-intro { flex: 1; min-width: 230px; }
+.student-directory-eyebrow { display: block; margin-bottom: 6px; color: #467451; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.1em; }
+.student-directory-intro h1 { margin: 0; color: #18552c; font-size: 1.35rem; line-height: 1.25; }
+.student-directory-intro p { margin: 7px 0 0; color: #567060; font-size: 0.75rem; line-height: 1.5; }
+.student-management-header .student-management-actions { width: auto; }
+.student-management-actions .btn { border-radius: 7px; }
+.student-management-actions .student-view-toggle { background: #fff; border-color: #b9d9c2; }
+.student-management-actions .student-upload-trigger { background: #fff5da; border-color: #e5bd62; color: #79530c; }
+.student-management-actions .student-upload-trigger:hover { background: #ffedba; }
+.student-management-actions > .btn-primary { background: #22743b; border: 1px solid #1b6332; box-shadow: 0 3px 8px #216e3420; }
+.student-management-actions > .btn-primary:hover { background: #185c2d; }
+.student-management-panel { border-color: #bfdcc8; border-radius: 12px; box-shadow: 0 4px 18px rgba(22,72,37,0.06); }
+.student-management-panel .card-header { padding: 18px 20px; background: #fff; border-bottom: 1px solid #d5e8db; gap: 18px; }
+.student-section-kicker { color: #598065; letter-spacing: 0.07em; }
+.student-list-heading .card-title { color: #18552c; }
+.student-total-count { background: #22743b; color: #fff; border-radius: 6px; padding: 3px 8px; }
+.student-management-panel .student-filter-select { border-color: #c3daca; background-color: #f8fbf9; border-radius: 7px; color: #345c41; }
+.student-management-panel .student-filter-select:focus { border-color: #cf9b2f; box-shadow: 0 0 0 3px #e6b84d25; }
+.student-management-table thead th { background: #eaf4ee; color: #2b5c3a; border-bottom: 2px solid #c4ddcc; font-weight: 750; letter-spacing: 0.04em; }
+.student-management-table tbody tr:nth-child(even) { background: #fafcfb; }
+.student-management-table tbody tr:hover { background: #f0f8f2; }
+.student-management-table td { border-bottom-color: #e1ece4; padding-top: 15px; padding-bottom: 15px; }
+.student-record-person > span { background: #e3f2e8; color: #226439; border: 1px solid #b8d8c2; border-radius: 12px; font-weight: 800; }
+.student-management-table tbody tr:nth-child(even) .student-record-person > span { background: #fff2d2; color: #805b15; border-color: #e8d19b; }
+.student-record-person strong { color: #244e32; }
+.student-course-tag { background: #edf4ff; border-color: #d0dff0; color: #345e88; border-radius: 6px; }
+.student-record-status { border-radius: 20px; padding: 5px 9px; }
+.student-record-status.is-active { background: #e3f5e9; border-color: #b8dfc5; color: #216b39; }
+.student-row-edit { background: #edf6f0; border-color: #b9d8c3; color: #22643a; border-radius: 6px; }
+.student-row-delete { background: #fff2ef; border-color: #efcfc8; color: #b14435; border-radius: 6px; }
+.student-management-panel .pagination { padding: 12px 18px; background: #f7faf8; }
+.student-management-panel .page-btn { border-radius: 7px; }
+.student-management-panel .page-btn.active { background: #22743b; border-color: #22743b; }
+@media (max-width: 1000px) {
+  .student-management-header { flex-wrap: wrap; padding: 18px; }
+  .student-management-header .student-management-actions { justify-content: flex-start; }
+}
+@media (max-width: 520px) {
+  .student-management-header .student-management-actions { width: 100%; }
+  .student-management-header .student-management-actions > .btn-primary { grid-column: 1 / -1; }
+  .student-management-panel .card-header { padding: 16px; }
+}
+
+/* Compact student tools keep the records table prominent. */
+.student-management-header {
+  min-height: 0; padding: 0; margin-bottom: 12px; border: 0;
+  border-radius: 0; background: transparent; box-shadow: none;
+  justify-content: flex-end;
+}
+.student-management-header .student-management-actions { gap: 8px; }
+.student-management-header .student-management-actions .btn {
+  min-height: 30px; padding: 5px 10px; font-size: 0.68rem;
+}
+.student-management-header .student-upload-trigger > span { font-size: 0.85rem; }
+@media (max-width: 520px) {
+  .student-management-header .student-management-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; }
+}
+
+/* Teacher directory matches the student records palette. */
+.teacher-directory-page .teacher-directory-overview {
+  display: block; padding: 0; margin-bottom: 16px; border: 0;
+  background: transparent; box-shadow: none;
+}
+.teacher-directory-overview::after { display: none; }
+.teacher-directory-page .teacher-directory-overview-right { display: block; width: 100%; }
+.teacher-directory-page .teacher-directory-stats {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;
+  width: 100%; border: 0; background: transparent; box-shadow: none;
+}
+.teacher-directory-page .teacher-directory-stats > div {
+  min-width: 0; padding: 16px 20px; gap: 5px; border: 1px solid #b8d8c2;
+  border-left: 4px solid #22743b; border-radius: 10px; background: #eef8f1;
+}
+.teacher-directory-page .teacher-directory-stats > div:last-child {
+  border: 1px solid #e6ca86; border-left: 4px solid #d49a26; background: #fff8e7;
+}
+.teacher-directory-page .teacher-directory-stats strong { font-size: 1.4rem; color: #18552c; }
+.teacher-directory-page .teacher-directory-stats .teacher-stat-label { font-size: 0.6rem; letter-spacing: 0.06em; color: #356044; }
+.teacher-directory-page .teacher-directory-stats small { font-size: 0.68rem; color: #607266; }
+.teacher-directory-page .teacher-directory-stats > div:last-child .teacher-stat-label { color: #805b15; }
+.teacher-directory-panel { border-color: #bfdcc8; border-radius: 12px; box-shadow: 0 4px 18px rgba(22,72,37,0.06); }
+.teacher-directory-panel-header { padding: 18px 20px; background: #fff; border-bottom-color: #d5e8db; }
+.teacher-directory-panel-header h2 span { background: #22743b; color: #fff; border-radius: 6px; }
+.teacher-directory-details-toggle { background: #fff5da; border-color: #e5bd62; color: #79530c; border-radius: 7px; }
+.teacher-directory-details-toggle:hover { background: #ffedba; border-color: #d4ad53; }
+.teacher-directory-add { background: #22743b; border-color: #1b6332; border-radius: 7px; }
+.teacher-directory-table thead th { background: #eaf4ee; color: #2b5c3a; border-bottom: 2px solid #c4ddcc; letter-spacing: 0.04em; }
+.teacher-directory-table td { padding-top: 15px; padding-bottom: 15px; border-bottom-color: #e1ece4; }
+.teacher-directory-table tbody tr:nth-child(even) { background: #fafcfb; }
+.teacher-directory-table tbody tr:hover { background: #f0f8f2; }
+.teacher-directory-avatar { border-radius: 12px; background: #e3f2e8; border-color: #b8d8c2; color: #226439; }
+.teacher-directory-table tbody tr:nth-child(even) .teacher-directory-avatar { background: #fff2d2; border-color: #e8d19b; color: #805b15; }
+.teacher-department-tag { border-radius: 6px; background: #edf4ff; border-color: #d0dff0; color: #345e88; }
+.teacher-account-status { border-radius: 20px; }
+.teacher-directory-edit { background: #edf6f0; border-color: #b9d8c3; color: #22643a; border-radius: 6px; }
+.teacher-directory-delete { background: #fff2ef; border-color: #efcfc8; color: #b14435; border-radius: 6px; }
+.teacher-directory-pagination { background: #f7faf8; padding: 12px 18px; }
+.teacher-directory-pagination .page-btn { border-radius: 7px; }
+.teacher-directory-pagination .page-btn.active { background: #22743b; border-color: #22743b; }
+@media (max-width: 520px) {
+  .teacher-directory-page .teacher-directory-stats { gap: 8px; }
+  .teacher-directory-page .teacher-directory-stats > div { padding: 12px; }
+}
+
+/* Consistent table headers and hover accents across dashboard pages. */
+.dash-shell .dash-content table thead th {
+  background: #22743b; color: #fff; border-bottom-color: #1b6332;
+}
+.dash-shell .dash-content table {
+  border: 1px solid #dca62e;
+  outline: 1px solid #dca62e;
+  outline-offset: -1px;
+}
+
+/* Visible yellow separators between table rows. */
+.dash-shell .dash-content table tbody tr > td,
+.dash-shell .dash-content table tbody tr > th {
+  border-bottom: 1px solid #dca62e;
+}
+
+/* Compact teacher totals, including assignment needs. */
+.teacher-directory-page .teacher-directory-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.teacher-directory-page .teacher-directory-stats > div {
+  padding: 10px 16px; gap: 3px; border-radius: 8px;
+}
+.teacher-directory-page .teacher-directory-stats > div:nth-child(2) {
+  border: 1px solid #e6ca86; border-left: 4px solid #d49a26; background: #fff8e7;
+}
+.teacher-directory-page .teacher-directory-stats > div:last-child {
+  border: 1px solid #c6d9ca; border-left: 4px solid #709779; background: #f4f8f5;
+}
+.teacher-directory-page .teacher-directory-stats strong { font-size: 1.15rem; }
+.teacher-directory-page .teacher-directory-stats small { font-size: 0.62rem; white-space: normal; }
+.teacher-directory-page .teacher-directory-stats > div:last-child .teacher-stat-label { color: #356044; }
+@media (max-width: 520px) {
+  .teacher-directory-page .teacher-directory-stats { gap: 6px; }
+  .teacher-directory-page .teacher-directory-stats > div { padding: 9px 8px; }
+  .teacher-directory-page .teacher-directory-stats .teacher-stat-label { font-size: 0.5rem; letter-spacing: 0; }
+}
+
+.teacher-edit-photo { display: flex; align-items: center; gap: 16px; padding: 14px; margin-bottom: 18px; border: 1px solid #bfdcc8; border-radius: 10px; background: #f4faf6; }
+.teacher-edit-photo img { width: 72px; height: 72px; flex-shrink: 0; object-fit: cover; border-radius: 12px; border: 1px solid #b8d8c2; }
+.teacher-edit-photo > div { min-width: 0; }
+.teacher-edit-photo input { max-width: 100%; font: inherit; font-size: 0.7rem; }
+.teacher-edit-photo p { margin-top: 6px; color: var(--text-muted); font-size: 0.65rem; }
+
+.course-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 520px) { .course-summary-grid { grid-template-columns: 1fr; } }

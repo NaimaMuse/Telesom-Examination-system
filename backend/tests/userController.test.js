@@ -243,10 +243,16 @@ const runTests = async () => {
   {
     let stored;
     User.create=async docs=>{const data=Array.isArray(docs)?docs[0]:docs;stored={_id:new mongoose.Types.ObjectId(),...data};return Array.isArray(docs)?[stored]:stored;};
-    const {req,res,next,getResult}=createMock({name:'Hassan Teacher',email:' Hassan@Telesom.com ',password:'ignored',teacherId:'IGNORED'});
+    const {req,res,next,getResult}=createMock({name:'Hassan Teacher',email:' Hassan@Telesom.com ',password:'InitialTeacher123!',teacherId:'IGNORED'});
     await createTeacher(req,res,next);
     const result=getResult(), data=result.responseBody?.data, password=data?.credentials?.temporaryPassword;
-    assert(result.statusCode===201 && password?.length>=20 && await bcrypt.compare(password,stored.password) && stored.mustChangePassword && data.credentials.email==='hassan@telesom.com' && /^TCH-[A-F0-9]{12}$/.test(data.teacher.teacherId) && !data.user.password && !data.teacher.password, 'Teacher receives generated one-time credentials and only a hash is stored');
+    assert(result.statusCode===201 && password==='InitialTeacher123!' && await bcrypt.compare(password,stored.password) && stored.mustChangePassword && data.credentials.email==='hassan@telesom.com' && /^TCH-[A-F0-9]{12}$/.test(data.teacher.teacherId) && !data.user.password && !data.teacher.password, 'Teacher receives admin-set initial credentials, only a hash is stored, and password change is required');
+  }
+
+  {
+    const {req,res,next,getResult}=createMock({name:'Teacher',email:'teacher@example.com',password:'short'});
+    await createTeacher(req,res,next);
+    assert(getResult().statusCode===400, 'Teacher creation rejects a short initial password');
   }
 
   User.findOne = origUserFindOne;

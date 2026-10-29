@@ -14,6 +14,7 @@ const controller = createResourceController(Course, {
     'department',
     'semester',
     'academicYear',
+    'batch',
     'isActive',
   ],
   filterFields: ['courseCode', 'title', 'name', 'status', 'department', 'semester', 'academicYear', 'isActive'],
