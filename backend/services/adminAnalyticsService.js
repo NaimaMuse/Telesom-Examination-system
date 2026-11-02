@@ -6,7 +6,7 @@ function buildAnalytics(data,attendance,filters={}) {
   const pairs=new Set(students.map(s=>String(s.courseId)+':'+String(s._id)));
   const unique=new Map();
   for(const record of attendance){const date=new Date(record.date).toISOString().slice(0,10);if(pairs.has(String(record.course)+':'+String(record.student))&&(!filters.from||date>=filters.from)&&(!filters.to||date<=filters.to))unique.set(String(record.course)+':'+String(record.student)+':'+date,{...record,day:date});}
-  const records=[...unique.values()],recorded=students.filter(s=>s.hasMarks),final=students.filter(s=>s.finalized);
+  const records=[...unique.values()].filter(row=>!filters.attendanceStatus||row.status===filters.attendanceStatus),recorded=students.filter(s=>s.hasMarks),final=students.filter(s=>s.finalized);
   const average=rows=>rows.length?round(rows.reduce((sum,s)=>sum+s.totalMarks,0)/rows.length):null;
   const distribution=['A','B','C','D','F'].map(grade=>({grade,count:final.filter(s=>(s.totalMarks>=90?'A':s.totalMarks>=80?'B':s.totalMarks>=70?'C':s.totalMarks>=60?'D':'F')===grade).length}));
   const monthly=[...new Set(records.map(row=>row.day.slice(0,7)))].sort().map(month=>{const rows=records.filter(row=>row.day.startsWith(month));return {month,...counts(rows),rate:rate(counts(rows))};});

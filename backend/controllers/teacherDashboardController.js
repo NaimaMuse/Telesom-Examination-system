@@ -332,13 +332,14 @@ const assignmentForAssessment = async (req, assignments) => {
   const { assessmentType, assessmentId } = req.params;
   if (!['exam', 'quiz'].includes(assessmentType) || !mongoose.isValidObjectId(assessmentId)) throw Object.assign(new Error('Invalid assessment.'), { statusCode: 400 });
   const Model = assessmentType === 'exam' ? Exam : Quiz;
-  const assessment = await Model.findById(assessmentId).select('course').lean();
+  const assessment = await Model.findById(assessmentId).select('course academicYear').lean();
   return assessment ? assignments.find(a => String(a.course?._id) === String(assessment.course)) : null;
 };
 
-const assessmentEnrollmentFilter=async(req,assessment)=>{
+const assessmentEnrollmentFilter=async(req,assessment,assignment)=>{
   if(req.query.courseId){const service=require('../services/teacherCourseWorkspaceService');const context=await service.resolveScope(req.user,req.query);if(!context.selected||!require('../services/academicProgressService').assessmentApplies(assessment,context.selected))throw Object.assign(new Error('Assessment does not belong to this course and batch.'),{statusCode:403});return service.enrollmentFilter(context.selected);}
-  return {course:assessment.course,status:'enrolled',...(assessment.academicYear?{academicYear:assessment.academicYear}:{}),...(assessment.batch?{batch:assessment.batch}:{})};
+  // Standalone gradebook follows current course enrollments; legacy exam years may use a different label.
+  return {course:assessment.course,status:'enrolled',...(assessment.batch?{batch:assessment.batch}:{})};
 };
 
 const getTeacherAssessmentResults = async (req, res, next) => {
@@ -361,7 +362,7 @@ const getTeacherAssessmentResults = async (req, res, next) => {
     }
 
     const [enrollments, results] = await Promise.all([
-      Enrollment.find(await assessmentEnrollmentFilter(req,assessment))
+      Enrollment.find(await assessmentEnrollmentFilter(req,assessment,assignment))
         .populate({ path: 'student', populate: { path: 'user', select: 'name email' } })
         .lean(),
       Result.find({ [assessmentType]: assessmentId }).lean(),
@@ -423,7 +424,7 @@ const saveTeacherAssessmentResults = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Assessment not found for your assigned course.' });
     }
 
-    const enrollments = await Enrollment.find(await assessmentEnrollmentFilter(req,assessment))
+    const enrollments = await Enrollment.find(await assessmentEnrollmentFilter(req,assessment,assignment))
       .select('student')
       .lean();
     const enrolledStudentIds = new Set(enrollments.map(({ student }) => String(student)));

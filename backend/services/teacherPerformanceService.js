@@ -29,13 +29,15 @@ const calculatePerformance = ({ course, assessments, enrollments, results, atten
     if (previous) { if (batch && !previous.batches.includes(batch)) previous.batches.push(batch); continue; }
     students.set(String(student._id), { _id: student._id, student: student.user?.name || 'Student record unavailable', studentId: student.studentId || '—', courseId: course._id, course: course.courseCode || course.title || course.name, courseName: course.title || course.name || course.courseCode, batches: batch ? [batch] : [], totalMarks: 0, gradedAssessments: 0, expectedAssessments: valid.length, gradedMaximum: 0, invalidScores: 0 });
   }
+  // A saved course result remains visible even when legacy year labels differ.
+  const appliesToStudent=(assessment,enrollment,studentId)=>!enrollment||require('./academicProgressService').assessmentApplies(assessment,enrollment)||results.some(r=>String(r.student)===String(studentId)&&r.storageType===assessment.storageType&&String(r.assessmentId)===String(assessment._id)&&Number.isFinite(r.marksObtained)&&r.marksObtained>=0&&r.marksObtained<=assessment.totalMarks);
   const rows = [], seen = new Set();
   for (const result of [...results].sort((a,b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))) {
     const assessment = assessmentMap.get(`${result.storageType}:${result.assessmentId}`);
     const student = students.get(String(result.student));
     const key = `${result.storageType}:${result.assessmentId}:${result.student}`;
     if (!assessment || !student || seen.has(key)) continue;
-    if(attendance!==undefined){const enrollment=primaryEnrollment(enrollments,student._id,course);if(enrollment&&!require('./academicProgressService').assessmentApplies(assessment,enrollment))continue;}
+    if(attendance!==undefined){const enrollment=primaryEnrollment(enrollments,student._id,course);if(!appliesToStudent(assessment,enrollment,student._id))continue;}
     seen.add(key);
     if (typeof result.marksObtained !== 'number' || !Number.isFinite(result.marksObtained) || result.marksObtained < 0 || result.marksObtained > assessment.totalMarks) { student.invalidScores++; continue; }
     const percentage = round(result.marksObtained / assessment.totalMarks * 100);
@@ -48,8 +50,8 @@ const calculatePerformance = ({ course, assessments, enrollments, results, atten
       const {calculateCourseMarks,day,assessmentApplies}=require('./academicProgressService');
       const enrollment=primaryEnrollment(enrollments,student._id,course);
       const relevant=attendance.filter(r=>String(r.student)===String(student._id)&&String(r.course)===String(course._id)&&(!enrollment?.enrollmentDate||day(r.date)>=day(enrollment.enrollmentDate)));
-      const marks=calculateCourseMarks(valid.filter(a=>!enrollment||assessmentApplies(a,enrollment)).map(a=>({...a,kind:a.storageType})),results.filter(r=>String(r.student)===String(student._id)).map(r=>({...r,kind:r.storageType,assessment:r.assessmentId})),relevant);
-      const cohort=valid.filter(a=>!enrollment||assessmentApplies(a,enrollment));
+      const marks=calculateCourseMarks(valid.filter(a=>appliesToStudent(a,enrollment,student._id)).map(a=>({...a,kind:a.storageType})),results.filter(r=>String(r.student)===String(student._id)).map(r=>({...r,kind:r.storageType,assessment:r.assessmentId})),relevant);
+      const cohort=valid.filter(a=>appliesToStudent(a,enrollment,student._id));
       const maximum=cohort.reduce((sum,a)=>sum+a.totalMarks,0);
       const threshold=ownThreshold??(maximum>=90&&cohort.every(a=>Number.isFinite(a.passingMarks)&&a.passingMarks>=0&&a.passingMarks<=a.totalMarks)?round(cohort.reduce((sum,a)=>sum+a.passingMarks,0)/maximum*100):null);
       const finalized=marks.complete&&threshold!==null;

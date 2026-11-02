@@ -30,7 +30,7 @@ export default function TeacherResults({scope,onEditingChange}) {
       setAssessments(rows);
       const selected = rows.find(item => assessmentKey(item) === selectedKey) || rows[0];
       if (!selected) { setSelectedKey(''); setAssessment(null); setStudents([]); return; }
-      if (assessmentKey(selected) !== selectedKey) { setSelectedKey(assessmentKey(selected)); return; }
+      if (assessmentKey(selected) !== selectedKey) { setAssessment(null);setStudents([]);setLoadingRoster(true);setSelectedKey(assessmentKey(selected)); return; }
       const roster = await api.get('/teacher/results/' + selected.type + '/' + selected._id, { signal,params:scope });
       if (!isCurrent()) return;
       setAssessment(roster.data?.assessment || null);
@@ -110,7 +110,7 @@ export default function TeacherResults({scope,onEditingChange}) {
             className="form-control"
             value={selectedKey}
             disabled={saving || loadingAssessments || assessments.length === 0}
-            onChange={(event) => {setDirty(false);setLoadingRoster(true);setSelectedKey(event.target.value);}}
+            onChange={(event) => {setDirty(false);setAssessment(null);setStudents([]);setNotice('');setLoadingRoster(true);setSelectedKey(event.target.value);}}
           >
             <option value="">{loadingAssessments ? 'Loading assessments...' : 'Select an assessment'}</option>
             {assessments.map((item) => (

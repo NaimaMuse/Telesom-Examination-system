@@ -44,15 +44,20 @@ export default function TeacherContracts({ admin = false, combined = false, cont
       const responses=await Promise.all(requests);
       if(!isCurrent())return;
       const next=responses[0].data.contracts||[];setContracts(next);
-      if(!selectedId&&next.length)setSelectedId(next[0]._id);
+      if(!admin&&!selectedId&&next.length)setSelectedId(next[0]._id);
       if(selectedId)setDetail(responses[1].data);
       if(admin)setOptions(responses[responses.length-1].data);
       setError('');
     }catch(err){if(isCurrent())setError(err.response?.data?.message||'Contracts could not refresh. Please retry.');}
     finally{if(isCurrent())setLoading(false);}
   },{enabled:!busy&&!contractForm&&!lessonForm,deps:[selectedId,revision,admin]});
-  const current=contracts.find(c=>c._id===selectedId);
   const visible=contracts.filter(c=>Object.entries(filters).every(([key,value])=>!value||(key==='status'?c.contractStatus===value:key==='batch'?c.batch===value:String(c[key]?._id||c[key])===value))&&matchesPageSearch(search,c.teacher?.user?.name,c.teacher?.teacherId,c.course?.title,c.course?.name,c.batch,c.academicYear,c.contractStatus));
+  // The planner and contract summary must always belong to the filtered table.
+  const activeId=admin?(visible.some(c=>c._id===selectedId)?selectedId:visible[0]?._id||''):selectedId;
+  const current=contracts.find(c=>c._id===activeId);
+  useEffect(()=>{
+    if(admin&&localSelectedId!==activeId){setSelectedId(activeId);setDetail(null);}
+  },[admin,activeId,localSelectedId]);
   const saveContract=async event=>{
     event.preventDefault();setBusy(true);setError('');
     try{
@@ -125,7 +130,7 @@ export default function TeacherContracts({ admin = false, combined = false, cont
         <div className="contract-metrics">{[['Total Contract Days',current.totalContractDays],['Completed Teaching Days',current.completedTeachingDays],['Remaining Contract Days',current.remainingContractDays],['Contract Progress',current.progress+'%']].map(([label,value])=><div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
         <div className="contract-progress" aria-label={'Contract progress '+current.progress+'%'}><span style={{width:current.progress+'%'}}/></div>
         <p className="contract-muted">{current.startDate} — {current.endDate||'No end date'} · One day counts once, even with multiple completed lessons.</p></>}
-        {combined&&<CourseOutlines key={selectedId} role={admin?'admin':'teacher'} embedded contractId={selectedId} onChange={outlineChanged} onEditingChange={setOutlineBusy}/>}
+        {combined&&<CourseOutlines key={activeId} role={admin?'admin':'teacher'} embedded contractId={activeId} onChange={outlineChanged} onEditingChange={setOutlineBusy}/>}
         {workspaceMode!=='outline'&&(!combined||displayedLessons.length>0)&&<><div className="contract-heading lessons-heading"><h3>{combined?'Additional contract lessons':'Assigned lessons'}</h3>{!admin&&!combined&&<button type="button" className="btn btn-sm btn-primary" disabled={busy||current.status!=='active'} onClick={()=>{setError('');setLessonForm({title:'',description:'',plannedDate:''});}}>+ Add lesson</button>}</div>
         {!detail||detail.contract._id!==selectedId?<p className="contract-empty">Loading lessons…</p>:!displayedLessons.length?<p className="contract-empty">No lessons added to this contract.</p>:<div className="table-responsive"><table className="data-table"><thead><tr><th>Lesson</th><th>Planned date</th><th>Status</th><th>Actual teaching day</th>{!admin&&<th>Action</th>}</tr></thead><tbody>{displayedLessons.map(lesson=><tr key={lesson._id}><td><strong>{lesson.title}</strong>{lesson.description&&<small className="contract-muted">{lesson.description}</small>}</td><td>{dateLabel(lesson.plannedDate)}</td><td><span className={'badge badge-'+(lesson.status==='completed'?'success':'warning')}>{lesson.status==='completed'?'Completed':'Planned'}</span></td><td>{dateLabel(lesson.completedDay)}</td>{!admin&&<td><button type="button" className={'btn btn-sm '+(lesson.status==='completed'?'btn-secondary':'btn-primary')} disabled={busy} onClick={()=>changeStatus(lesson)}>{lesson.status==='completed'?'Reverse completion':'Mark completed'}</button></td>}</tr>)}</tbody></table></div>}</>}
       </>}

@@ -1,3 +1,4 @@
+import TeachingIcon from './TeachingIcon';
 import {AcademyReports,BatchManagement,CourseOutlines,MakeupClasses} from './AcademyWorkspace';
 import TeacherContracts from './TeacherContracts';
 import ChangePasswordModal from './ChangePasswordModal';
@@ -43,28 +44,28 @@ const NAV = {
     {
       section: 'Overview',
       items: [
-        { to: '/admin',            label: 'Dashboard',         icon: '🏠', end: true },
+        { to: '/admin',            label: 'Dashboard',         icon: 'grid', end: true },
       ],
     },
     {
       section: 'Management',
       items: [
-        { to: '/admin/students',   label: 'Student Management', icon: '🎓' },
-        { to: '/admin/teachers',   label: 'Teacher Management', icon: '👨‍🏫' },
-        { to: '/admin/batches', label: 'Years & Batches', icon: '🗓️' },
-        { to: '/admin/courses',    label: 'Course Management',  icon: '📚' },
+        { to: '/admin/students',   label: 'Student Management', icon: 'graduate' },
+        { to: '/admin/teachers',   label: 'Teacher Management', icon: 'teacher' },
+        { to: '/admin/batches', label: 'Years & Batches', icon: 'reschedule' },
+        { to: '/admin/courses',    label: 'Course Management',  icon: 'book' },
       ],
     },
     {
       section: 'Academic',
       items: [
-        { to: '/admin/exams',      label: 'Exam & Quiz Mgmt',  icon: '📝' },
-        { to: '/admin/marks',      label: 'Marks & Results',   icon: '📊' },
-        { to: '/admin/attendance', label: 'Attendance',         icon: '📅' },
-        { to: '/admin/reports', label: 'Reports Center', icon: '📑' },
-        { to: '/admin/outlines', label: 'Teaching & Outlines', icon: '📖' },
-        { to: '/admin/makeup', label: 'Makeup Classes', icon: '🗓️' },
-        { to: '/admin/analytics',  label: 'Analytics & Reports',icon: '📈' },
+        { to: '/admin/exams',      label: 'Exam & Quiz Mgmt',  icon: 'clipboard' },
+        { to: '/admin/marks',      label: 'Marks & Results',   icon: 'chart' },
+        { to: '/admin/attendance', label: 'Attendance',         icon: 'calendar' },
+        { to: '/admin/reports', label: 'Reports Center', icon: 'file' },
+        { to: '/admin/outlines', label: 'Teaching & Outlines', icon: 'book' },
+        { to: '/admin/makeup', label: 'Makeup Classes', icon: 'reschedule' },
+        { to: '/admin/analytics',  label: 'Analytics & Reports',icon: 'chart' },
       ],
     },
   ],
@@ -72,13 +73,13 @@ const NAV = {
     {
       section: 'Overview',
       items: [
-        { to: '/teacher', label: 'Dashboard', icon: '🏠', end: true },
-        { to: '/teacher/my-course', label: 'My Course', icon: '📚' },
-        { to: '/teacher/exams', label: 'Exams & Quizzes', icon: '📝' },
-        { to: '/teacher/results', label: 'Result', icon: '📋' },
-        { to: '/teacher/performance', label: 'Student Performance', icon: '📊' },
-        { to: '/teacher/makeup', label: 'Makeup Classes', icon: '🗓️' },
-        { to: '/teacher/profile', label: 'My Profile', icon: '👤' },
+        { to: '/teacher', label: 'Dashboard', icon: 'grid', end: true },
+        { to: '/teacher/my-course', label: 'My Course', icon: 'book' },
+        { to: '/teacher/exams', label: 'Exams & Quizzes', icon: 'clipboard' },
+        { to: '/teacher/results', label: 'Result', icon: 'clipboard' },
+        { to: '/teacher/performance', label: 'Student Performance', icon: 'chart' },
+        { to: '/teacher/makeup', label: 'Makeup Classes', icon: 'reschedule' },
+        { to: '/teacher/profile', label: 'My Profile', icon: 'profile' },
       ],
     },
   ],
@@ -86,25 +87,25 @@ const NAV = {
     {
       section: 'Overview',
       items: [
-        { to: '/student',           label: 'Dashboard',       icon: '🏠', end: true },
+        { to: '/student',           label: 'Dashboard',       icon: 'grid', end: true },
       ],
     },
     {
       section: 'Academics',
       items: [
-        { to: '/student/courses',   label: 'My Courses',      icon: '📚' },
-        { to: '/student/exams',     label: 'Exams & Results', icon: '📊' },
-        { to: '/student/quizzes',   label: 'Quizzes',         icon: '📝' },
-        { to: '/student/makeup', label: 'Makeup Classes', icon: '🗓️' },
-        { to: '/student/outlines', label: 'Course Outlines', icon: '📖' },
-        { to: '/student/notes',     label: 'Study Notes',     icon: '📄' },
-        { to: '/student/attendance',label: 'Attendance',      icon: '📅' },
+        { to: '/student/courses',   label: 'My Courses',      icon: 'book' },
+        { to: '/student/exams',     label: 'Exams & Results', icon: 'chart' },
+        { to: '/student/quizzes',   label: 'Quizzes',         icon: 'clipboard' },
+        { to: '/student/makeup', label: 'Makeup Classes', icon: 'reschedule' },
+        { to: '/student/outlines', label: 'Course Outlines', icon: 'book' },
+        { to: '/student/notes',     label: 'Study Notes',     icon: 'file' },
+        { to: '/student/attendance',label: 'Attendance',      icon: 'calendar' },
       ],
     },
     {
       section: 'Account',
       items: [
-        { to: '/student/profile',   label: 'My Profile',      icon: '👤' },
+        { to: '/student/profile',   label: 'My Profile',      icon: 'profile' },
       ],
     },
   ],
@@ -261,7 +262,7 @@ export default function DashboardLayout({ role }) {
   };
 
   return (
-    <div className={`dash-shell ${role === 'teacher' ? 'teacher-shell' : ''}`}>
+    <div className={`dash-shell ${role === 'teacher' ? 'teacher-shell' : ''} ${role === 'admin' && location.pathname === '/admin' ? 'admin-home-shell' : ''}`}>
       {role === 'teacher' && user?.mustChangePassword && <ChangePasswordModal required onSignOut={handleLogout} />}
       {showGreeting && !user?.mustChangePassword && <div className="dashboard-greeting-popup" role="status">
         <span className="dashboard-greeting-mark" aria-hidden="true">☀</span>
@@ -304,7 +305,7 @@ export default function DashboardLayout({ role }) {
                       handleLogout();
                     }}
                   >
-                    <span className="sidebar-link-icon">{item.icon}</span>
+                    <span className="sidebar-link-icon"><TeachingIcon name={item.icon} size={21}/></span>
                     {item.label}
                   </button>
                 ) : (
@@ -317,7 +318,7 @@ export default function DashboardLayout({ role }) {
                     }
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <span className="sidebar-link-icon">{item.icon}</span>
+                    <span className="sidebar-link-icon"><TeachingIcon name={item.icon} size={21}/></span>
                     {item.label}
                   </NavLink>
                 )
@@ -344,7 +345,7 @@ export default function DashboardLayout({ role }) {
               onClick={() => setSidebarOpen(prev => !prev)}
               aria-label="Toggle menu"
             >
-              ☰
+              <TeachingIcon name="menu" size={21}/>
             </button>
             <div>
               <div className={`topbar-page-title ${showGreetingInTopbar ? 'topbar-greeting' : ''}`}>
@@ -358,10 +359,10 @@ export default function DashboardLayout({ role }) {
 
           <div className="topbar-right">
             <div className={`topbar-search ${staffSidebar ? 'admin-topbar-search' : ''}`}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>🔍</span>
+              <TeachingIcon name="search" size={18}/>
               <input
                 type="text"
-                placeholder={`Search ${pageMeta.title.toLowerCase()}…`}
+                placeholder={role === 'admin' && location.pathname === '/admin' ? 'Search students, courses, exams, and more…' : `Search ${pageMeta.title.toLowerCase()}…`}
                 aria-label={`Search ${pageMeta.title}`}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -370,7 +371,7 @@ export default function DashboardLayout({ role }) {
 
             <NotificationBell key={user?._id || user?.id} userId={user?._id || user?.id} onNavigate={() => setDataVersion(value => value + 1)} />
 
-            {staffSidebar ? (
+            {role === 'admin' && location.pathname === '/admin' ? <details className="rd-account-menu"><summary><span className="rd-account-avatar">TA</span><span><strong>Telesom Academy</strong><small>Admin</small></span><span aria-hidden="true">⌄</span></summary><div><button type="button" aria-label="Sign Out" onClick={handleLogout}>Sign Out</button></div></details> : staffSidebar ? (
               <button type="button" className="topbar-profile topbar-signout" onClick={handleLogout}>
                 Sign Out
               </button>

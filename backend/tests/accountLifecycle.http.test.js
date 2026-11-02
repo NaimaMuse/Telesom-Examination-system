@@ -18,7 +18,7 @@ let server;
  const teacher=await request('POST','/users/teachers',{name:'Test Teacher',email:'teacher@test.example',password:'ignore-me',teacherId:'IGNORED'},adminToken);
  assert.strictEqual(teacher.status,201);created.push([User,teacher.body.data.user._id],[Teacher,teacher.body.data.teacher._id]);
  const temporary=teacher.body.data.credentials.temporaryPassword;
- assert(temporary.length>=20);assert.notStrictEqual(temporary,'ignore-me');
+ assert.strictEqual(temporary,'ignore-me','Admin-supplied initial password must be respected');
  let login=await request('POST','/auth/login',{email:'teacher@test.example',password:temporary,role:'teacher'});
  assert.strictEqual(login.status,200);assert.strictEqual(login.body.user.mustChangePassword,true);
  const oldToken=login.body.token;

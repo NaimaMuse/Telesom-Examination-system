@@ -72,6 +72,18 @@ const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let 
   await models.Exam.create({title:'Batch B only',course:course._id,academicYear:'2026',semester:'S1',batch:'Batch B',type:'quiz',totalMarks:30,examDate:new Date(Date.now()+86400000)});
   await models.Quiz.create({title:'Native quiz A',quizCode:'QA',course:course._id,academicYear:'2026',batch:'Batch A',totalMarks:20,quizDate:new Date(Date.now()+86400000),status:'published'});
   result=await request('GET','/teacher/my-course'+query);assert.deepStrictEqual(result.body.assessments.map(a=>a.title).sort(),['Native quiz A','Shared exam']);assert.strictEqual(result.body.upcomingExams.length,2);
+  const legacyRosterUser=await models.User.create({name:'Different year student',email:'different-year@workspace.test',role:'student',password});
+  const legacyRosterStudent=await models.Student.create({user:legacyRosterUser._id,studentId:'TL-2027-01',gender:'female',academicYear:'2027',batch:'Batch A'});
+  await models.Enrollment.create({student:legacyRosterStudent._id,course:course._id,academicYear:'2027',batch:'Batch A'});
+  const unrelatedExam=await models.Exam.create({title:'Other course exam',course:foreign._id,academicYear:'2026',type:'exam',totalMarks:20,examDate:new Date()});
+  result=await request('GET','/teacher/results/assessments');assert.strictEqual(result.status,200);assert(!result.body.assessments.some(a=>a._id===String(unrelatedExam._id)));
+  result=await request('GET','/teacher/results/exam/'+globalExam._id);assert.strictEqual(result.status,200);assert.strictEqual(result.body.students.length,3,'Standalone gradebook includes course enrollments with different year labels');
+  assert.strictEqual((await request('GET','/teacher/results/exam/'+unrelatedExam._id)).status,404);
+  assert.strictEqual((await request('PUT','/teacher/results/exam/'+globalExam._id,{results:[{studentId:legacyRosterStudent._id,marksObtained:16}]})).status,200);
+  const savedPerformance=await request('GET','/teacher/performance?courseId='+course._id);
+  assert.strictEqual(savedPerformance.status,200);
+  const savedStudent=savedPerformance.body.students.find(s=>s._id===String(legacyRosterStudent._id));assert(savedStudent?.hasMarks,'Saved gradebook result must appear in performance despite legacy year mismatch');assert(savedStudent.assessmentResults.some(r=>r.marks===16&&r.assessmentId==='exam:'+globalExam._id));
+
   result=await request('GET','/teacher/results/assessments'+query);assert.strictEqual(result.status,200);assert.strictEqual(result.body.assessments.length,2);
   result=await request('GET','/teacher/results/exam/'+globalExam._id+query);assert.strictEqual(result.body.students.length,1);assert.strictEqual(result.body.students[0]._id,String(students[0].student._id));
   assert.strictEqual((await request('PUT','/teacher/results/exam/'+globalExam._id+query,{results:[{studentId:students[1].student._id,marksObtained:18}]})).status,403);

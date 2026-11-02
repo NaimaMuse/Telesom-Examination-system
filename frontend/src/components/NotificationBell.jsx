@@ -1,3 +1,4 @@
+import TeachingIcon from './TeachingIcon';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -41,7 +42,7 @@ export default function NotificationBell({ userId, onNavigate }) {
   const unread = items.filter(item => !read.includes(item.id));
   return <div className="notification-bell" ref={wrapper}>
     <button ref={trigger} type="button" className="topbar-icon-btn" aria-label={`Notifications${unread.length ? `, ${unread.length} unread` : ''}`} aria-expanded={open} aria-controls="notification-panel" onClick={() => setOpen(value => !value)}>
-      <span aria-hidden="true">🔔</span>{unread.length > 0 && <span className="notification-count">{unread.length > 99 ? '99+' : unread.length}</span>}
+      <TeachingIcon name="bell" size={20}/>{unread.length > 0 && <span className="notification-count">{unread.length > 99 ? '99+' : unread.length}</span>}
     </button>
     {open && <section className="notification-panel" id="notification-panel" aria-label="Notifications">
       <header><div><strong>Important notices</strong><p>Upcoming exams, quizzes & assessments · next 7 days</p></div><button type="button" aria-label="Close notifications" onClick={() => {setOpen(false);trigger.current?.focus();}}>×</button></header>

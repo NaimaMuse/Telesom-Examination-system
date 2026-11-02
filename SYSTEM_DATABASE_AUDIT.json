@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-29T08:16:38.508Z",
+  "mode": "read-only",
+  "collections": {
+    "User": 40,
+    "Student": 31,
+    "Teacher": 8,
+    "Sequence": 1,
+    "Batch": 1,
+    "CourseTeacher": 8,
+    "Course": 4,
+    "Enrollment": 12,
+    "Exam": 7,
+    "Quiz": 0,
+    "ExamResult": 20,
+    "QuizResult": 0,
+    "Note": 3,
+    "TeacherContract": 1,
+    "TeachingLesson": 3,
+    "Attendance": 5,
+    "AttendanceImport": 0,
+    "CourseOutline": 5,
+    "MakeupClass": 0,
+    "Counter": 0
+  },
+  "brokenReferences": [],
+  "yearLabelMismatches": 6,
+  "api": {
+    "checked": 491,
+    "passed": 491,
+    "failures": []
+  },
+  "accounts": {
+    "admin": 1,
+    "teacher": 8,
+    "student": 31
+  },
+  "studentsWithoutEnrollment": 20
+}

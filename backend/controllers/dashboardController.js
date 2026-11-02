@@ -131,5 +131,6 @@ module.exports.getAdminDashboard = asyncHandler(async (req,res) => {
     id: type + ':' + record._id, title, to, createdAt: record.createdAt,
     description: record.user?.name || record.title || record.name || record.studentId || 'Account unavailable',
   }))).sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0) || b.id.localeCompare(a.id)).slice(0,5);
-  res.json({success:true,data:{recentActivities,totals:{students,teachers,courses,assessments:exams+quizzes},recentStudents:recent.map(student=>({_id:student._id,createdAt:student.createdAt,name:student.user?.name||'Student account unavailable',email:student.user?.email||'',studentId:student.studentId,status:student.user?.isActive===false?'inactive':student.status||'active'}))}});
+  const history=await require('../services/adminDashboardHistoryService').loadDashboardHistory();
+  res.json({success:true,data:{history,recentActivities,totals:{students,teachers,courses,assessments:exams+quizzes},recentStudents:recent.map(student=>({_id:student._id,createdAt:student.createdAt,name:student.user?.name||'Student account unavailable',email:student.user?.email||'',studentId:student.studentId,status:student.user?.isActive===false?'inactive':student.status||'active'}))}});
 });

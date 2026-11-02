@@ -1,104 +1,26 @@
-import { Link } from 'react-router-dom';
-import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import TeachingIcon from '../../components/TeachingIcon';
+import './AdminDashboard.css';
+import {Link} from 'react-router-dom';
+import {usePageSearch,matchesPageSearch} from '../../context/PageSearchContext';
+import {useState} from 'react';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import api from '../../services/api';
 
-function StatCard({ icon, label, value, color, trend }) {
-  return (
-    <div className="stat-card">
-      <div className={`stat-icon ${color}`}>{icon}</div>
-      <div className="stat-info">
-        <div className="stat-value">{value ?? '—'}</div>
-        <div className="stat-label">{label}</div>
-        {trend && <div className={`stat-trend ${trend.dir}`}>{trend.text}</div>}
-      </div>
-    </div>
-  );
-}
-
-export default function AdminDashboard() {
-  const [stats,setStats] = useState(null);
-  const [recent,setRecent] = useState([]);
-  const [loading,setLoading] = useState(true);
-  const [error,setError] = useState('');
-  const [revision,setRevision] = useState(0);
-  const [search] = usePageSearch();
-  const visibleRecent = recent.filter(student => matchesPageSearch(search,student.title,student.description));
-  useEffect(() => {
-    let active=true,busy=false;
-    const controller=new AbortController();
-    const load=async()=>{
-      if(busy)return;busy=true;
-      try {
-        const {data}=await api.get('/dashboard/admin',{signal:controller.signal});
-        if(!active)return;
-        setStats(data.data.totals);setRecent(data.data.recentActivities||[]);setError('');
-      }catch(error){if(active)setError(error.response?.data?.message||'Dashboard could not refresh. Retrying automatically; previously loaded data may be out of date.');}
-      finally{busy=false;if(active)setLoading(false);}
-    };
-    load();
-    const refresh=()=>{if(!document.hidden)load();};
-    const timer=setInterval(refresh,5000);
-    window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
-    return()=>{active=false;controller.abort();clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);};
-  },[revision]);
-
-  return (
-    <>
-      {error && <div role="alert" style={{padding:'12px 16px',marginBottom:16,borderRadius:8,background:'#fff7ed',color:'#9a7847',fontSize:12}}>{error} <button className="btn btn-sm btn-secondary" onClick={()=>setRevision(value=>value+1)}>Retry</button></div>}
-      {/* Stats */}
-      <div className="stats-grid admin-dashboard-stats">
-        <StatCard icon="🎓" label="Total Students"  value={stats?.students} color="green"   />
-        <StatCard icon="👨‍🏫" label="Total Teachers"  value={stats?.teachers} color="gold"   />
-        <StatCard icon="📚" label="Total Courses"   value={stats?.courses}  color="green"  />
-        <StatCard icon="📝" label="Total Assessments"     value={stats?.assessments}    color="gold"   />
-      </div>
-
-      <div className="grid-2 admin-dashboard-panels">
-        {/* Quick actions */}
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">Quick Actions</span>
-          </div>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {[
-              { label: 'Add New Student',   to: '/admin/students',   icon: '🎓' },
-              { label: 'Add New Teacher',   to: '/admin/teachers',   icon: '👨‍🏫' },
-              { label: 'Create Course',     to: '/admin/courses',    icon: '📚' },
-              { label: 'View Assessments',     to: '/admin/exams',      icon: '📝' },
-              { label: 'View Analytics',    to: '/admin/analytics',  icon: '📈' },
-            ].map(a => (
-              <Link key={a.to} to={a.to} className="quick-action-link">
-                <span>{a.icon}</span> {a.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-        <section className="card" aria-labelledby="recent-activities-title">
-          <div className="card-header">
-            <span className="card-title" id="recent-activities-title">Recent Activities</span>
-          </div>
-          <div className="card-body">
-            {!visibleRecent.length ? (
-              <div className="empty-state" role="status">
-                {loading ? 'Loading activities…' : search ? 'No activities match your search.' : error ? 'Recent activities unavailable.' : 'No recent activities yet.'}
-              </div>
-            ) : (
-              <ul className="admin-activity-list">
-                {visibleRecent.slice(0,3).map(student => (
-                  <li key={student.id}>
-                    <span className="admin-activity-dot" aria-hidden="true" />
-                    <div className="admin-activity-content">
-                      <Link to={student.to}>{student.title}</Link>
-                      <p>{student.description}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
-      </div>
-    </>
-  );
+const actions=[['Add New Student','/admin/students','graduate','green'],['Add New Teacher','/admin/teachers','teacher','gold'],['Create Course','/admin/courses','book','blue'],['View Assessments','/admin/exams','clipboard','purple'],['View Analytics','/admin/analytics','chart','rose'],['Generate Report','/admin/reports','file','green']];
+const metrics=[['students','Total Students','graduate','green'],['teachers','Total Teachers','teacher','gold'],['courses','Total Courses','book','blue'],['assessments','Total Assessments','clipboard','purple']];
+function Sparkline({values,color,id}){const max=Math.max(1,...values),points=values.map((v,i)=>`${i*72/Math.max(1,values.length-1)},${32-v/max*27}`).join(' ');return <svg className="rd-spark" viewBox="0 0 74 36" aria-hidden="true"><defs><linearGradient id={id} x1="0" x2="0" y1="0" y2="1"><stop stopColor={color} stopOpacity=".2"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs><polygon points={`0,36 ${points} 72,36`} fill={`url(#${id})`}/><polyline points={points} fill="none" stroke={color} strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round"/></svg>;}
+function AcademyArt(){return <svg className="rd-academy-art" viewBox="0 0 290 155" aria-hidden="true"><defs><linearGradient id="rd-book" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#31B44A"/><stop offset="1" stopColor="#00593f"/></linearGradient><filter id="rd-shadow"><feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="#165c32" floodOpacity=".17"/></filter></defs><circle cx="165" cy="84" r="71" fill="#fff" opacity=".24"/><g fill="#31b44a" opacity=".25"><path d="m42 40 8-5 6 11-8 5zM242 35l7-6 5 7-7 6zM220 117l7-4 6 10-7 4z"/><circle cx="60" cy="112" r="4"/></g><g filter="url(#rd-shadow)"><path d="m85 119 112-14 51 18-113 18-50-13z" fill="#0c7148"/><path d="m92 118 105-10 43 14-105 15-43-11z" fill="#faf5df"/><path d="m85 113 111-13 52 17-113 17-50-13z" fill="url(#rd-book)"/><path d="m101 96 96-11 34 15-94 14-36-12z" fill="#D7982F"/><path d="m108 96 88-8 28 11-87 12-29-9z" fill="#fffdf2"/><path d="m101 91 95-11 35 15-94 13-36-11z" fill="#fff"/><path d="m115 71 74-9 20 18-75 12-19-12z" fill="url(#rd-book)"/><path d="m145 46 54-2-3 26c-17 12-34 11-51 1z" fill="#00613e"/><path d="m112 46 61-21 70 19-64 24z" fill="#009555"/><path d="m112 46 61-16 70 14-64 19z" fill="#007642"/><path d="m173 46-37 11v24" stroke="#D7982F" strokeWidth="3" fill="none"/><path d="m132 83 4-10 4 10z" fill="#D7982F"/></g></svg>;}
+function OverviewChart({history,loading}){const [period,setPeriod]=useState(6);const rows=history.slice(-period),max=Math.max(5,Math.ceil(Math.max(0,...rows.flatMap(r=>[r.students,r.courses]))/5)*5),x=i=>40+i*302/Math.max(1,rows.length-1),y=v=>170-v/max*140;return <section className="rd-panel rd-overview"><header><h2><TeachingIcon name="chart" size={18}/>Students &amp; Courses Overview</h2><select aria-label="Chart period" value={period} onChange={e=>setPeriod(Number(e.target.value))}><option value={6}>Last 6 Months</option><option value={12}>Last 12 Months</option></select></header><div className="rd-chart-legend"><span>Students</span><span>Courses</span></div>{loading?<div className="rd-empty">Loading overview…</div>:!rows.length?<div className="rd-empty">No history available.</div>:<svg className="rd-chart" viewBox="0 0 365 208" role="img" aria-label="Cumulative student and course records by month"><defs><linearGradient id="rd-chart-fill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="#31B44A" stopOpacity=".22"/><stop offset="1" stopColor="#31B44A" stopOpacity="0"/></linearGradient></defs>{Array.from({length:6},(_,i)=>{const v=max*i/5;return <g key={i}><line x1="38" x2="345" y1={y(v)} y2={y(v)} stroke="#edf1ef"/><text x="28" y={y(v)+3} textAnchor="end">{Number(v.toFixed(1))}</text></g>;})}<polygon points={`${x(0)},170 ${rows.map((r,i)=>`${x(i)},${y(r.students)}`).join(' ')} ${x(rows.length-1)},170`} fill="url(#rd-chart-fill)"/>{[['students','#20a958'],['courses','#e9a318']].map(([key,color])=><g key={key}><polyline points={rows.map((r,i)=>`${x(i)},${y(r[key])}`).join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>{rows.map((r,i)=><circle key={r.month} cx={x(i)} cy={y(r[key])} r="3.3" fill={color}><title>{r.month}: {r[key]} {key}</title></circle>)}</g>)}{rows.map((r,i)=><text key={r.month} x={x(i)} y="192" textAnchor="middle">{period===12&&i%2!==0?'':r.label}</text>)}</svg>}<p className="rd-chart-note">Cumulative records · based on registration dates</p></section>;}
+function relativeTime(value){const minutes=Math.max(0,Math.floor((Date.now()-new Date(value))/60000));if(!Number.isFinite(minutes))return '';if(minutes<1)return 'Just now';if(minutes<60)return minutes+' min ago';if(minutes<1440)return Math.floor(minutes/60)+'h ago';return Math.floor(minutes/1440)+'d ago';}
+export default function AdminDashboard(){
+ const [data,setData]=useState(null),[error,setError]=useState(''),[revision,setRevision]=useState(0),[search]=usePageSearch();
+ useAutoRefresh(async({signal,isCurrent})=>{try{const response=await api.get('/dashboard/admin',{signal});if(isCurrent()){setData(response.data.data);setError('');}}catch(e){if(isCurrent())setError(e.response?.data?.message||'Dashboard could not refresh. Previously loaded data may be out of date.');}},{interval:5000,deps:[revision]});
+ const history=data?.history||[],recent=(data?.recentActivities||[]).filter(r=>matchesPageSearch(search,r.title,r.description)),colors={green:'#20a958',gold:'#e9a318',blue:'#2189ff',purple:'#ab4df4'};
+ return <div className="reference-dashboard">{error&&<div className="rd-error" role="alert">{error}<button onClick={()=>setRevision(v=>v+1)}>Retry</button></div>}
+ <section className="rd-welcome"><div><span>ADMIN DASHBOARD</span><h1>Welcome back, Admin! <span aria-hidden="true">👋</span></h1><p>Here’s an overview of your academy. Manage students, courses, exams, and more.</p></div><AcademyArt/><blockquote>“Empowering<br/>Tomorrow’s Talent”<i/></blockquote></section>
+ <section className="rd-metrics" aria-label="Academy totals">{metrics.map(([key,label,icon,color])=>{const previous=history.at(-2)?.[key],current=data?.totals?.[key],change=previous>0?Math.round((current-previous)/previous*100):null;return <article key={key} className={'rd-metric rd-'+color}><div className="rd-metric-icon"><TeachingIcon name={icon} size={25}/></div><div><strong>{current??'—'}</strong><span>{label}</span><small>{!data?'Loading…':change!==null?<><b>{change>=0?'↑':'↓'} {Math.abs(change)}%</b> from last month</>:current>0?'New records this month':'No records yet'}</small></div>{history.length>0&&<Sparkline values={history.slice(-6).map(r=>r[key])} color={colors[color]} id={'rd-spark-'+key}/>}</article>;})}</section>
+ <div className="rd-main-grid"><section className="rd-panel rd-actions"><header><h2><TeachingIcon name="bolt" size={18}/>Quick Actions</h2></header><div className="rd-actions-grid">{actions.map(([label,to,icon,color])=><Link key={to} to={to} className={'rd-action rd-'+color}><span><TeachingIcon name={icon} size={23}/></span><strong>{label}</strong><i aria-hidden="true">›</i></Link>)}</div></section>
+ <OverviewChart history={history} loading={!data&&!error}/>
+ <section className="rd-panel rd-recent"><header><h2><TeachingIcon name="clock" size={18}/>Recent Activities</h2><Link to="/admin/reports">View reports →</Link></header><ul>{recent.map(r=>{const type=r.id.split(':')[0],icon=type==='student'?'profile':type==='teacher'?'teacher':type==='course'?'book':'clipboard',color=type==='student'?'blue':type==='teacher'?'rose':type==='course'?'gold':'green';return <li key={r.id}><span className={'rd-activity-icon rd-'+color}><TeachingIcon name={icon} size={17}/></span><div><Link to={r.to}>{r.title}</Link><p>{r.description}</p></div><time dateTime={r.createdAt} title={new Date(r.createdAt).toLocaleString('en-GB',{timeZone:'Africa/Nairobi'})}>{relativeTime(r.createdAt)}</time></li>;})}</ul>{!recent.length&&<p className="rd-empty">{!data&&!error?'Loading activities…':search?'No matching activities.':'No recent activities.'}</p>}</section></div>
+ </div>;
 }

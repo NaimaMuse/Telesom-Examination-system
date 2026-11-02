@@ -61,6 +61,7 @@ router.put('/profile-picture',authorizeRoles('teacher'),upload.single('file'),sa
 router.put('/profile-picture/:teacherId',authorizeRoles('admin'),upload.single('file'),saveProfilePicture);
 router.delete('/profile-picture',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{const teacher=await teacherFor(req.user);teacher.profilePicture='';await teacher.save();res.json({picture:''});}));
 router.get('/outlines',asyncHandler(async(req,res)=>{
+  res.set('Cache-Control','no-store');
   let filter={};
   if(req.user.role==='teacher')filter.teacher=(await teacherFor(req.user))._id;
   if(req.user.role==='student'){

@@ -8,3 +8,7 @@ report=buildAnalytics(data,records,{course:'c1',batch:'2025'});assert.equal(repo
 report=buildAnalytics(data,records,{teacher:'t2'});assert.equal(report.summary.average,20);assert.equal(report.courses.length,1);
 report=buildAnalytics(data,records,{from:'2026-10-02',to:'2026-10-03'});assert.equal(report.summary.attendanceRate,0);assert.equal(report.monthly.length,1);
 console.log('Admin analytics tests passed: unique students, course totals, final grades, attendance deduplication, zero scores and filters.');
+
+report=buildAnalytics(data,records,{course:'c1',teacher:'t1',batch:'2026',from:'2026-10-01',to:'2026-10-02',attendanceStatus:'absent'});assert.equal(report.summary.attendanceRecords,1);assert.equal(report.monthly[0].absent,1);assert.equal(report.summary.recorded,1);
+report=buildAnalytics(data,records,{attendanceStatus:'present'});assert.equal(report.summary.attendanceRecords,0,'Status filter applies after latest daily record wins');
+report=buildAnalytics(data,records,{attendanceStatus:'',from:'',to:''});assert.equal(report.summary.attendanceRecords,3,'All statuses and dates preserve every latest record');

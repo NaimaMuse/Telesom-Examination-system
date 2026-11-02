@@ -18,7 +18,9 @@ const generateToken = require('../utils/generateToken');
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const BASE_URL = `http://localhost:${process.env.PORT || 5000}`;
+let BASE_URL;
+let testServer;
+const isolatedDbName = `telesom_user_test_${require('crypto').randomBytes(6).toString('hex')}`;
 const stamp = Date.now();
 const adminEmail = `userctrl.admin.${stamp}@telesom.local`;
 const studentEmail = `userctrl.student.${stamp}@telesom.local`;
@@ -120,7 +122,16 @@ const run = async () => {
   if (!process.env.MONGODB_URI || !process.env.JWT_SECRET) {
     throw new Error('MONGODB_URI and JWT_SECRET must be set in backend/.env');
   }
+  const isolatedUrl = new URL(process.env.MONGODB_URI);
+  isolatedUrl.pathname = '/'+isolatedDbName;
+  process.env.MONGODB_URI = isolatedUrl.toString();
   assertSafeTestDatabase(process.env.MONGODB_URI);
+  await mongoose.connect(process.env.MONGODB_URI, {serverSelectionTimeoutMS:8000});
+  if(mongoose.connection.name!==isolatedDbName)throw new Error('Unexpected test database');
+  databaseConnected = true;
+  const {app}=require('../server');
+  testServer=await new Promise(resolve=>{const server=app.listen(0,'127.0.0.1',()=>resolve(server));});
+  BASE_URL='http://127.0.0.1:'+testServer.address().port;
 
   const health = await requestJson('GET', '/api/health');
   assert(
@@ -128,10 +139,7 @@ const run = async () => {
     'GET /api/health is reachable'
   );
 
-  await mongoose.connect(process.env.MONGODB_URI, {
-    serverSelectionTimeoutMS: 8000,
-  });
-  databaseConnected = true;
+
   console.log('Connected to MongoDB for test setup');
 
   const adminPassword = 'AdminTestPass1';
@@ -308,28 +316,32 @@ const run = async () => {
     'Admin can enroll a student in a course'
   );
 
+  const assignment=await requestJson('POST','/api/course-teachers',{token:adminToken,body:{teacher:createdIds.teacherProfile,course:createdIds.course,academicYear:'2026'}});
+  createdIds.assignment=assignment.json?.data?._id;
+  assert(assignment.status===201,'Admin assigns the course to the teacher');
   const examDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const exam = await requestJson('POST', '/api/exams', {
-    token: adminToken,
+    token: teacherLogin.json?.token,
     body: {
       title: 'Integration Test Exam',
       examCode: `INT-${stamp}`,
       course: createdIds.course,
-      totalMarks: 100,
-      passingMarks: 50,
+      totalMarks: 70,
+      passingMarks: 35,
       examDate,
       durationMinutes: 60,
     },
   });
+  if(exam.status!==201)console.error('Exam creation response:',exam.status,exam.json?.message);
   createdIds.exam = exam.json?.data?._id;
-  assert(exam.status === 201 && createdIds.exam, 'Admin can schedule an exam');
+  assert(exam.status === 201 && createdIds.exam, 'Assigned teacher can schedule an exam');
 
   const examResult = await requestJson('POST', '/api/exam-results', {
     token: adminToken,
     body: {
       exam: createdIds.exam,
       student: createdIds.studentProfile,
-      marksObtained: 80,
+      marksObtained: 56,
     },
   });
   createdIds.examResult = examResult.json?.data?._id;
@@ -426,7 +438,7 @@ const run = async () => {
   );
   assert(
     deactivatedStudent.status === 200 &&
-      deactivatedStudent.json?.data?.status === 'inactive' &&
+      deactivatedStudent.json?.data?.status === 'dropped' &&
       studentAccountAfterDeactivation?.isActive === false,
     'Student deactivation preserves records and disables account access'
   );
@@ -504,6 +516,7 @@ const cleanup = async () => {
     if (createdIds.enrollment) {
       await Enrollment.findByIdAndDelete(createdIds.enrollment);
     }
+    if(createdIds.assignment)await require('../models/CourseTeacher').findByIdAndDelete(createdIds.assignment);
     if (createdIds.course) {
       await Course.findByIdAndDelete(createdIds.course);
     }
@@ -533,6 +546,7 @@ const cleanup = async () => {
   } catch (error) {
     console.error('Cleanup warning:', error.message);
   } finally {
+    if(testServer)await new Promise(resolve=>testServer.close(resolve));
     await mongoose.disconnect();
     databaseConnected = false;
   }

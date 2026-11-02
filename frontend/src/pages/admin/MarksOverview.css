@@ -29,3 +29,25 @@
 .marks-dialog .ao-table-wrap :is(th,td):not(:first-child) { width: 18%; }
 .marks-dialog button:focus-visible { outline: 3px solid #e5bb50; outline-offset: 3px; }
 @media (max-width: 520px) { .marks-dialog > header, .marks-dialog .ao-dialog-body { padding: 16px; } .marks-detail-metrics { gap: 6px; } .marks-detail-metrics > div { padding: 9px; } .marks-dialog .marks-course-total > strong { font-size: 23px; } }
+/* Compact student results popup. */
+.ao-dialog.marks-dialog { width:560px; max-width:100%; max-height:85vh; border-radius:13px; }
+.marks-dialog > header { padding:13px 16px; gap:12px; border-bottom:2px solid #D7982F; }
+.marks-dialog header small { font-size:8px; }
+.marks-dialog header h2 { font-size:16px; line-height:1.35; margin:4px 0; }
+.marks-dialog header p { font-size:10px; }
+.marks-dialog header button { width:28px; height:28px; font-size:18px; }
+.marks-dialog .ao-dialog-body { padding:14px 16px 16px; }
+.marks-dialog .marks-course-total { padding:11px 13px; gap:12px; border-radius:8px; }
+.marks-dialog .marks-course-total span { font-size:12px; }
+.marks-dialog .marks-course-total small { font-size:9px; margin-top:4px; }
+.marks-dialog .marks-course-total > strong { font-size:24px; }
+.marks-dialog .marks-course-total > strong small { font-size:10px; }
+.marks-dialog .marks-detail-metrics { gap:8px; margin:10px 0 13px; }
+.marks-dialog .marks-detail-metrics > div { padding:9px 10px; border-radius:7px; }
+.marks-dialog .marks-detail-metrics span { font-size:9px; margin-bottom:5px; }
+.marks-dialog .marks-detail-metrics strong { font-size:16px; }
+.marks-dialog .marks-detail-metrics .marks-detail-result { font-size:11px; }
+.marks-dialog .marks-assessment-heading { font-size:12px; margin-block:12px 9px; }
+.marks-dialog .ao-table-wrap th { padding:8px; font-size:9px; }
+.marks-dialog .ao-table-wrap td { padding:9px 8px; font-size:10px; }
+@media(max-width:420px) { .marks-dialog > header,.marks-dialog .ao-dialog-body { padding:12px; }.marks-dialog .marks-course-total > strong { font-size:21px; }.marks-dialog .marks-detail-metrics > div { padding:8px; } }

@@ -1,3 +1,4 @@
+import './AssessmentForm.css';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useCallback, useEffect } from 'react';
@@ -67,10 +68,10 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-box assessment-form-modal" role="dialog" aria-modal="true" aria-labelledby="assessment-form-title" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <span className="modal-title">{title}</span>
-          <button type="button" className="modal-close" onClick={onClose}>✕</button>
+          <div><span className="assessment-form-eyebrow">TELESOM ACADEMY · ASSESSMENTS</span><h2 id="assessment-form-title" className="modal-title">{title}</h2></div>
+          <button type="button" className="modal-close" aria-label="Close assessment form" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
@@ -106,8 +107,8 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
                         {assignedCourses[0].courseCode || assignedCourses[0].code} — {assignedCourses[0].title || assignedCourses[0].name}
                       </option>
                     </select>
-                    <small style={{ color: 'var(--primary)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontWeight: 600 }}>
-                      ✓ Your assigned course ({assignedCourses[0].courseCode || assignedCourses[0].code}) is automatically locked.
+                    <small className="assessment-course-hint">
+                      ✓ Assigned course is locked to your account.
                     </small>
                   </>
                 ) : assignedCourses.length > 1 ? (
@@ -192,7 +193,7 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              <div className="form-group"><label className="form-label">Batch (leave empty for all batches)</label><input readOnly={!!fixedScope} className="form-control" value={form.batch||''} onChange={e=>setForm(p=>({...p,batch:e.target.value}))}/></div>
+              <div className="form-group"><label className="form-label">Batch (optional)</label><input readOnly={!!fixedScope} className="form-control" value={form.batch||''} onChange={e=>setForm(p=>({...p,batch:e.target.value}))}/></div>
 <div className="form-group"><label className="form-label">Publish marks</label><select className="form-control" value={form.marksPublished?'published':'unpublished'} onChange={e=>setForm(p=>({...p,marksPublished:e.target.value==='published'}))}><option value="unpublished">Unpublished marks</option><option value="published">Publish marks to students</option></select></div>
               <div className="form-group"><label className="form-label">Student visibility</label><select className="form-control" value={form.visibleToStudents?'visible':'hidden'} onChange={e=>setForm(p=>({...p,visibleToStudents:e.target.value==='visible'}))}><option value="hidden">Hidden from students</option><option value="visible">Visible to students</option></select></div>
             </div>
