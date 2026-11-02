@@ -1,3 +1,5 @@
+import AcademyHeader from './AcademyHeader';
+import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
 import {AcademyReports,BatchManagement,CourseOutlines,MakeupClasses} from './AcademyWorkspace';
 import TeacherContracts from './TeacherContracts';
@@ -9,6 +11,7 @@ import { NavLink, Routes, Route, Navigate, useNavigate, useLocation } from 'reac
 import { useAuth } from '../context/AuthContext';
 import './dashboard.css';
 import './dashboard-theme.css';
+import './AcademySidebar.css';
 import { PageSearchContext } from '../context/PageSearchContext';
 
 // ─── Admin Pages ───────────────────────────────────────────────
@@ -37,6 +40,13 @@ import StudentQuizzes    from '../pages/student/StudentQuizzes';
 import StudentNotes      from '../pages/student/StudentNotes';
 import StudentAttendance from '../pages/student/StudentAttendance';
 import StudentProfile    from '../pages/student/StudentProfile';
+
+import '../pages/teacher/TeacherDashboardLayout.css';
+import '../pages/teacher/TeacherDashboardReference.css';
+
+function DashboardContentFrame({active, children}) {
+  return active ? <div className="dashboard-main">{children}</div> : children;
+}
 
 // ─── Nav config per role ─────────────────────────────────────────
 const NAV = {
@@ -76,7 +86,7 @@ const NAV = {
         { to: '/teacher', label: 'Dashboard', icon: 'grid', end: true },
         { to: '/teacher/my-course', label: 'My Course', icon: 'book' },
         { to: '/teacher/exams', label: 'Exams & Quizzes', icon: 'clipboard' },
-        { to: '/teacher/results', label: 'Result', icon: 'clipboard' },
+        { to: '/teacher/results', label: 'Results & Marks', icon: 'clipboard' },
         { to: '/teacher/performance', label: 'Student Performance', icon: 'chart' },
         { to: '/teacher/makeup', label: 'Makeup Classes', icon: 'reschedule' },
         { to: '/teacher/profile', label: 'My Profile', icon: 'profile' },
@@ -219,6 +229,17 @@ export default function DashboardLayout({ role }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const teacherHome = role === 'teacher' && location.pathname === '/teacher';
+  const [teacherAvatar, setTeacherAvatar] = useState('');
+  useEffect(() => {
+    setTeacherAvatar('');
+    if (role !== 'teacher') return;
+    const controller = new AbortController();
+    api.get('/teacher/profile', {signal:controller.signal}).then(({data}) => {
+      if (!controller.signal.aborted) setTeacherAvatar(data.teacher?.profilePicture || '');
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [role, user?._id, location.pathname]);
   const [dataVersion, setDataVersion] = useState(0);
   const [showGreeting, setShowGreeting] = useState(true);
   useEffect(() => {
@@ -262,9 +283,9 @@ export default function DashboardLayout({ role }) {
   };
 
   return (
-    <div className={`dash-shell ${role === 'teacher' ? 'teacher-shell' : ''} ${role === 'admin' && location.pathname === '/admin' ? 'admin-home-shell' : ''}`}>
+    <div className={`dash-shell ${role === 'teacher' ? 'teacher-shell' : ''} ${teacherHome ? 'teacher-dashboard-shell' : ''} ${sidebarOpen ? 'academy-menu-open' : ''} ${teacherHome && sidebarOpen ? 'teacher-dashboard-collapsed' : ''} ${role === 'admin' && location.pathname === '/admin' ? 'admin-home-shell' : ''}`}>
       {role === 'teacher' && user?.mustChangePassword && <ChangePasswordModal required onSignOut={handleLogout} />}
-      {showGreeting && !user?.mustChangePassword && <div className="dashboard-greeting-popup" role="status">
+      {showGreeting && !teacherHome && !user?.mustChangePassword && <div className="dashboard-greeting-popup" role="status">
         <span className="dashboard-greeting-mark" aria-hidden="true">☀</span>
         <div><strong>{greeting()}, {firstName}</strong><p>Welcome to your {role} dashboard.</p></div>
         <button type="button" aria-label="Dismiss greeting" onClick={() => setShowGreeting(false)}>×</button>
@@ -276,24 +297,19 @@ export default function DashboardLayout({ role }) {
       />
 
       {/* ── Sidebar ── */}
-      <aside className={`dash-sidebar ${staffSidebar ? 'admin-sidebar' : ''} ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`dash-sidebar academy-sidebar ${sidebarOpen ? 'open' : ''}`}>
         {/* Brand */}
         <div className="sidebar-brand">
           <TelesomLogo size="lg" showText={false} />
           <div className="sidebar-brand-text">
-            <strong>Telesom</strong>
-            <span>{staffSidebar ? (role === 'admin' ? 'Admin' : 'Teacher') : 'Academy Portal'}</span>
+            <strong>Telesom Academy</strong>
           </div>
         </div>
-
-        {/* Role badge */}
-        {!staffSidebar && <div className="sidebar-role-badge">{userRole}</div>}
 
         {/* Navigation */}
         <nav className="sidebar-nav">
           {navSections.map((section) => (
             <div key={section.section}>
-              {!staffSidebar && <div className="sidebar-section-label">{section.section}</div>}
               {section.items.map((item) => (
                 item.logout ? (
                   <button
@@ -325,71 +341,23 @@ export default function DashboardLayout({ role }) {
               ))}
             </div>
           ))}
+          {<button type="button" className="sidebar-link sidebar-link-button academy-sidebar-signout" onClick={handleLogout}><span className="sidebar-link-icon"><TeachingIcon name="arrow" size={21}/></span>Sign Out</button>}
         </nav>
 
-        {/* Footer */}
-        {!staffSidebar && <div className="sidebar-footer">
-          <button className="btn-logout" onClick={handleLogout}>
-            <span>🚪</span> Sign Out
-          </button>
-        </div>}
+        {<><div className="teacher-sidebar-motto"><TeachingIcon name="graduate" size={48}/><p>Learn <span>•</span> Excel <span>•</span> Achieve</p></div><svg className="teacher-sidebar-wave" viewBox="0 0 250 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 18C65 72 125 66 250 108V120H0Z" fill="#E5A500"/><path d="M0 38C72 95 160 78 250 112V120H0Z" fill="#087A43"/><path d="M0 52C78 105 170 88 250 116V120H0Z" fill="#003d24"/></svg></>}
       </aside>
 
       {/* ── Main ── */}
       <div className="dash-main">
+        <DashboardContentFrame active={teacherHome}>
         {/* Top Bar */}
-        <header className="dash-topbar">
-          <div className="topbar-left">
-            <button
-              className="topbar-menu-btn"
-              onClick={() => setSidebarOpen(prev => !prev)}
-              aria-label="Toggle menu"
-            >
-              <TeachingIcon name="menu" size={21}/>
-            </button>
-            <div>
-              <div className={`topbar-page-title ${showGreetingInTopbar ? 'topbar-greeting' : ''}`}>
-                {topbarTitle}
-              </div>
-              {!hideTopbarSubtitle && (
-                <div className="topbar-page-subtitle">{pageMeta.hint}</div>
-              )}
-            </div>
-          </div>
-
-          <div className="topbar-right">
-            <div className={`topbar-search ${staffSidebar ? 'admin-topbar-search' : ''}`}>
-              <TeachingIcon name="search" size={18}/>
-              <input
-                type="text"
-                placeholder={role === 'admin' && location.pathname === '/admin' ? 'Search students, courses, exams, and more…' : `Search ${pageMeta.title.toLowerCase()}…`}
-                aria-label={`Search ${pageMeta.title}`}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-
-            <NotificationBell key={user?._id || user?.id} userId={user?._id || user?.id} onNavigate={() => setDataVersion(value => value + 1)} />
-
-            {role === 'admin' && location.pathname === '/admin' ? <details className="rd-account-menu"><summary><span className="rd-account-avatar">TA</span><span><strong>Telesom Academy</strong><small>Admin</small></span><span aria-hidden="true">⌄</span></summary><div><button type="button" aria-label="Sign Out" onClick={handleLogout}>Sign Out</button></div></details> : staffSidebar ? (
-              <button type="button" className="topbar-profile topbar-signout" onClick={handleLogout}>
-                Sign Out
-              </button>
-            ) : <NavLink
-              to={profilePath}
-              className="topbar-profile"
-              aria-label="My profile"
-              style={{ textDecoration: 'none' }}
-            >
-              <span className="topbar-profile-name" style={{ display: 'inline' }}>{userRole}</span>
-            </NavLink>}
-          </div>
-        </header>
+        <AcademyHeader role={role} user={user} avatar={role==='teacher' ? teacherAvatar : user?.profilePicture || ''} onToggleMenu={()=>setSidebarOpen(previous=>!previous)} onLogout={handleLogout} search={search} onSearch={setSearch} pageTitle={pageMeta.title} onNotificationNavigate={()=>setDataVersion(value=>value+1)} />
 
         {/* Page content */}
-        <main className={`dash-content ${isStudentCoursesPage ? 'student-courses-content' : ''} ${isStudentExamsPage ? 'student-exams-content' : ''} ${isStudentQuizzesPage ? 'student-quizzes-content' : ''} ${isStudentNotesPage ? 'student-notes-content' : ''} ${isStudentAttendancePage ? 'student-attendance-content' : ''} ${role === 'teacher' && location.pathname === '/teacher' ? 'teacher-home-content' : ''}`}>
+        <main className={`dash-content ${isStudentCoursesPage ? 'student-courses-content' : ''} ${isStudentExamsPage ? 'student-exams-content' : ''} ${isStudentQuizzesPage ? 'student-quizzes-content' : ''} ${isStudentNotesPage ? 'student-notes-content' : ''} ${isStudentAttendancePage ? 'student-attendance-content' : ''} ${role === 'teacher' && location.pathname === '/teacher' ? 'teacher-home-content dashboard-content' : ''}`}>
           <PageSearchContext.Provider key={`${user?._id || user?.id || 'anonymous'}:${dataVersion}`} value={[search, setSearch]}>{ROLE_ROUTES[role]}</PageSearchContext.Provider>
         </main>
+        </DashboardContentFrame>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ const controller = createResourceController(Course, {
     'name',
     'description',
     'credits',
+    'teachingSchedule',
     'status',
     'department',
     'semester',

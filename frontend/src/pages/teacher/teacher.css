@@ -1499,12 +1499,12 @@
   .profile-course-meta { margin-top: 0.35rem; padding-top: 0.3rem; }
 }
 /* Compact teacher navigation, with the content offset following its width. */
-@media (min-width:769px){.teacher-shell{--sidebar-w:232px}}
+@media (min-width:769px){.teacher-shell{}}
 .teacher-sidebar .sidebar-brand{padding-inline:1rem}
 .teacher-sidebar .sidebar-link{font-size:.8rem;padding-block:.62rem;gap:.65rem}
 .teacher-sidebar .sidebar-section-label{padding-top:.65rem}
 .teacher-sidebar .sidebar-brand-icon{width:34px;height:34px}
-@media (max-width:768px){.teacher-shell .dash-sidebar{width:232px;transform:translateX(-232px)}.teacher-shell .dash-sidebar.open{transform:translateX(0)}.teacher-shell .topbar-search{display:flex;width:150px;min-width:0}.teacher-shell .topbar-search input{min-width:0;width:100%}.teacher-shell .topbar-profile-name{display:none}}
+@media (max-width:768px){.teacher-shell .topbar-search{display:flex;width:150px;min-width:0}.teacher-shell .topbar-search input{min-width:0;width:100%}.teacher-shell .topbar-profile-name{display:none}}
 @media(max-width:480px){.teacher-shell .topbar-search{width:125px}.teacher-shell .topbar-right{gap:8px}.teacher-shell .topbar-page-subtitle{display:none}}
 /* Compact course workspace banner. */
 .teacher-course-page .course-page-hero{padding:.8rem 1rem;gap:.85rem;margin-bottom:.9rem;grid-template-columns:auto minmax(0,1fr) minmax(140px,.24fr)}
@@ -1534,3 +1534,8 @@
 .teacher-assessments-page .assessment-create-button{min-height:32px;padding:0 .75rem;gap:.35rem;font-size:.7rem}
 .teacher-assessments-page .assessment-create-button span{font-size:1rem}
 @media(max-width:700px){.teacher-assessments-page .assessments-hero{padding:.65rem .8rem;gap:.6rem}.teacher-assessments-page .assessments-hero h1{font-size:1rem}}
+
+.teacher-calendar-day.has-classes:not(.is-selected) { background: #f0f8f2; box-shadow: inset 0 -3px #75b386; }
+.teacher-calendar-day.has-classes .calendar-cell-event { font-weight: 600; }
+.teacher-home-contract-grid .weekly-preview .weekly-schedule-heading { padding: 10px 12px; }
+.teacher-home-contract-grid .weekly-preview-slots { padding: 10px; gap: 5px; }

@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {assessmentDateKey,normalizeCalendarAssessments,assessmentTime,shiftCalendarDate} from '../src/pages/teacher/assessmentCalendar.mjs';
+const exam={_id:'same',title:'Exam',type:'exam',status:'scheduled',examDate:'2026-11-02T00:00:00.000Z',startTime:'09:00 AM',durationMinutes:90};
+const quiz={_id:'same',title:'Quiz',status:'published',quizDate:'2026-11-02T00:00:00.000Z',durationMinutes:30};
+const rows=normalizeCalendarAssessments([exam,{...exam,_id:'draft',status:'draft'},{...exam,_id:'cancel',status:'cancelled'},{...exam,_id:'done',status:'completed'}],[quiz]);
+assert.equal(rows.length,2);assert.equal(new Set(rows.map(row=>row.calendarKey)).size,2);
+assert.equal(rows.find(row=>row.storageType==='quiz').type,'quiz');
+assert.equal(rows.filter(row=>assessmentDateKey(row.examDate)==='2026-11-02').length,2,'Today at midnight remains on the calendar');
+assert.equal(assessmentDateKey('2026-11-02T22:00:00Z'),'2026-11-03','Timed dates follow Nairobi');
+assert.equal(assessmentDateKey('bad'),'');
+assert.equal(assessmentTime(exam),'09:00–10:30');assert.equal(assessmentTime({...exam,startTime:'01:30 PM',durationMinutes:60}),'13:30–14:30');
+assert.equal(assessmentTime(quiz),'Time not set','Do not invent quiz times');
+let date=shiftCalendarDate(new Date(2026,0,31),1,'month');assert.equal(date.getMonth(),1);assert.equal(date.getDate(),28);
+date=shiftCalendarDate(new Date(2028,0,31),1,'month');assert.equal(date.getDate(),29);
+assert.equal(shiftCalendarDate(new Date(2026,10,2),1,'week').getDate(),9);
+console.log('Assessment calendar passed: exam/quiz sources, status filtering, today, Nairobi dates, actual times, identity and month boundaries.');

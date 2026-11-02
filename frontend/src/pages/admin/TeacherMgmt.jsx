@@ -1,3 +1,5 @@
+import { WeeklySchedulePreview } from '../../components/WeeklySchedule';
+import { contractEndDate } from '../teacher/teachingSchedule.mjs';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -33,7 +35,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
   const [teacherContracts,setTeacherContracts]=useState([]);
   const [contractsLoading,setContractsLoading]=useState(!!initial?._id);
   const [contractLoadError,setContractLoadError]=useState('');
-  const chooseContract=contract=>setForm(current=>({...current,editContractId:contract?._id||'',editContractDays:contract?.totalContractDays||'',editContractStart:contract?.startDate||'',editContractEnd:contract?.endDate||''}));
+  const chooseContract=contract=>setForm(current=>({...current,editContractBasis:contract?.dayBasis||'teaching',editContractId:contract?._id||'',editContractDays:contract?.totalContractDays||'',editContractStart:contract?.startDate||'',editContractEnd:contract?.endDate||''}));
   useEffect(()=>{
     if(!initial?._id)return;
     const controller=new AbortController();
@@ -43,15 +45,15 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
     }).catch(()=>{if(!controller.signal.aborted)setContractLoadError('Contracts could not load. Close and reopen the form to retry.');}).finally(()=>{if(!controller.signal.aborted)setContractsLoading(false);});
     return()=>controller.abort();
   },[initial?._id]);
-  const [picture, setPicture] = useState('');
+  const selectedCourse = courses.find(course => course._id === form.course);
   useEffect(() => {
-    if (!initial?._id) return;
-    const controller = new AbortController();
-    api.get('/academy/profile-picture/' + initial._id, {signal: controller.signal})
-      .then(({data}) => { if (!controller.signal.aborted) setPicture(data.picture || ''); })
-      .catch(() => {});
-    return () => controller.abort();
-  }, [initial?._id]);
+    if (initial?._id || !selectedCourse) return;
+    const batch=batches.find(item => item.name===selectedCourse.batch && item.academicYear===selectedCourse.academicYear);
+    setForm(current => ({...current,contractBatchId:batch?._id||'',contractBatch:batch?.name||'',contractAcademicYear:batch?.academicYear||''}));
+  }, [selectedCourse, batches, initial?._id]);
+  useEffect(() => {
+    setForm(current => ({...current,contractEnd:contractEndDate(current.contractStart,current.contractDays),...(current.editContractBasis==='calendar'?{editContractEnd:contractEndDate(current.editContractStart,current.editContractDays)}:{})}));
+  }, [form.contractStart, form.contractDays, form.editContractStart, form.editContractDays, form.editContractBasis]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const handleSubmit = async (e) => {
@@ -69,18 +71,6 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
         <div className="modal-header teacher-form-header"><div><span className="teacher-form-eyebrow">TELESOM ACADEMY</span><h2 className="modal-title" id="teacher-form-title">{title}</h2><p>Teacher account &amp; teaching contract</p></div><button type="button" className="modal-close" aria-label="Close teacher form" onClick={onClose}>×</button></div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            {initial?._id && <div className="teacher-edit-photo">
-              {picture && <img src={picture} alt="Teacher profile preview" />}
-              <div><label className="form-label" htmlFor="teacher-profile-photo">Profile photo (optional)</label>
-              <input id="teacher-profile-photo" type="file" accept="image/png,image/jpeg,image/webp" disabled={saving} onChange={event => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-                if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) { setError('Choose a PNG, JPEG or WebP image up to 2 MB.'); event.target.value = ''; return; }
-                setError(''); setForm(current => ({...current, profileFile: file}));
-                const reader = new FileReader(); reader.onload = () => setPicture(reader.result); reader.readAsDataURL(file);
-              }} />
-              <p>PNG, JPEG or WebP · Up to 2 MB. Leave empty to keep the current photo.</p></div>
-            </div>}
             <div className="grid-2 teacher-form-grid">
               {fields.map(f => (
                 <div className="form-group" key={f.key}>
@@ -88,19 +78,20 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
                   {f.type === 'course'
                     ? <select id={`teacher-${f.key}`} className="form-control" required={f.required} value={form.course||''} disabled={coursesLoading || courses.length === 0} onChange={e=>setForm(p=>({...p,course:e.target.value}))}><option value="">{coursesLoading ? 'Loading courses…' : courses.length ? 'Select a course' : 'No courses available'}</option>{courses.map(course=><option key={course._id} value={course._id}>{course.courseCode ? `${course.courseCode} · ` : ''}{course.title || course.name}</option>)}</select>
                     : f.type === 'batch'
-                    ? <><select id={`teacher-${f.key}`} className="form-control" required disabled={batchesLoading || !!batchesError || !batches.length} value={form.contractBatchId || ''} onChange={e => { const batch = batches.find(item => item._id === e.target.value); setForm(current => ({...current, contractBatchId: batch?._id || '', contractBatch: batch?.name || '', contractAcademicYear: batch?.academicYear || ''})); }}><option value="">{batchesLoading ? 'Loading batches…' : batchesError ? 'Batches unavailable' : batches.length ? 'Select a batch' : 'No batches available'}</option>{batches.map(batch => <option key={batch._id} value={batch._id}>{batch.name} · {batch.academicYear}</option>)}</select>{batchesError && <p role="alert">{batchesError}</p>}{!batchesLoading && !batchesError && !batches.length && <p className="teacher-field-hint">Create a batch in Years &amp; Batches first.</p>}</>
+                    ? <><select id={`teacher-${f.key}`} className="form-control" required disabled={batchesLoading || !!batchesError || !batches.length} value={form.contractBatchId || ''} onChange={e => { const batch = batches.find(item => item._id === e.target.value); setForm(current => ({...current, contractBatchId: batch?._id || '', contractBatch: batch?.name || '', contractAcademicYear: batch?.academicYear || ''})); }}><option value="">{batchesLoading ? 'Loading batches…' : batchesError ? 'Batches unavailable' : batches.length ? 'Select a batch' : 'No batches available'}</option>{batches.filter(batch => !selectedCourse?.batch || (batch.name===selectedCourse.batch && batch.academicYear===selectedCourse.academicYear)).map(batch => <option key={batch._id} value={batch._id}>{batch.name} · {batch.academicYear}</option>)}</select>{batchesError && <p role="alert">{batchesError}</p>}{!batchesLoading && !batchesError && !batches.length && <p className="teacher-field-hint">Create a batch in Years &amp; Batches first.</p>}</>
                     : f.type === 'select'
                     ? <select id={`teacher-${f.key}`} required={f.required} className="form-control" value={form[f.key]||''} onChange={e => setForm(p=>({...p,[f.key]:e.target.value}))}><option value="">Select…</option>{f.options.map(o=><option key={o} value={o}>{o}</option>)}</select>
-                    : <input id={`teacher-${f.key}`} className="form-control" type={f.type} minLength={f.type === 'password' ? 8 : undefined} maxLength={f.type === 'password' ? 72 : undefined} autoComplete={f.type === 'password' ? 'new-password' : undefined} min={f.type==='number'?1:undefined} step={f.type==='number'?1:undefined} required={f.required} value={form[f.key]||''} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} />
+                    : <input id={`teacher-${f.key}`} className="form-control" type={f.type} readOnly={f.key==='contractEnd'} minLength={f.type === 'password' ? 8 : undefined} maxLength={f.type === 'password' ? 72 : undefined} max={f.key==='contractDays'?36500:undefined} autoComplete={f.type === 'password' ? 'new-password' : undefined} min={f.type==='number'?1:undefined} step={f.type==='number'?1:undefined} required={f.required} value={form[f.key]||''} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} />
                   }
                 </div>
               ))}
             </div>
+            {selectedCourse && <WeeklySchedulePreview schedule={selectedCourse.teachingSchedule || []} title="Assigned course schedule" />}
             {!initial?._id && <p className="teacher-password-hint">Teachers change their temporary password at first sign-in.</p>}
             {initial?._id && <section className="teacher-edit-contract"><h3>Teaching contract</h3>
               {contractsLoading?<p>Loading contracts…</p>:contractLoadError?<p role="alert">{contractLoadError}</p>:!teacherContracts.length?<p>No saved contract found. Create one in Teaching &amp; Outlines.</p>:<>
               <label className="form-label" htmlFor="teacher-edit-contract">Course / Year / Batch</label><select id="teacher-edit-contract" className="form-control" value={form.editContractId||''} onChange={event=>chooseContract(teacherContracts.find(contract=>contract._id===event.target.value))}>{teacherContracts.map(contract=><option key={contract._id} value={contract._id}>{contract.course?.title||contract.course?.name} · {contract.academicYear} / {contract.batch} · {contract.contractStatus}</option>)}</select>
-              <div className="grid-2 teacher-form-grid">{[['editContractDays','Contract days','number'],['editContractStart','Start date','date'],['editContractEnd','End date (optional)','date']].map(([key,label,type])=><div className="form-group" key={key}><label className="form-label" htmlFor={key}>{label}</label><input id={key} className="form-control" type={type} min={type==='number'?1:undefined} step={type==='number'?1:undefined} required={key!=='editContractEnd'} value={form[key]||''} onChange={event=>setForm(current=>({...current,[key]:event.target.value}))}/></div>)}</div>
+              <label className="form-label">Duration basis<select className="form-control" value={form.editContractBasis||'teaching'} onChange={event=>setForm(current=>({...current,editContractBasis:event.target.value}))}><option value="calendar">Calendar days</option><option value="teaching">Teaching days (legacy)</option></select></label><div className="grid-2 teacher-form-grid">{[['editContractDays','Contract days','number'],['editContractStart','Start date','date'],['editContractEnd',form.editContractBasis==='calendar'?'End date (calculated)':'End date (optional)','date']].map(([key,label,type])=><div className="form-group" key={key}><label className="form-label" htmlFor={key}>{label}</label><input id={key} className="form-control" type={type} readOnly={key==='editContractEnd' && form.editContractBasis==='calendar'} min={type==='number'?1:undefined} step={type==='number'?1:undefined} required={key!=='editContractEnd'} value={form[key]||''} onChange={event=>setForm(current=>({...current,[key]:event.target.value}))}/></div>)}</div>
               </>}
             </section>}
           </div>
@@ -154,8 +145,8 @@ function TeacherDetailsModal({ teacher, courseAssignment, loading, error, onClos
             <h3>Teaching contracts</h3>
             {teacher.contracts?.length ? teacher.contracts.map(contract => <article className="teacher-details-contract" key={contract._id}>
               <div className="teacher-details-contract-heading"><strong>{contract.course?.title || contract.course?.name || 'Course'}</strong><span>{contract.contractStatus}</span></div>
-              <div className="teacher-details-contract-metrics">{[['Total days',contract.totalContractDays],['Completed',contract.completedTeachingDays],['Remaining',contract.remainingContractDays]].map(([label,value])=><div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
-              <dl className="teacher-details-grid">{[['Batch',contract.batch],['Academic year',contract.academicYear],['Start date',contract.startDate],['End date',contract.endDate || 'Not set'],['Progress',contract.progress+'%']].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>)}</dl>
+              <WeeklySchedulePreview schedule={contract.course?.teachingSchedule || []} /><div className="teacher-details-contract-metrics">{[['Contract days',contract.totalContractDays],['Taught days',contract.completedTeachingDays],['Remaining',contract.remainingContractDays]].map(([label,value])=><div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
+              <dl className="teacher-details-grid">{[['Batch',contract.batch],['Academic year',contract.academicYear],['Start date',contract.startDate],['End date',contract.endDate || 'Not set'],[contract.dayBasis==='calendar'?'Calendar duration elapsed':'Teaching progress',contract.progress+'%']].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>)}</dl>
             </article>) : <p className="teacher-details-contract-empty">No teaching contract configured.</p>}
           </section>
           </>}
@@ -212,14 +203,14 @@ function TeacherCredentialsModal({ credentials, onClose }) {
           <button type="button" className="modal-close" aria-label="Close credentials" onClick={onClose}>×</button>
         </header>
         <div className="modal-body teacher-credentials-body">
-          <div className="teacher-credentials-success"><span aria-hidden="true">✓</span><p><strong>{credentials.name}</strong> can now sign in with these details.</p></div>
+          <div className="teacher-credentials-success"><span aria-hidden="true">✓</span><div><strong>{credentials.name}</strong><p>Teacher account ready</p></div><span className="teacher-ready-pill">Created</span></div>
           <section className="teacher-credential-section" aria-label="Sign-in credentials">
-            <h3>Sign-in credentials</h3>
+            <h3 className="visually-hidden">Sign-in credentials</h3>
             <div className="teacher-credential-list">
               {credentialRows.map(([label, value]) => (
                 <div className={`teacher-credential-row ${label === 'Temporary password' ? 'password' : ''}`} key={label}>
                   <div><span>{label}</span><strong>{value}</strong></div>
-                  <button type="button" className="teacher-credential-copy" onClick={() => copyValue(label, value)} aria-label={`Copy ${label}`}>
+                  <button type="button" className={`teacher-credential-copy ${copied === label ? 'is-copied' : ''}`} onClick={() => copyValue(label, value)} aria-label={`Copy ${label}`}>
                     {copied === label ? 'Copied' : 'Copy'}
                   </button>
                 </div>
@@ -365,10 +356,6 @@ export default function TeacherMgmt() {
 
         status: form.status,
       });
-      if (form.profileFile) {
-        const pictureData = new FormData(); pictureData.append('file', form.profileFile);
-        await api.put('/academy/profile-picture/' + editTarget._id, pictureData, {headers: {'Content-Type': 'multipart/form-data'}});
-      }
       const assignment = getTeacherAssignment(editTarget);
       const currentCourse = String(assignment?.course?._id || assignment?.course || '');
       if (form.course !== currentCourse) {
@@ -381,7 +368,7 @@ export default function TeacherMgmt() {
           else await api.post('/course-teachers', {...payload, teacher: editTarget._id, role: 'lead', isPrimary: true});
         }
       }
-      if(form.editContractId) await api.put('/teacher-contracts/'+form.editContractId,{totalDays:Number(form.editContractDays),startDate:form.editContractStart,endDate:form.editContractEnd||null});
+      if(form.editContractId) await api.put('/teacher-contracts/'+form.editContractId,{dayBasis:form.editContractBasis,totalDays:Number(form.editContractDays),startDate:form.editContractStart,endDate:form.editContractEnd||null});
       await Promise.all([fetchTeachers(), fetchCourseAssignments()]);
       setShowModal(false);
       setEditTarget(null);
@@ -389,6 +376,7 @@ export default function TeacherMgmt() {
     }
 
     const course = courses.find((item) => item._id === form.course);
+    if (!course || !form.contractBatch || !form.contractAcademicYear || !contractEndDate(form.contractStart,form.contractDays)) throw new Error('Select a course, matching batch, start date and valid contract duration.');
     const response = await api.post('/users/teachers', {
       password: form.password,
       name: form.name,
@@ -411,7 +399,7 @@ export default function TeacherMgmt() {
         isPrimary: true,
         status: 'active',
       });
-      await api.post('/teacher-contracts', {teacher:teacher._id, course:course._id, academicYear:form.contractAcademicYear || course.academicYear || String(new Date().getFullYear()), batch:form.contractBatch, startDate:form.contractStart, endDate:form.contractEnd || null, totalDays:Number(form.contractDays)});
+      await api.post('/teacher-contracts', {teacher:teacher._id, course:course._id, academicYear:form.contractAcademicYear || course.academicYear || String(new Date().getFullYear()), batch:form.contractBatch, startDate:form.contractStart, endDate:form.contractEnd || null, dayBasis:'calendar',totalDays:Number(form.contractDays)});
     } catch (assignmentError) {
       assignmentWarning = assignmentError.response?.data?.message || 'The account was created, but the course assignment or contract could not be saved. Complete setup in Teacher Contracts.';
     }
@@ -509,7 +497,7 @@ export default function TeacherMgmt() {
         </footer>
       </section>
 
-      {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_EDIT_FIELDS : [...TEACHER_FIELDS, { key: 'password', label: 'Temporary password', type: 'password', required: true }, { key: 'course', label: 'Course', type: 'course', required: true }, { key: 'contractDays', label: 'Contract days', type: 'number', required: true }, { key: 'contractBatch', label: 'Contract batch', type: 'batch', required: true }, { key: 'contractStart', label: 'Start date', type: 'date', required: true }, { key: 'contractEnd', label: 'End date (optional)', type: 'date' }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
+      {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_EDIT_FIELDS : [...TEACHER_FIELDS, { key: 'password', label: 'Temporary password', type: 'password', required: true }, { key: 'course', label: 'Course', type: 'course', required: true }, { key: 'contractDays', label: 'Contract duration (calendar days)', type: 'number', required: true }, { key: 'contractBatch', label: 'Contract batch', type: 'batch', required: true }, { key: 'contractStart', label: 'Start date', type: 'date', required: true }, { key: 'contractEnd', label: 'End date (calculated)', type: 'date' }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
       {deleteTarget && <ConfirmModal message={`Delete "${deleteTarget.name}"?`} onConfirm={handleDelete} onCancel={()=>setDeleteTarget(null)} loading={deleting} />}
       {createdCredentials && <TeacherCredentialsModal credentials={createdCredentials} onClose={() => setCreatedCredentials(null)} />}
       {selectedTeacher && <TeacherDetailsModal teacher={selectedTeacher} courseAssignment={selectedTeacher.assignedCourse || null} loading={teacherDetailsLoading} error={teacherDetailsError} onClose={() => { teacherDetailsRequest.current += 1; setSelectedTeacher(null); setTeacherDetailsError(''); }} />}

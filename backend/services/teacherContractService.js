@@ -8,8 +8,12 @@ const Assignment = require('../models/CourseTeacher');
 const fail = (message,statusCode=400) => {throw Object.assign(new Error(message),{statusCode});};
 const teachingDay = (now = new Date()) => new Date(now.getTime()+3*3600000).toISOString().slice(0,10);
 const validDate = value => typeof value==='string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10)===value;
+function calendarEnd(startDate,totalDays) {
+  if (!validDate(startDate) || !Number.isInteger(totalDays) || totalDays < 1 || totalDays > 36500) fail('Enter a valid start date and duration (1–36500 days).');
+  const end=new Date(startDate+'T12:00:00Z');end.setUTCDate(end.getUTCDate()+totalDays-1);return end.toISOString().slice(0,10);
+}
 const validateContract = data => {
-  if (!Number.isInteger(data.totalDays) || data.totalDays<1) fail('Total teaching days must be a positive whole number.');
+  if (!Number.isInteger(data.totalDays) || data.totalDays<1) fail('Contract duration must be a positive whole number.');
   if (!validDate(data.startDate) || (data.endDate && (!validDate(data.endDate)||data.endDate<data.startDate))) fail('Enter valid contract dates. End date cannot precede start date.');
   if (!String(data.batch||'').trim() || !String(data.academicYear||'').trim()) fail('Batch and academic year are required.');
 };
@@ -17,10 +21,14 @@ const completedDays = async contractId => Lesson.distinct('completedDay',{contra
 function calculateBalance(contract, days, now=new Date()) {
   const dates=[...new Set(days.filter(Boolean))].sort();
   const completedTeachingDays=dates.length;
-  const remainingContractDays=Math.max(0,contract.totalDays-completedTeachingDays);
+  const calendar=contract.dayBasis==='calendar';
+  const endDate=calendar?calendarEnd(contract.startDate,contract.totalDays):contract.endDate;
   const day=teachingDay(now);
-  const contractStatus=contract.status==='cancelled'?'Cancelled':remainingContractDays===0?'Completed':day<contract.startDate?'Scheduled':contract.endDate&&day>contract.endDate?'Expired':'Active';
-  return {totalContractDays:contract.totalDays,completedTeachingDays,remainingContractDays,progress:Math.min(100,Math.round(completedTeachingDays/contract.totalDays*100)),contractStatus,completedDates:dates};
+  const elapsedCalendarDays=day<contract.startDate?0:Math.min(contract.totalDays,Math.floor((Date.parse(day)-Date.parse(contract.startDate))/86400000)+1);
+  const elapsed=calendar?elapsedCalendarDays:completedTeachingDays;
+  const remainingContractDays=Math.max(0,contract.totalDays-elapsed);
+  const contractStatus=contract.status==='cancelled'?'Cancelled':day<contract.startDate?'Scheduled':endDate&&day>endDate?'Expired':!calendar&&remainingContractDays===0?'Completed':'Active';
+  return {endDate:endDate||null,dayBasis:contract.dayBasis||'teaching',elapsedCalendarDays,totalContractDays:contract.totalDays,completedTeachingDays,remainingContractDays,progress:Math.min(100,Math.round(elapsed/contract.totalDays*100)),contractStatus,completedDates:dates};
 }
 const summary = async contract => {
   const plain=contract.toObject?contract.toObject():contract;
@@ -54,9 +62,14 @@ const loadContract = async id => {
 async function createContract(user,data) {
   if(user.role!=='admin')fail('Only admins can configure contracts.',403);
   const fields={teacher:data.teacher,course:data.course,academicYear:String(data.academicYear||'').trim(),batch:String(data.batch||'').trim(),startDate:data.startDate,endDate:data.endDate||null,totalDays:Number(data.totalDays)};
+  fields.dayBasis=data.dayBasis||'calendar';
+  if(!['calendar','teaching'].includes(fields.dayBasis))fail('Invalid contract day basis.');
+  if(fields.dayBasis==='calendar')fields.endDate=calendarEnd(fields.startDate,fields.totalDays);
   validateContract(fields);
   if(!mongoose.isValidObjectId(fields.teacher)||!mongoose.isValidObjectId(fields.course))fail('Select a valid teacher and course.');
   if(!await Teacher.exists({_id:fields.teacher})||!await Course.exists({_id:fields.course}))fail('Teacher or course not found.',404);
+  const course=await Course.findById(fields.course).select('batch academicYear').lean();
+  if(course.batch && (course.batch!==fields.batch || course.academicYear!==fields.academicYear))fail('Select the year and batch configured for this course.');
   if(!await Assignment.exists({teacher:fields.teacher,course:fields.course,academicYear:fields.academicYear,status:'active'}))fail('Assign this course and academic year to the teacher first.');
   const contract=await Contract.create({...fields,createdBy:user._id});
   return summary(contract);
@@ -66,13 +79,15 @@ async function updateContract(user,id,data) {
   await loadContract(id);
   return withContractLock(id,async()=>{
     const contract=await loadContract(id);
-    const fields={...contract.toObject(),...Object.fromEntries(['totalDays','startDate','endDate','status'].filter(k=>data[k]!==undefined).map(k=>[k,k==='totalDays'?Number(data[k]):data[k]||null]))};
+    const fields={...contract.toObject(),...Object.fromEntries(['totalDays','startDate','endDate','status','dayBasis'].filter(k=>data[k]!==undefined).map(k=>[k,k==='totalDays'?Number(data[k]):data[k]||null]))};
+    if(!['calendar','teaching'].includes(fields.dayBasis))fail('Invalid contract day basis.');
+    if(fields.dayBasis==='calendar')fields.endDate=calendarEnd(fields.startDate,fields.totalDays);
     validateContract(fields);
     if(!['active','cancelled'].includes(fields.status))fail('Invalid contract status.');
     const days=await completedDays(id);
-    if(fields.totalDays<days.length)fail('Contract days cannot be lower than completed teaching days.');
+    if(fields.dayBasis!=='calendar'&&fields.totalDays<days.length)fail('Contract days cannot be lower than completed teaching days.');
     if(days.some(day=>day<fields.startDate||(fields.endDate&&day>fields.endDate)))fail('Contract dates must include all completed teaching days.');
-    for(const key of ['totalDays','startDate','endDate','status'])contract[key]=fields[key];
+    for(const key of ['totalDays','startDate','endDate','status','dayBasis'])contract[key]=fields[key];
     await contract.save();return summary(contract);
   });
 }
@@ -96,7 +111,7 @@ async function setLessonStatus(user,contractId,lessonId,status,now=new Date()) {
         if(day<contract.startDate)fail(`You can complete lessons from ${contract.startDate}, when your teaching contract starts. Today in Nairobi is ${day}. Contact Admin if the start date is incorrect.`);
         if(contract.endDate&&day>contract.endDate)fail(`This teaching contract ended on ${contract.endDate}. Contact Admin to review the contract dates.`);
         const days=await completedDays(contractId);
-        if(!days.includes(day)&&days.length>=contract.totalDays)fail('All contracted teaching days have been used.');
+        if(contract.dayBasis!=='calendar'&&!days.includes(day)&&days.length>=contract.totalDays)fail('All contracted teaching days have been used.');
         lesson.status='completed';lesson.progress=100;lesson.completedAt=now;lesson.completedDay=day;lesson.completedBy=user._id;
         lesson.history.push({action:'completed',at:now,by:user._id,teachingDay:day});
       } else {
@@ -108,4 +123,4 @@ async function setLessonStatus(user,contractId,lessonId,status,now=new Date()) {
     return {lesson,contract:await summary(contract)};
   });
 }
-module.exports={withContractLock,loadContract,teachingDay,validDate,validateContract,calculateBalance,summary,authorize,createContract,updateContract,createLesson,setLessonStatus};
+module.exports={calendarEnd,withContractLock,loadContract,teachingDay,validDate,validateContract,calculateBalance,summary,authorize,createContract,updateContract,createLesson,setLessonStatus};

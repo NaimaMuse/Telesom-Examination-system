@@ -1,0 +1,249 @@
+/* Teacher dashboard content only. The shared outer layout owns the sidebar offset. */
+.dash-shell.teacher-dashboard-shell {
+  --topbar-h: 64px;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+.dash-shell.teacher-dashboard-shell > .dash-main {
+  flex: 1 1 0%;
+  min-width: 0;
+  height: auto;
+  min-height: 100vh;
+  max-width: none;
+  box-sizing: border-box;
+  overflow: visible;
+}
+.dash-shell.teacher-dashboard-shell .dashboard-main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  max-width: none;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+.dash-shell.teacher-dashboard-shell .dashboard-main > header.academy-header {
+  width: 100%;
+  height: var(--topbar-h);
+  min-height: var(--topbar-h);
+  flex: 0 0 var(--topbar-h);
+  box-sizing: border-box;
+}
+.dash-shell.teacher-dashboard-shell .dashboard-main > .dashboard-content {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  padding: 30px;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: visible;
+}
+.dash-shell.teacher-dashboard-shell .dashboard-content > .teacher-reference-dashboard {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+  gap: 18px;
+  box-sizing: border-box;
+}
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-overview-row,
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-schedule-layout {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  max-width: none;
+}
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard :is(.teacher-contract-panel,.teacher-assessments-panel,.teacher-calendar-card,.teacher-schedule-side,.teacher-agenda-card) {
+  min-width: 0;
+  height: auto;
+  max-height: none;
+}
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-welcome-banner { height: auto; min-height: 86px; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-dashboard-metrics .teacher-metric-card { height: auto; min-height: 80px; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-calendar-grid { flex: 0 0 auto; grid-auto-rows: auto; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-calendar-day { min-height: 36px; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-schedule-side { overflow: visible; }
+@media(max-width:999px) {
+  .dash-shell.teacher-dashboard-shell .dashboard-main > .dashboard-content { padding: 22px; }
+}
+@media(max-width:600px) {
+  .dash-shell.teacher-dashboard-shell .dashboard-main > .dashboard-content { padding: 16px; }
+  .dash-shell.teacher-dashboard-shell .dashboard-content > .teacher-reference-dashboard { gap: 14px; }
+}
+
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-assessments-only { grid-template-columns:minmax(0,1fr); }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-contract-side { min-width:0; align-self:start; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-contract-side .teacher-contract-panel { height:auto; max-height:none; }
+
+
+/* Three stacked panels beside the interactive academic calendar. */
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);
+  gap:20px;
+  width:100%;
+  min-width:0;
+  align-items:start;
+}
+.teacher-two-column-layout > *,.teacher-dashboard-stack > * { min-width:0; }
+.teacher-dashboard-stack { display:grid; gap:16px; align-content:start; }
+.teacher-dashboard-stack .teacher-contract-side { min-width:0; }
+.teacher-dashboard-stack .teacher-contract-panel,.teacher-dashboard-stack .teacher-assessments-panel { height:auto; max-height:none; }
+.teacher-dashboard-stack .teacher-assessments-empty { padding:18px; gap:7px; }
+.teacher-dashboard-stack .teacher-panel-message { padding:16px 18px; font-size:11px; line-height:1.6; }
+.teacher-dashboard-stack .teacher-assessments-panel > .teacher-panel-message { color:#e2f3e7; }
+.teacher-scheduled-panel { border:1px solid #E2EAE4; border-radius:15px; background:#fff; box-shadow:0 2px 8px #263d2806; overflow:hidden; }
+.teacher-scheduled-panel > header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-bottom:1px solid #edf2ef; }
+.teacher-scheduled-panel h2 { display:flex; align-items:center; gap:10px; font-size:15px; margin:0; color:#17231D; }
+.teacher-scheduled-panel h2 svg { color:#087A43; }
+.teacher-scheduled-panel header > span { padding:4px 8px; border-radius:6px; background:#FFF4D9; color:#8a631c; font-size:10px; white-space:nowrap; }
+.teacher-scheduled-date { padding:10px 18px 0; color:#718078; font-size:10px; }
+.teacher-scheduled-panel ul { list-style:none; margin:0; padding:2px 18px 12px; }
+.teacher-scheduled-panel li { display:flex; align-items:center; gap:14px; padding:12px 0 12px 14px; position:relative; border-left:1px solid #b9d9c3; border-bottom:1px solid #edf2ef; }
+.teacher-scheduled-panel li:before { content:''; width:7px; height:7px; position:absolute; top:19px; left:-4px; border-radius:50%; background:#087A43; box-shadow:0 0 0 3px #fff; }
+.teacher-scheduled-time { font-size:12px; font-weight:700; color:#005B35; flex:0 0 44px; }
+.teacher-scheduled-time small { display:block; color:#718078; font-weight:400; margin-top:3px; font-size:10px; }
+.teacher-scheduled-panel li > div { min-width:0; flex:1; }
+.teacher-scheduled-panel li strong { display:block; font-size:12px; color:#17231D; overflow-wrap:anywhere; }
+.teacher-scheduled-panel li > div small { display:block; color:#718078; margin-top:4px; font-size:10px; }
+.teacher-scheduled-badge { font-size:9px; color:#087A43; background:#E8F5EB; border-radius:12px; padding:4px 7px; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-card { width:100%; padding-bottom:5px; overflow:hidden; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-heading { padding:18px; gap:12px; flex-wrap:wrap; }
+.teacher-two-column-layout .teacher-calendar-title h2 { font-size:17px; }
+.teacher-two-column-layout .teacher-calendar-controls { gap:7px; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid { margin:0 18px; border:1px solid #deebe2; border-radius:12px; gap:1px; background:#e4eee7; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-weekday { padding:11px 0; color:#376246; background:#f1f8f3; font-size:11px; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day { min-height:62px; padding:7px 3px; font-size:12px; background:#fff; box-shadow:none; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day.has-classes { background:#E8F5EB; color:#005B35; box-shadow:inset 0 -3px #31B44A; font-weight:700; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day.is-today { outline:2px solid #D7982F; outline-offset:-3px; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day.is-selected { background:#087A43; color:#fff; box-shadow:inset 0 -3px #005B35; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day .calendar-cell-event { display:block; margin-top:5px; padding:3px; max-width:100%; font-size:8px; color:inherit; background:#ffffff80; border-radius:4px; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day.is-selected .calendar-cell-event { background:#ffffff20; }
+.teacher-two-column-layout .teacher-calendar-day:focus-visible { outline:2px solid #D7982F; outline-offset:-2px; }
+.teacher-two-column-layout .teacher-calendar-legend { padding:14px 18px; gap:12px; }
+.teacher-two-column-layout .teaching-day-legend i { display:inline-block; width:9px; height:9px; border-radius:3px; background:#31B44A; }
+@media(max-width:1000px) {
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout { grid-template-columns:minmax(0,1fr); }
+ .teacher-two-column-layout > .teacher-calendar-card { grid-row:1; }
+}
+@media(max-width:600px) {
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day { min-height:52px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid { margin:0 10px; }
+ .teacher-two-column-layout .teacher-contract-main { flex-wrap:wrap; }
+}
+
+.teacher-scheduled-badge { text-transform:capitalize; text-align:center; }
+.teacher-scheduled-badge small { display:block; font-size:8px; margin-top:3px; color:#718078; }
+.teacher-scheduled-badge.quiz { color:#6b4b92; background:#f1eaf9; }
+.teacher-scheduled-panel a { text-decoration:none; }
+.teacher-scheduled-panel a:hover strong { color:#087A43; text-decoration:underline; }
+.teacher-scheduled-panel button { border:0; background:transparent; color:#087A43; text-decoration:underline; cursor:pointer; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day.has-exams:not(.is-selected) { background:#FFF4D9; box-shadow:inset 0 -3px #D7982F; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day.has-exams.has-classes:not(.is-selected) { background:linear-gradient(140deg,#E8F5EB 50%,#FFF4D9); box-shadow:inset 0 -3px #D7982F; }
+.teacher-two-column-layout .calendar-assessment-label { display:block; max-width:100%; padding:3px 4px; margin-top:3px; border-radius:4px; background:#D7982F20; color:#7a5516; font-size:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; text-transform:capitalize; }
+.teacher-two-column-layout .is-selected .calendar-assessment-label { color:#fff; background:#ffffff20; }
+.teacher-two-column-layout .calendar-day-markers i.is-quiz,.teacher-two-column-layout .calendar-quiz-legend i { background:#9470ba; }
+.teacher-two-column-layout .calendar-day-markers i.is-exam,.teacher-two-column-layout .calendar-exam-legend i { background:#D7982F; }
+.teacher-two-column-layout .calendar-exam-legend i,.teacher-two-column-layout .calendar-quiz-legend i { display:inline-block; width:7px; height:7px; border-radius:50%; }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid.view-month { grid-template-columns:repeat(7,minmax(0,1fr)); }
+.dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day { min-width:0; min-height:72px; }
+@media(max-width:600px) { .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day { min-height:60px; } .teacher-two-column-layout .calendar-assessment-label { font-size:7px; } }
+
+/* Compact teacher dashboard: fit ordinary desktop screens without clipping data. */
+@media(min-width:1001px) {
+ .dash-shell.teacher-dashboard-shell { --topbar-h:56px; }
+ .dash-shell.teacher-dashboard-shell .dashboard-main > .dashboard-content { padding:14px 18px; }
+ .dash-shell.teacher-dashboard-shell .dashboard-content > .teacher-reference-dashboard { gap:12px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout { gap:14px; }
+ .teacher-dashboard-shell .teacher-dashboard-stack { gap:10px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-dashboard-metrics { gap:12px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-dashboard-metrics .teacher-metric-card { min-height:60px; padding:10px 14px; gap:12px; border-radius:11px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-metric-icon { width:38px; height:38px; flex-basis:38px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-metric-icon svg { width:22px; height:22px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-metric-copy strong { font-size:24px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-metric-copy span { font-size:11px; }
+ .teacher-dashboard-stack .teacher-contract-panel > header,.teacher-dashboard-stack .teacher-assessments-panel > header,.teacher-dashboard-stack .teacher-scheduled-panel > header { padding:10px 13px; gap:8px; }
+ .teacher-dashboard-stack h2 { font-size:13px; }
+ .teacher-dashboard-stack header h2 svg { width:18px; height:18px; }
+ .teacher-dashboard-stack header a { font-size:10px; }
+ .teacher-dashboard-stack .teacher-reference-contract { padding:10px 13px; }
+ .teacher-dashboard-stack .teacher-contract-emblem { width:36px; height:36px; flex-basis:36px; border-radius:9px; }
+ .teacher-dashboard-stack .teacher-contract-emblem svg { width:24px; height:24px; }
+ .teacher-dashboard-stack .teacher-contract-main { gap:9px; }
+ .teacher-dashboard-stack .teacher-contract-main a { font-size:13px; }
+ .teacher-dashboard-stack .teacher-contract-main p { margin:4px 0 2px; font-size:10px; }
+ .teacher-dashboard-stack .teacher-contract-main small { font-size:9px; }
+ .teacher-dashboard-stack .teacher-contract-state { padding:4px 8px; font-size:9px; }
+ .teacher-dashboard-stack .teacher-contract-weekline { margin-top:8px; padding-top:8px; gap:5px; font-size:10px; }
+ .teacher-dashboard-stack .teacher-assessments-empty { padding:13px; gap:5px; }
+ .teacher-dashboard-stack .teacher-assessments-empty > svg { width:24px; height:24px; }
+ .teacher-dashboard-stack .teacher-assessments-empty strong { font-size:11px; }
+ .teacher-dashboard-stack .teacher-assessments-empty p { font-size:10px; }
+ .teacher-dashboard-stack .teacher-assessments-panel ul { padding:0 10px 10px; gap:6px; }
+ .teacher-dashboard-stack .teacher-assessments-panel li { padding:9px; gap:8px; border-radius:8px; }
+ .teacher-dashboard-stack .teacher-assessments-panel li a { font-size:11px; }
+ .teacher-dashboard-stack .teacher-assessments-panel li p { margin:3px 0; font-size:9px; }
+ .teacher-dashboard-stack .teacher-assessment-icon { padding:6px; }
+ .teacher-dashboard-stack .teacher-assessment-icon svg { width:19px; height:19px; }
+ .teacher-dashboard-stack .teacher-scheduled-date { padding:7px 13px 0; margin:0; font-size:9px; }
+ .teacher-dashboard-stack .teacher-scheduled-panel ul { padding:0 13px 8px; }
+ .teacher-dashboard-stack .teacher-scheduled-panel li { padding-top:8px; padding-bottom:8px; gap:10px; }
+ .teacher-dashboard-stack .teacher-scheduled-panel li strong { font-size:11px; }
+ .teacher-dashboard-stack .teacher-scheduled-panel li > div small { font-size:9px; margin-top:3px; }
+ .teacher-dashboard-stack .teacher-panel-message { padding:11px 13px; font-size:10px; line-height:1.5; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-heading { padding:12px 14px; gap:8px; }
+ .teacher-two-column-layout .teacher-calendar-title h2 { font-size:14px; }
+ .teacher-two-column-layout .teacher-calendar-title .teacher-calendar-icon { width:28px; height:28px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid { margin:0 12px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-weekday { padding:7px 0; font-size:10px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day { min-height:46px; padding:4px 2px; font-size:11px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day .calendar-cell-event { margin-top:3px; padding:2px; font-size:7px; }
+ .teacher-two-column-layout .calendar-assessment-label { padding:2px; margin-top:2px; font-size:7px; }
+ .teacher-two-column-layout .teacher-calendar-legend { padding:9px 12px; gap:8px; font-size:8px; }
+}
+@media(min-width:1001px) and (max-height:720px) {
+ .dash-shell.teacher-dashboard-shell .dashboard-main > .dashboard-content { padding:10px 14px; }
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-day { min-height:39px; }
+ .teacher-dashboard-shell .teacher-dashboard-stack { gap:8px; }
+}
+
+/* Calendar on the left, assessment and contract panels on the right. */
+@media(min-width:1001px) {
+ .dash-shell.teacher-dashboard-shell .teacher-reference-dashboard .teacher-two-column-layout { grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); }
+ .teacher-two-column-layout > .teacher-calendar-card { grid-column:1; grid-row:1; }
+ .teacher-two-column-layout > .teacher-dashboard-stack { grid-column:2; grid-row:1; }
+}
+
+/* Quiet calendar markers: subtle teaching tint and a single date selection. */
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day {
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  background:#fff; color:#385746; box-shadow:none; outline:none;
+}
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.has-classes { background:#f0f8f3; color:#17643a; box-shadow:none; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.has-exams { box-shadow:none; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.has-contract-start { background:#fffdf6; box-shadow:none; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.is-selected { background:#edf6f0; box-shadow:none; outline:none; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.is-today { outline:none; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day:hover { background:#e8f2eb; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .calendar-date-number { display:inline-flex; align-items:center; justify-content:center; min-width:27px; height:27px; padding:0 4px; border:1px solid transparent; border-radius:50%; color:inherit; font-size:11px; font-weight:500; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .calendar-date-number:after { content:none; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .has-classes .calendar-date-number { font-weight:650; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .is-today .calendar-date-number { border-color:#d6ad58; color:#86621d; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .is-selected .calendar-date-number { background:#17643a; color:#fff; border-color:transparent; }
+.calendar-event-dots { display:flex; justify-content:center; align-items:center; gap:4px; min-height:4px; }
+.calendar-event-dots i { width:4px; height:4px; border-radius:50%; }
+.calendar-event-dots .is-teaching { background:#4a9863; }
+.calendar-event-dots .is-exam { background:#cf9d3a; }
+.calendar-event-dots .is-quiz { background:#9470ba; }
+.teacher-two-column-layout .teacher-calendar-grid .contract-start-marker { top:5px; right:7px; font-size:9px; color:#bd9342; }
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-reference-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day:focus-visible { outline:2px solid #7aaf8a; outline-offset:-2px; }

@@ -23,6 +23,7 @@ export default function TeachingIcon({name, size=20}) {
     filter: <path d="M3 4h18l-7 8v8l-4-2v-6z"/>,
     eye: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></>,
     arrow: <path d="M5 12h14m-5-5 5 5-5 5"/>,
+    briefcase: <><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12a24 24 0 0 0 18 0M12 11v4"/></>,
     play: <path d="m8 4 12 8-12 8z"/>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.book}</svg>;

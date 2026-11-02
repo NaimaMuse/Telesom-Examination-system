@@ -12,9 +12,9 @@ const { authorizeRoles } = require('../middleware/roleMiddleware');
 const { asyncHandler } = require('../controllers/resourceController');
 const router = express.Router();
 router.use(protect,authorizeRoles('admin','teacher'));
-const populated = query => query.populate({path:'teacher',populate:{path:'user',select:'name email'}}).populate('course','title name courseCode');
+const populated = query => query.populate({path:'teacher',populate:{path:'user',select:'name email'}}).populate('course','title name courseCode teachingSchedule academicYear batch');
 router.get('/options',authorizeRoles('admin'),asyncHandler(async(req,res)=>{
-  const [teachers,courses,assignments,batches]=await Promise.all([Teacher.find().populate('user','name').lean(),Course.find().select('title name courseCode academicYear').lean(),Assignment.find({status:'active'}).lean(),Batch.find({status:'active'}).sort({academicYear:-1,name:1}).lean()]);
+  const [teachers,courses,assignments,batches]=await Promise.all([Teacher.find().populate('user','name').lean(),Course.find().select('title name courseCode academicYear batch teachingSchedule').lean(),Assignment.find({status:'active'}).lean(),Batch.find({status:'active'}).sort({academicYear:-1,name:1}).lean()]);
   res.json({teachers:teachers.map(t=>({_id:t._id,name:t.user?.name||t.teacherId,teacherId:t.teacherId})),courses,assignments,batches});
 }));
 router.get('/',asyncHandler(async(req,res)=>{
@@ -28,6 +28,10 @@ router.get('/',asyncHandler(async(req,res)=>{
   }
   const records=await populated(Contract.find(filters).sort({createdAt:-1})).lean();
   let contracts=await Promise.all(records.map(service.summary));
+  if(req.user.role==='teacher'){
+    const assignments=await Assignment.find({teacher:filters.teacher,status:'active'}).lean();
+    contracts=contracts.map(contract=>({...contract,activeAssignment:assignments.some(assignment=>String(assignment.course)===String(contract.course?._id||contract.course)&&assignment.academicYear===contract.academicYear)}));
+  }
   if(req.query.status)contracts=contracts.filter(c=>c.contractStatus===req.query.status);
   res.json({contracts});
 }));

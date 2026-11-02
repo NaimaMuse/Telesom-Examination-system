@@ -100,3 +100,17 @@ export async function updateExam(id, data) {
 export async function deleteExam(id) {
   return safeDelete(`/teacher/exams/${id}`);
 }
+
+export async function getTeacherCalendarAssessments(signal) {
+  const fetchAll = async endpoint => {
+    const first = await api.get(endpoint, {signal,params:{limit:100,page:1}});
+    const rows = [...(first.data?.data || [])];
+    for(let page=2;page<=Number(first.data?.pagination?.pages || 1);page++) {
+      const response=await api.get(endpoint,{signal,params:{limit:100,page}});
+      rows.push(...(response.data?.data || []));
+    }
+    return rows;
+  };
+  const [exams,quizzes]=await Promise.all([fetchAll('/exams'),fetchAll('/quizzes')]);
+  return {exams,quizzes};
+}

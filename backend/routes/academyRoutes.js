@@ -29,7 +29,25 @@ router.get('/batches',asyncHandler(async(req,res)=>{
   if(req.user.role!=='admin'){
     filter.status='active';let enrollments=[];
     if(req.user.role==='student'){const student=await Student.findOne({user:req.user._id});if(student)enrollments=await Enrollment.find({student:student._id,status:'enrolled'}).lean();}
-    else {const teacher=await teacherFor(req.user);const assignments=await require('../models/CourseTeacher').find({teacher:teacher._id,status:'active'}).lean();if(assignments.length)enrollments=await Enrollment.find({status:'enrolled',$or:assignments.map(a=>({course:a.course,academicYear:a.academicYear}))}).lean();}
+    else {
+      const teacher=await teacherFor(req.user);
+      const assignmentFilter={teacher:teacher._id,status:'active'};
+      if(req.query.courseId)assignmentFilter.course=id(req.query.courseId);
+      const assignments=await require('../models/CourseTeacher').find(assignmentFilter).populate('course','batch academicYear').lean();
+      if(req.query.courseId&&!assignments.length)fail('This course is not assigned to you.',403);
+      if(req.query.purpose==='assessment'){
+        if(!req.query.courseId)fail('Select an assigned course first.');
+        return res.json({batches:await Batch.find(filter).sort({academicYear:-1,name:1}).lean()});
+      }
+      if(assignments.length){
+        const scopes=assignments.map(a=>({course:a.course?._id||a.course,academicYear:a.academicYear}));
+        const [students,contracts]=await Promise.all([
+          Enrollment.find({status:'enrolled',$or:scopes}).lean(),
+          Contract.find({teacher:teacher._id,status:'active',$or:scopes}).lean(),
+        ]);
+        enrollments=[...students,...contracts,...assignments.filter(a=>a.course?.batch&&a.course.academicYear===a.academicYear).map(a=>({batch:a.course.batch,academicYear:a.academicYear}))];
+      }
+    }
     const pairs=enrollments.filter(e=>e.batch).map(e=>({name:e.batch,academicYear:e.academicYear}));if(!pairs.length)return res.json({batches:[]});filter.$or=pairs;
   }
   res.json({batches:await Batch.find(filter).sort({academicYear:-1,name:1}).lean()});
@@ -49,7 +67,7 @@ router.get('/profile-picture/:teacherId',asyncHandler(async(req,res)=>{
   res.json({picture:teacher.profilePicture||''});
 }));
 const saveProfilePicture = asyncHandler(async(req,res)=>{
-  const teacher=req.params.teacherId ? await Teacher.findById(id(req.params.teacherId)) : await teacherFor(req.user),file=req.file;
+  const teacher=await teacherFor(req.user),file=req.file;
   if(!teacher)fail('Teacher not found.',404);
   if(!file||file.size>2*1024*1024)fail('Select a PNG, JPEG or WebP image up to 2 MB.');
   const b=file.buffer;
@@ -58,7 +76,7 @@ const saveProfilePicture = asyncHandler(async(req,res)=>{
   teacher.profilePicture=`data:${type};base64,${b.toString('base64')}`;await teacher.save();res.json({picture:teacher.profilePicture});
 });
 router.put('/profile-picture',authorizeRoles('teacher'),upload.single('file'),saveProfilePicture);
-router.put('/profile-picture/:teacherId',authorizeRoles('admin'),upload.single('file'),saveProfilePicture);
+router.put('/profile-picture/:teacherId',asyncHandler(async()=>{fail('Teachers can only update their own profile picture from their account.',403);}));
 router.delete('/profile-picture',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{const teacher=await teacherFor(req.user);teacher.profilePicture='';await teacher.save();res.json({picture:''});}));
 router.get('/outlines',asyncHandler(async(req,res)=>{
   res.set('Cache-Control','no-store');

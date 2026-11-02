@@ -6,6 +6,7 @@ const schema = new mongoose.Schema({
   batch: {type:String,required:true,trim:true},
   startDate: {type:String,required:true},
   endDate: {type:String,default:null},
+  dayBasis: {type:String,enum:['calendar','teaching'],default:'teaching'},
   totalDays: {type:Number,required:true,min:1,validate:Number.isInteger},
   status: {type:String,enum:['active','cancelled'],default:'active'},
   createdBy: {type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},

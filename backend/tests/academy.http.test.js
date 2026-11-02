@@ -24,8 +24,26 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   assert.strictEqual((await request('POST','/academy/batches',{name:'Batch 1',academicYear:'2026'})).status,201);
   assert.strictEqual((await request('POST','/academy/batches',{name:'Batch 1',academicYear:'2026'})).status,409);
   assert.strictEqual((await request('POST','/academy/batches',{name:'Batch 2',academicYear:'2026'},tu)).status,403);
+  const loadedBatches=await request('GET','/academy/batches?courseId='+course._id,null,tu);
+  assert.strictEqual(loadedBatches.status,200);
+  assert(loadedBatches.body.batches.some(batch=>batch.name==='Batch 1'));
+  assert.strictEqual((await request('GET','/academy/batches?courseId='+course._id,null,other)).status,403);
+  assert.strictEqual((await request('GET','/academy/batches?courseId=invalid',null,tu)).status,400);
   assert.strictEqual((await request('POST','/enrollments',{student:student._id,course:course._id,academicYear:'2027',batch:'Batch 1'})).status,400);
   await request('POST','/academy/batches',{name:'Batch 2',academicYear:'2026'});
+  const batchOnlyCourse=await m.Course.create({name:'Batch dropdown course',courseCode:'BATCH-DROP',academicYear:'2026',batch:'Batch 2'});
+  await m.CourseTeacher.create({teacher:teacher._id,course:batchOnlyCourse._id,academicYear:'2026'});
+  assert.deepStrictEqual((await request('GET','/academy/batches?courseId='+batchOnlyCourse._id,null,tu)).body.batches.map(batch=>batch.name),['Batch 2'],'Configured course batches load before enrollment');
+  await m.Batch.create({name:'Contract only',academicYear:'2026'});
+  await m.TeacherContract.create({teacher:teacher._id,course:batchOnlyCourse._id,academicYear:'2026',batch:'Contract only',startDate:'2026-01-01',totalDays:120,createdBy:admin._id});
+  assert((await request('GET','/academy/batches?courseId='+batchOnlyCourse._id,null,tu)).body.batches.some(batch=>batch.name==='Contract only'),'Contract batches load before enrollment');
+  assert.deepStrictEqual((await request('GET','/academy/batches?courseId='+batchOnlyCourse._id+'&academicYear=2027',null,tu)).body.batches,[]);
+  const catalog=await request('GET','/academy/batches?purpose=assessment&courseId='+batchOnlyCourse._id,null,tu);
+  assert.strictEqual(catalog.status,200);
+  const adminBatches=(await request('GET','/academy/batches')).body.batches.filter(batch=>batch.status==='active');
+  assert.deepStrictEqual(catalog.body.batches.map(batch=>batch._id).sort(),adminBatches.map(batch=>batch._id).sort(),'Assessment dropdown loads the saved Admin batch catalog without enrollment filtering');
+  assert.strictEqual((await request('GET','/academy/batches?purpose=assessment&courseId='+batchOnlyCourse._id,null,other)).status,403);
+  assert.strictEqual((await request('GET','/academy/batches?purpose=assessment',null,tu)).status,400);
   let response=await request('POST','/enrollments',{student:student._id,course:course._id,academicYear:'2026',batch:'Batch 2'});assert.strictEqual(response.status,201,JSON.stringify(response.body));
   assert.strictEqual((await request('POST','/enrollments',{student:student._id,course:course._id,academicYear:'2026',batch:'Batch 2'})).status,409);
   await m.Enrollment.deleteOne({_id:response.body.data._id});
@@ -66,6 +84,11 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   form=new FormData();form.append('file',new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64')],{type:'image/png'}),'avatar.png');
   response=await request('PUT','/academy/profile-picture',form,tu);assert.strictEqual(response.status,200);assert(response.body.picture.startsWith('data:image/png;base64,'));
   assert.strictEqual((await request('GET','/teacher/profile',null,tu)).body.teacher.profilePicture,response.body.picture,'Own profile must return the saved picture');
+  assert.strictEqual((await request('PUT','/academy/profile-picture',form)).status,403,'Admin cannot upload a teacher picture');
+  assert.strictEqual((await request('PUT','/academy/profile-picture/'+teacher._id,form)).status,403,'Admin cannot upload through the former teacher-ID endpoint');
+  assert.strictEqual((await request('PUT','/academy/profile-picture/'+teacher._id,form,other)).status,403,'Another teacher cannot upload a picture for this teacher');
+  assert.strictEqual((await request('GET','/teacher/profile',null,tu)).body.teacher.profilePicture,response.body.picture,'Denied uploads must preserve the existing picture');
+
   assert.strictEqual((await request('GET','/teachers/'+teacher._id+'/details')).body.data.profilePicture,response.body.picture,'Admin details must return the saved picture');
   assert.strictEqual((await request('GET','/academy/profile-picture/'+teacher._id,null,su)).status,403);
   assert.strictEqual((await request('DELETE','/academy/profile-picture',null,tu)).body.picture,'');

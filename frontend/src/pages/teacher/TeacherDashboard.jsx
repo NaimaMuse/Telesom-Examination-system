@@ -1,15 +1,19 @@
+import { assessmentDateKey, normalizeCalendarAssessments, assessmentTime, shiftCalendarDate } from './assessmentCalendar.mjs';
+import TeachingIcon from '../../components/TeachingIcon';
+import { WEEK_DAYS } from '../../components/WeeklySchedule';
+import { classesOnDate } from './teachingSchedule.mjs';
 import api from '../../services/api';
-import TelesomLogo from '../../components/TelesomLogo';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getTeacherDashboardData } from '../../services/teacherService';
+import { getTeacherDashboardData, getTeacherCalendarAssessments } from '../../services/teacherService';
 import './teacher.css';
+import './TeacherDashboardDesign.css';
 
 function parseExamDate(value) {
   if (!value) return null;
-  const datePart = String(value).match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  const datePart = assessmentDateKey(value);
   const date = datePart
     ? new Date(Number(datePart.slice(0, 4)), Number(datePart.slice(5, 7)) - 1, Number(datePart.slice(8, 10)))
     : new Date(value);
@@ -34,6 +38,7 @@ export default function TeacherDashboard() {
   const [contracts, setContracts] = useState([]);
   const [contractsError, setContractsError] = useState('');
   const [upcoming, setUpcoming] = useState([]);
+  const [assessmentsError, setAssessmentsError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -51,21 +56,23 @@ export default function TeacherDashboard() {
     requestRef.current = controller;
     if (initial === true) setLoading(true);
     try {
-      const [dashboardResult, contractResult] = await Promise.allSettled([
+      const [dashboardResult, contractResult, examsResult] = await Promise.allSettled([
         getTeacherDashboardData(controller.signal),
         api.get('/teacher-contracts', {signal: controller.signal}),
+        getTeacherCalendarAssessments(controller.signal),
       ]);
       if (!activeRef.current || controller.signal.aborted) return;
       if (contractResult.status === 'fulfilled') {
         setContracts(previous=>JSON.stringify(previous)===JSON.stringify(contractResult.value.data.contracts||[])?previous:contractResult.value.data.contracts||[]); setContractsError('');
       } else { setContractsError('Contracts could not refresh. Retrying automatically.'); }
+      if (examsResult.status === 'fulfilled') {
+        const next=normalizeCalendarAssessments(examsResult.value.exams,examsResult.value.quizzes);
+        setUpcoming(previous=>JSON.stringify(previous)===JSON.stringify(next)?previous:next);
+        setAssessmentsError('');
+      } else { setAssessmentsError('Assessments could not refresh. Please retry.'); }
       if (dashboardResult.status === 'rejected') throw dashboardResult.reason;
-      const data = dashboardResult.value;
-      if (!activeRef.current || controller.signal.aborted) return;
+      setSummary(dashboardResult.value?.summary ?? null);
       setError(null);
-      setSummary(data?.summary ?? null);
-      const next = Array.isArray(data?.upcomingExams) ? data.upcomingExams : [];
-      setUpcoming(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
     } catch (err) {
       if (!activeRef.current || controller.signal.aborted) return;
       setError('Dashboard could not refresh. Retrying automatically.');
@@ -92,35 +99,25 @@ export default function TeacherDashboard() {
     };
   }, [load]);
 
-  useEffect(() => {
-    const firstUpcoming = upcoming
-      .map((exam) => ({ exam, date: parseExamDate(exam.examDate || exam.date) }))
-      .filter((entry) => entry.date)
-      .sort((left, right) => left.date - right.date)[0];
-    if (!firstUpcoming) return;
-    setSelectedDate(dateKey(firstUpcoming.date));
-    setCalendarMonth(new Date(firstUpcoming.date.getFullYear(), firstUpcoming.date.getMonth(), 1));
-  }, [upcoming]);
 
   const matchingContracts=contracts.filter(contract=>matchesPageSearch(search,contract.course?.title,contract.course?.name,contract.batch,contract.academicYear));
   const contractsByDate=matchingContracts.reduce((groups,contract)=>{const key=String(contract.startDate||'').slice(0,10);if(key)groups[key]=[...(groups[key]||[]),contract];return groups;},{});
-  const selectedContracts=contractsByDate[selectedDate]||[];
+
   const matchingExams = upcoming.filter(exam => matchesPageSearch(search, exam.title, exam.type, exam.course?.title, exam.course?.courseCode, exam.examDate, exam.date));
   const examsByDate = matchingExams.reduce((groups, exam) => {
-    const date = parseExamDate(exam.examDate || exam.date);
-    if (!date) return groups;
-    const key = dateKey(date);
+    const key = assessmentDateKey(exam.examDate || exam.date);
+    if (!key) return groups;
     groups[key] = [...(groups[key] || []), exam];
     return groups;
   }, {});
 
   const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
   const monthDays = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
-  const calendarStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1 - ((monthStart.getDay() + 6) % 7));
-  const calendarCellCount = Math.ceil((((monthStart.getDay() + 6) % 7) + monthDays) / 7) * 7;
+  const calendarStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1 - ((monthStart.getDay() + 1) % 7));
+  const calendarCellCount = Math.ceil((((monthStart.getDay() + 1) % 7) + monthDays) / 7) * 7;
   const selectedLocalDate = new Date(`${selectedDate}T12:00:00`);
   const weekStart = new Date(selectedLocalDate);
-  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 1) % 7));
   const visibleDates = calendarView === 'day'
     ? [selectedLocalDate]
     : calendarView === 'week'
@@ -131,22 +128,21 @@ export default function TeacherDashboard() {
     key: dateKey(date),
     currentMonth: date.getMonth() === calendarMonth.getMonth(),
   }));
-  const selectedExams = search.trim() ? matchingExams : examsByDate[selectedDate] || [];
+
+  const selectedAssessments = examsByDate[selectedDate] || [];
   const todayKey = dateKey(new Date());
-  const nextAssessments = [...matchingExams].filter(exam=>{const date=parseExamDate(exam.examDate||exam.date);return date&&dateKey(date)>=todayKey;}).sort((a,b)=>parseExamDate(a.examDate||a.date)-parseExamDate(b.examDate||b.date)).slice(0,3);
+  const nextAssessments = [...matchingExams].filter(exam=>{const date=parseExamDate(exam.examDate||exam.date);return date&&assessmentDateKey(exam.examDate||exam.date)>=todayKey;}).sort((a,b)=>parseExamDate(a.examDate||a.date)-parseExamDate(b.examDate||b.date)).slice(0,3);
 
   return (
-    <div className="teacher-scope">
-
-
+    <div className="teacher-scope teacher-reference-dashboard teacher-gold-dashboard">
       <section className="teacher-dashboard-metrics" aria-label="Course totals">
         {[
-          { label: 'Enrolled Students', value: summary?.totalStudents, icon: '♙', tone: 'students' },
-          { label: 'Total Exams', value: summary?.totalExams, icon: '▤', tone: 'exams' },
-          { label: 'Total Quizzes', value: summary?.totalQuizzes, icon: '▦', tone: 'quizzes' },
+          { label: 'Enrolled Students', value: summary?.totalStudents, icon: 'users', tone: 'students', to: '/teacher/my-course?tab=students' },
+          { label: 'Total Exams', value: summary?.totalExams, icon: 'file', tone: 'exams', to: '/teacher/exams' },
+          { label: 'Total Quizzes', value: summary?.totalQuizzes, icon: 'clipboard', tone: 'quizzes', to: '/teacher/exams' },
         ].map((metric) => (
           <article className="teacher-metric-card" key={metric.label}>
-            <span className={`teacher-metric-icon ${metric.tone}`} aria-hidden="true">{metric.icon}</span>
+            <span className={`teacher-metric-icon ${metric.tone}`} aria-hidden="true"><TeachingIcon name={metric.icon} size={28}/></span>
             <div className="teacher-metric-copy">
               <strong>{loading ? '—' : typeof metric.value === 'number' ? metric.value : 'Unavailable'}</strong>
               <span>{metric.label}</span>
@@ -155,27 +151,7 @@ export default function TeacherDashboard() {
         ))}
       </section>
 
-      <section className="teacher-contracts-home" aria-labelledby="teacher-contracts-home-title">
-        <header><div><span>TEACHING WORKSPACE</span><h2 id="teacher-contracts-home-title">Your teaching contracts</h2></div><Link to="/teacher/my-course?tab=outline">My course →</Link></header>
-        {contractsError && <p role="status" className="teacher-contracts-message">{contractsError}</p>}
-        {loading && !contracts.length ? <p className="teacher-contracts-message">Loading contracts…</p> : !contracts.length ? <p className="teacher-contracts-message">Your teaching contract will appear here when your administrator creates it.</p> : <div className={`teacher-home-contract-grid ${contracts.length === 1 ? 'single-contract' : ''}`}>
-          {contracts.filter(contract => matchesPageSearch(search,contract.course?.title,contract.course?.name,contract.batch,contract.academicYear,contract.contractStatus)).slice(0,3).map(contract => {
-            const params = new URLSearchParams({tab:'outline',courseId:String(contract.course?._id || contract.course),academicYear:contract.academicYear,batch:contract.batch,contractId:contract._id});
-            return <article key={contract._id}>
-              <div className="teacher-home-contract-top"><span>{contract.academicYear} / {contract.batch}</span><span className="teacher-home-contract-status">{contract.contractStatus}</span></div>
-              <h3>{contract.course?.title || contract.course?.name || 'Assigned course'}</h3>
-              <p>{contract.startDate} · {contract.endDate || 'No end date'}</p>
-              <dl><div><dt>Total days</dt><dd>{contract.totalContractDays}</dd></div><div><dt>Completed</dt><dd>{contract.completedTeachingDays}</dd></div><div><dt>Remaining</dt><dd>{contract.remainingContractDays}</dd></div></dl>
-              <Link to={'/teacher/my-course?'+params.toString()}>View contract &amp; outline →</Link>
-            </article>;
-          })}
-          <aside className="teacher-next-assessments" aria-labelledby="teacher-next-assessments-title">
-            <div className="teacher-next-heading"><h3 id="teacher-next-assessments-title">Upcoming assessments</h3><Link to="/teacher/exams">View all →</Link></div>
-            {nextAssessments.length ? <ul>{nextAssessments.map(exam=><li key={exam._id||exam.title}><span className="teacher-next-date">{formatDate(parseExamDate(exam.examDate||exam.date),{day:'numeric',month:'short'})}</span><div><strong>{exam.title}</strong><p>{exam.course?.title||'Assigned course'}</p></div><span className="teacher-next-type">{exam.type||'Exam'}</span></li>)}</ul> : <p className="teacher-next-empty">No upcoming assessments scheduled.</p>}
-          </aside>
-          {search && !contracts.some(contract => matchesPageSearch(search,contract.course?.title,contract.course?.name,contract.batch,contract.academicYear,contract.contractStatus)) && <p className="teacher-contracts-message">No contracts match your search.</p>}
-        </div>}
-      </section>
+
 
       {error && (
         <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '0.85rem 1.1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -185,20 +161,38 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-      <section className="teacher-schedule-layout" aria-label="Academic schedule">
-        <div className="teacher-calendar-card">
+      <section className="teacher-two-column-layout" aria-label="Teaching overview and calendar"><div className="teacher-dashboard-stack">
+<section className="teacher-scheduled-panel"><header><h2><TeachingIcon name="clipboard"/> Scheduled Assessments</h2><span><TeachingIcon name="calendar" size={13}/>{formatDate(selectedLocalDate,{month:'short',day:'numeric'})}</span></header><p className="teacher-scheduled-date">{formatDate(selectedLocalDate,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</p>
+          {assessmentsError && <p className="teacher-panel-message" role="alert">{assessmentsError} <button type="button" onClick={()=>load()}>Retry</button></p>}
+          {loading ? <p className="teacher-panel-message">Loading scheduled assessments…</p> : selectedAssessments.length ? <ul>{selectedAssessments.map(item=><li key={item.calendarKey}><span className="teacher-scheduled-time"><TeachingIcon name={item.type==='quiz'?'clipboard':'file'} size={19}/></span><div><Link to="/teacher/exams"><strong>{item.title}</strong></Link><small>{item.course?.title||item.course?.name||item.courseName||'Assigned course'}{item.batch?' · '+item.batch:''}</small><small className="teacher-assessment-timing"><TeachingIcon name="clock" size={12}/>{assessmentTime(item)}{item.durationMinutes?' · '+item.durationMinutes+' minutes':''}</small></div><span className={'teacher-scheduled-badge '+item.type}>{item.type||'Exam'}<small>{item.status}</small></span></li>)}</ul> : !assessmentsError && <p className="teacher-panel-message">No exams, quizzes or assessments scheduled for this date. Select a marked date in the calendar.</p>}
+        </section>
+<section className="teacher-assessments-panel"><header><h2><TeachingIcon name="calendar"/> Upcoming Assessments</h2><Link to="/teacher/exams">View all <TeachingIcon name="arrow" size={16}/></Link></header>
+          {loading ? <p className="teacher-panel-message" role="status">Loading upcoming assessments…</p> : assessmentsError && !upcoming.length ? <p className="teacher-panel-message" role="alert">{assessmentsError}</p> : nextAssessments.length ? <ul>{nextAssessments.map(exam=><li key={exam.calendarKey||exam._id||exam.title}><span className="teacher-assessment-icon"><TeachingIcon name="file" size={25}/></span><div><Link to="/teacher/exams">{exam.title}</Link><p>{formatDate(parseExamDate(exam.examDate||exam.date),{weekday:'short',month:'short',day:'numeric',year:'numeric'})} · {assessmentTime(exam)}</p><small>{exam.course?.title||exam.courseName||'Assigned course'}</small></div><span className="teacher-assessment-type">{exam.status||'Upcoming'}</span></li>)}</ul> : <div className="teacher-assessments-empty"><TeachingIcon name="calendar" size={34}/><strong>No upcoming assessments scheduled.</strong><p>Your scheduled exams and quizzes will appear here.</p></div>}
+        </section>
+
+<aside className="teacher-contract-side">
+          <section className="teacher-contract-panel"><header><h2><TeachingIcon name="briefcase"/> Teaching Contract</h2><Link to="/teacher/my-course?tab=outline">View details <TeachingIcon name="arrow" size={16}/></Link></header>
+          {contractsError && <p className="teacher-panel-message" role="status">{contractsError}</p>}
+          {loading && !contracts.length ? <p className="teacher-panel-message">Loading contracts…</p> : matchingContracts.length === 0 ? <p className="teacher-panel-message">{search ? 'No contracts match your search.' : 'Your teaching contract will appear when your administrator assigns it.'}</p> : matchingContracts.slice(0,3).map(contract => {
+            const params=new URLSearchParams({tab:'outline',courseId:String(contract.course?._id||contract.course),academicYear:contract.academicYear,batch:contract.batch,contractId:contract._id});
+            return <article className="teacher-reference-contract" key={contract._id}>
+              <div className="teacher-contract-main"><span className="teacher-contract-emblem"><TeachingIcon name="book" size={32}/></span><div><Link to={'/teacher/my-course?'+params.toString()}>{contract.course?.title||contract.course?.name||'Assigned course'}</Link><p><TeachingIcon name="calendar" size={14}/>{contract.startDate} – {contract.endDate||'No end date'}</p><small>{contract.academicYear} / {contract.batch}</small></div><span className={'teacher-contract-state '+contract.contractStatus?.toLowerCase()}>{contract.contractStatus==='Active' && <TeachingIcon name="check" size={14}/>} {contract.contractStatus}</span></div>
+              <div className="teacher-contract-weekline"><TeachingIcon name="clock" size={16}/><strong>Weekly Schedule:</strong><span>{(contract.course?.teachingSchedule||[]).map(slot=>WEEK_DAYS[slot.day]+(new Set((contract.course?.teachingSchedule||[]).map(row=>row.startTime+'–'+row.endTime)).size>1?' '+slot.startTime+'–'+slot.endTime:'')).join(' – ')||'Not scheduled'}</span><span className="teacher-contract-weektime">{new Set((contract.course?.teachingSchedule||[]).map(slot=>slot.startTime+'–'+slot.endTime)).size===1 ? (contract.course.teachingSchedule[0].startTime+'–'+contract.course.teachingSchedule[0].endTime) : ''}</span></div>
+              <div className="teacher-contract-totals"><span><strong>{contract.totalContractDays}</strong> contract days</span><span><strong>{contract.completedTeachingDays}</strong> taught days</span><span><strong>{contract.remainingContractDays}</strong> remaining</span></div>
+            </article>;
+          })}
+        </section>
+        </aside>
+</div>
+<div className="teacher-calendar-card">
           <div className="teacher-calendar-heading">
             <div className="teacher-calendar-title">
-              <span className="teacher-calendar-icon" aria-hidden="true">▦</span>
-              <div><h2>Academic Schedule</h2><p>View your class and exam schedule</p></div>
+              <span className="teacher-calendar-icon"><TeachingIcon name="calendar" size={32}/></span>
+              <div><h2>Academic Calendar</h2><p>Your academic schedule for this month</p></div>
             </div>
             <div className="teacher-calendar-controls">
               <button type="button" className="calendar-nav-btn" aria-label="Previous period" onClick={() => {
-                const amount = calendarView === 'month' ? -1 : calendarView === 'week' ? -7 : -1;
-                const unit = calendarView === 'month' ? 'month' : 'day';
-                const nextDate = new Date(selectedLocalDate);
-                if (unit === 'month') nextDate.setMonth(nextDate.getMonth() + amount);
-                else nextDate.setDate(nextDate.getDate() + amount);
+                const nextDate = shiftCalendarDate(selectedLocalDate,-1,calendarView);
                 setSelectedDate(dateKey(nextDate));
                 setCalendarMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
               }}>‹</button>
@@ -208,10 +202,7 @@ export default function TeacherDashboard() {
                   ? `${formatDate(weekStart, { month: 'short', day: 'numeric' })} – ${formatDate(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6), { month: 'short', day: 'numeric', year: 'numeric' })}`
                   : formatDate(calendarMonth, { month: 'long', year: 'numeric' })}</span>
               <button type="button" className="calendar-nav-btn" aria-label="Next period" onClick={() => {
-                const amount = calendarView === 'month' ? 1 : calendarView === 'week' ? 7 : 1;
-                const nextDate = new Date(selectedLocalDate);
-                if (calendarView === 'month') nextDate.setMonth(nextDate.getMonth() + amount);
-                else nextDate.setDate(nextDate.getDate() + amount);
+                const nextDate = shiftCalendarDate(selectedLocalDate,1,calendarView);
                 setSelectedDate(dateKey(nextDate));
                 setCalendarMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
               }}>›</button>
@@ -221,48 +212,31 @@ export default function TeacherDashboard() {
             </div>
           </div>
           <div className={`teacher-calendar-grid view-${calendarView}`} role="grid" aria-label={formatDate(calendarMonth, { month: 'long', year: 'numeric' })}>
-            {calendarView !== 'day' && (calendarView === 'week' ? visibleDates : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']).map((item, index) => {
+            {calendarView !== 'day' && (calendarView === 'week' ? visibleDates : ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']).map((item, index) => {
               if (calendarView === 'week') return <div className="teacher-calendar-weekday" role="columnheader" key={dateKey(item)}>{formatDate(item, { weekday: 'short', day: 'numeric' })}</div>;
               return <div className="teacher-calendar-weekday" role="columnheader" key={item}>{item}</div>;
             })}
             {calendarDays.map(({ date, key, currentMonth }) => {
               const dayExams = examsByDate[key] || [];
               const dayContracts = contractsByDate[key] || [];
+              const dayClasses = classesOnDate(matchingContracts, key);
               const selected = selectedDate === key;
               return (
                 <button type="button" role="gridcell" key={key}
-                  className={`teacher-calendar-day ${currentMonth || calendarView !== 'month' ? '' : 'is-outside'} ${key === todayKey ? 'is-today' : ''} ${selected ? 'is-selected' : ''} ${dayExams.length ? 'has-exams' : ''} ${dayContracts.length ? 'has-contract-start' : ''}`}
-                  aria-label={`${formatDate(date, { weekday: 'long', month: 'long', day: 'numeric' })}${dayExams.length ? `, ${dayExams.length} exam${dayExams.length === 1 ? '' : 's'}` : ''}${dayContracts.length ? ', '+dayContracts.length+' contract starts' : ''}`}
+                  className={`teacher-calendar-day ${currentMonth || calendarView !== 'month' ? '' : 'is-outside'} ${key === todayKey ? 'is-today' : ''} ${selected ? 'is-selected' : ''} ${dayClasses.length ? 'has-classes' : ''} ${dayExams.length ? 'has-exams' : ''} ${dayContracts.length ? 'has-contract-start' : ''}`}
+                  aria-label={`${formatDate(date, { weekday: 'long', month: 'long', day: 'numeric' })}${dayExams.length ? `, ${dayExams.length} exam${dayExams.length === 1 ? '' : 's'}` : ''}${dayContracts.length ? ', '+dayContracts.length+' contract starts' : ''}${dayClasses.length ? ', '+dayClasses.length+' teaching classes' : ''}`}
+                  title={[...dayClasses.map(item=>item.course?.title||item.course?.name||'Teaching day'),...dayExams.map(item=>(item.type||'Exam')+': '+item.title)].join('\n')}
                   aria-pressed={selected} onClick={() => setSelectedDate(key)}>
-                  <span>{calendarView === 'day' ? formatDate(date, { weekday: 'long', day: 'numeric' }) : date.getDate()}</span>
+                  <span className="calendar-date-number">{calendarView === 'day' ? formatDate(date, { weekday: 'long', day: 'numeric' }) : date.getDate()}</span>
                   {dayContracts.length > 0 && <span className="contract-start-marker" title="Contract starts" aria-hidden="true">★</span>}
-                  {dayExams.length > 0 && <span className="calendar-day-markers" aria-hidden="true">{dayExams.slice(0, 3).map((exam, index) => <i key={exam._id || index} />)}</span>}
-                  {calendarView !== 'month' && dayExams.length > 0 && <span className="calendar-cell-event">{dayExams[0].title}</span>}
+                  <span className="calendar-event-dots" aria-hidden="true">{dayClasses.length > 0 && <i className="is-teaching"/>}{dayExams.slice(0, 3).map((exam, index) => <i className={exam.type==='quiz'?'is-quiz':'is-exam'} key={exam.calendarKey || index}/>)}</span>
+                  {calendarView !== 'month' && dayExams.length > 0 && <span className="calendar-assessment-label">{dayExams[0].type||'Exam'}{dayExams.length>1?' +'+(dayExams.length-1):''}</span>}
                 </button>
               );
             })}
           </div>
-          <div className="teacher-calendar-legend"><span><i /> Exam scheduled</span><span className="contract-start-legend">★ Contract starts</span><button type="button" onClick={() => { const today = new Date(); setSelectedDate(todayKey); setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); }}>Today</button></div>
+          <div className="teacher-calendar-legend"><span className="calendar-exam-legend"><i/> Exam / assessment</span><span className="calendar-quiz-legend"><i/> Quiz</span><span className="teaching-day-legend"><i/> Teaching day</span><span className="contract-start-legend">★ Contract starts</span><button type="button" onClick={() => { const today = new Date(); setSelectedDate(todayKey); setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); }}>Today</button></div>
         </div>
-
-        <aside className="teacher-schedule-side" aria-live="polite">
-          <div className="teacher-date-card">
-            <span className="teacher-calendar-icon" aria-hidden="true">▦</span>
-            <div><span>{formatDate(selectedLocalDate, { weekday: 'long' })}</span><strong>{formatDate(selectedLocalDate, { month: 'long', day: 'numeric', year: 'numeric' })}</strong></div>
-          </div>
-          <div className="teacher-agenda-card">
-            <h3><span aria-hidden="true">▤</span> Contract schedule</h3>
-            {loading ? <p className="calendar-agenda-empty">Loading contracts…</p> : selectedContracts.length === 0 ? (
-              <div className="agenda-empty-state"><span className="agenda-empty-icon" aria-hidden="true">▤</span><p>No contracts start on this day. Select a date marked with a star.</p></div>
-            ) : selectedContracts.map(contract => (
-              <div className="calendar-agenda-item" key={contract._id}>
-                <span className="calendar-agenda-type">★</span>
-                <div><strong>{contract.course?.title||contract.course?.name||'Teaching contract'}</strong><small>{contract.academicYear} / {contract.batch}</small><small>{contract.totalContractDays} teaching days · {contract.contractStatus}</small></div>
-              </div>
-            ))}
-            <Link to="/teacher/my-course?tab=outline" className="calendar-agenda-link">View teaching contracts <span aria-hidden="true">→</span></Link>
-          </div>
-        </aside>
       </section>
     </div>
   );

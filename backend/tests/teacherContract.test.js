@@ -12,3 +12,25 @@ assert.throws(()=>validateContract({...contract,totalDays:1.5,batch:'B1',academi
 assert.throws(()=>validateContract({...contract,endDate:'2025-01-01',batch:'B1',academicYear:'2026'}));
 assert.strictEqual(calculateBalance({...contract,totalDays:1},['2026-01-01','2026-01-02']).remainingContractDays,0);
 console.log('Contract balance tests passed: unique days, reversals, Nairobi midnight, date validation and non-negative balances.');
+
+const {calendarEnd}=require('../services/teacherContractService');
+assert.strictEqual(calendarEnd('2026-11-02',120),'2027-03-01');
+assert.strictEqual(calendarEnd('2028-02-28',3),'2028-03-01');
+assert.strictEqual(calendarEnd('2026-11-02',1),'2026-11-02');
+assert.throws(()=>calendarEnd('2026-02-30',120));
+assert.throws(()=>calendarEnd('2026-11-02',0));
+const calendar={...contract,startDate:'2026-11-02',totalDays:120,dayBasis:'calendar'};
+const at=value=>new Date(value+'T12:00:00+03:00');
+assert.strictEqual(calculateBalance(calendar,[],at('2026-11-01')).remainingContractDays,120);
+assert.strictEqual(calculateBalance(calendar,[],at('2026-11-02')).remainingContractDays,119);
+assert.strictEqual(calculateBalance(calendar,['2026-11-02'],at('2026-11-02')).remainingContractDays,119);
+assert.strictEqual(calculateBalance(calendar,[],at('2027-03-01')).contractStatus,'Active');
+assert.strictEqual(calculateBalance(calendar,[],at('2027-03-02')).contractStatus,'Expired');
+assert.strictEqual(calculateBalance(calendar,[],at('2027-03-02')).remainingContractDays,0);
+console.log('Calendar contracts passed: inclusive dates, leap year, elapsed days independent of lessons, and expiry.');
+
+const Course=require('../models/Course');
+assert(new Course({teachingSchedule:[{day:7,startTime:'08:00',endTime:'10:00'}]}).validateSync());
+assert(new Course({teachingSchedule:[{day:1,startTime:'10:00',endTime:'08:00'}]}).validateSync());
+assert(new Course({teachingSchedule:[{day:1,startTime:'08:00',endTime:'10:00'},{day:1,startTime:'11:00',endTime:'12:00'}]}).validateSync());
+assert.equal(new Course({teachingSchedule:[{day:1,startTime:'08:00',endTime:'10:00'}]}).validateSync(),undefined);

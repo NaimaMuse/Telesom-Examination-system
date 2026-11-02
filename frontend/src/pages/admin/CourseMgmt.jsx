@@ -1,3 +1,4 @@
+import WeeklySchedule from '../../components/WeeklySchedule';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -15,7 +16,7 @@ const COURSE_FIELDS = [
 const PAGE_SIZE = 8;
 
 function CourseModal({ initial, onSave, onClose }) {
-  const [form, setForm] = useState({ credits: 3, status: 'active', ...(initial || {}) });
+  const [form, setForm] = useState({ credits: 3, status: 'active', teachingSchedule: [], ...(initial || {}) });
   const [batches, setBatches] = useState([]);
   const [batchesLoading, setBatchesLoading] = useState(true);
   const [batchError, setBatchError] = useState('');
@@ -34,6 +35,7 @@ function CourseModal({ initial, onSave, onClose }) {
   const submit = async (event) => {
     event.preventDefault();
     if (!selectedBatch) { setError('Select an existing year / batch.'); return; }
+    if (form.teachingSchedule.some(row => row.endTime <= row.startTime)) { setError('End time must be after start time.'); return; }
     setSaving(true);
     setError('');
     try {
@@ -79,6 +81,7 @@ function CourseModal({ initial, onSave, onClose }) {
                 </div>
               ))}
             </div>
+            <WeeklySchedule value={form.teachingSchedule || []} onChange={teachingSchedule => setForm(current => ({...current,teachingSchedule}))} />
             {error && <div className="course-form-error" role="alert">{error}</div>}
           </div>
           <footer className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save course'}</button></footer>
@@ -152,6 +155,7 @@ export default function CourseMgmt() {
       name: String(form.name || '').trim(),
       title: String(form.name || '').trim(),
       credits: Number(form.credits) || 3,
+      teachingSchedule: form.teachingSchedule || [],
       academicYear: String(form.academicYear || '').trim(),
       batch: String(form.batch || '').trim(),
       description: String(form.description || '').trim(),
@@ -202,11 +206,12 @@ export default function CourseMgmt() {
         ) : (
           <div className="table-responsive">
             <table className="data-table course-catalog-table">
-              <thead><tr><th>Course</th><th>Credits</th><th>Year</th><th>Description</th><th>Status</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+              <thead><tr><th>Course</th><th>Credits</th><th>Days</th><th>Year</th><th>Description</th><th>Status</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
               <tbody>{paginated.map((course) => (
                 <tr key={course._id}>
                   <td><div className="course-record"><span aria-hidden="true">▤</span><div><strong>{course.name}</strong><small>{course.courseCode || 'Code not set'}</small></div></div></td>
                   <td><span className="course-credit-value">{course.credits ?? '—'} <small>cr</small></span></td>
+                  <td><span className="course-term-value" title={(course.teachingSchedule || []).map(slot => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][slot.day]).join(', ') || 'No teaching days configured'}>{`${new Set((course.teachingSchedule || []).map(slot => slot.day)).size} ${new Set((course.teachingSchedule || []).map(slot => slot.day)).size === 1 ? 'day' : 'days'}`}</span></td>
                   <td><span className="course-term-value"><small>{course.academicYear || 'Year not set'}</small></span></td>
                   <td><span className="course-description-cell">{course.description || 'No description added'}</span></td>
                   <td><span className={`course-status-pill ${course.status === 'active' ? 'is-active' : course.status === 'archived' ? 'is-archived' : ''}`}><i aria-hidden="true"/>{course.status}</span></td>

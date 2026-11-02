@@ -45,6 +45,26 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
       status: 'upcoming',
     };
   });
+  const [batches, setBatches] = useState([]);
+  const [batchesLoading, setBatchesLoading] = useState(true);
+  const [batchesError, setBatchesError] = useState('');
+  const [batchRetry, setBatchRetry] = useState(0);
+  const selectedCourse = assignedCourses.find(course => course._id === form.course);
+  useEffect(() => {
+    const controller = new AbortController();
+    setBatchesLoading(true); setBatchesError(''); setBatches([]);
+    if (!form.course) { setBatchesLoading(false); return () => controller.abort(); }
+    api.get('/academy/batches', {signal:controller.signal, params:{courseId:form.course,purpose:'assessment',...(fixedScope?.academicYear?{academicYear:fixedScope.academicYear}:{})}})
+      .then(({data}) => {
+        if (controller.signal.aborted) return;
+        const records = data.batches || [];
+        setBatches(records);
+        if (!initial && !fixedScope && records.length === 1) setForm(current => current.batch ? current : {...current,batch:records[0].name,academicYear:records[0].academicYear});
+      })
+      .catch(() => { if (!controller.signal.aborted) setBatchesError('Could not load batches. Please retry.'); })
+      .finally(() => { if (!controller.signal.aborted) setBatchesLoading(false); });
+    return () => controller.abort();
+  }, [form.course, selectedCourse?.academicYear, fixedScope?.academicYear, batchRetry]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -58,6 +78,7 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
     setSaving(true);
     setError('');
     try {
+      if (form.batch && !fixedScope && !batches.some(batch => batch.name === form.batch && (!form.academicYear || batch.academicYear === form.academicYear)) && form.batch !== initial?.batch) throw new Error('Select a saved batch for this course.');
       await onSave({ ...form, course: finalCourse });
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to save');
@@ -117,7 +138,7 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
                       className="form-control"
                       required
                       value={form.course || ''}
-                      onChange={(e) => setForm((p) => ({ ...p, course: e.target.value }))}
+                      onChange={(e) => setForm((p) => ({ ...p, course: e.target.value, batch: '', academicYear: '' }))}
                     >
                       <option value="">Select your assigned course…</option>
                       {assignedCourses.map((c) => (
@@ -193,7 +214,11 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              <div className="form-group"><label className="form-label">Batch (optional)</label><input readOnly={!!fixedScope} className="form-control" value={form.batch||''} onChange={e=>setForm(p=>({...p,batch:e.target.value}))}/></div>
+              <div className="form-group"><label className="form-label" htmlFor="assessment-batch">Batch (optional)</label><select id="assessment-batch" className="form-control" disabled={!!fixedScope || batchesLoading || !!batchesError} value={form.batch ? JSON.stringify([form.academicYear || selectedCourse?.academicYear || '',form.batch]) : ''} onChange={event => { const [academicYear,batch]=event.target.value ? JSON.parse(event.target.value) : ['', '']; setForm(current => ({...current,batch,academicYear})); }}>
+                <option value="">{batchesLoading ? 'Loading batches…' : batchesError ? 'Batches unavailable' : 'All batches'}</option>
+                {batches.map(batch=><option key={batch._id} value={JSON.stringify([batch.academicYear,batch.name])}>{batch.academicYear} / {batch.name}</option>)}
+                {form.batch && !batches.some(batch=>batch.name===form.batch && batch.academicYear===(form.academicYear || selectedCourse?.academicYear || '')) && <option value={JSON.stringify([form.academicYear || selectedCourse?.academicYear || '',form.batch])}>{form.academicYear || selectedCourse?.academicYear} / {form.batch} (saved)</option>}
+              </select>{batchesError && <small role="alert">{batchesError} <button type="button" onClick={()=>setBatchRetry(value=>value+1)}>Retry</button></small>}{!batchesLoading && !batchesError && !batches.length && <small>No active batches have been created by Admin.</small>}</div>
 <div className="form-group"><label className="form-label">Publish marks</label><select className="form-control" value={form.marksPublished?'published':'unpublished'} onChange={e=>setForm(p=>({...p,marksPublished:e.target.value==='published'}))}><option value="unpublished">Unpublished marks</option><option value="published">Publish marks to students</option></select></div>
               <div className="form-group"><label className="form-label">Student visibility</label><select className="form-control" value={form.visibleToStudents?'visible':'hidden'} onChange={e=>setForm(p=>({...p,visibleToStudents:e.target.value==='visible'}))}><option value="hidden">Hidden from students</option><option value="visible">Visible to students</option></select></div>
             </div>
@@ -311,7 +336,7 @@ export default function TeacherExams({scope,onEditingChange,onChange}) {
       marksPublished:form.marksPublished===true,
       visibleToStudents:form.visibleToStudents===true,
       batch:form.batch||'',
-      academicYear:assignedCourses.find(c=>c._id===form.course)?.academicYear||String(new Date().getFullYear()),
+      academicYear:scope?.academicYear||form.academicYear||assignedCourses.find(c=>c._id===form.course)?.academicYear||String(new Date().getFullYear()),
       semester:assignedCourses.find(c=>c._id===form.course)?.semester||'',
       title: form.title,
       course: form.course,
