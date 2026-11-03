@@ -1,0 +1,104 @@
+/* Scoped My Course workspace design with shared Telesom brand tokens. */
+
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page { width:100%; min-width:0; box-sizing:border-box; color:var(--brand-green-deep); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-banner { display:flex; align-items:center; gap:13px; padding:15px 18px; margin-bottom:14px; border-radius:13px; background:linear-gradient(120deg,var(--brand-green-deep),#075b34); box-shadow:inset 0 2px var(--brand-gold),inset 0 -2px var(--brand-gold); color:#fff; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-mark { display:grid; place-items:center; width:43px; height:43px; flex:0 0 43px; border:1px solid #ffffff20; background:#ffffff08; color:#edc56c; border-radius:11px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-banner > div { flex:1; min-width:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-eyebrow { color:#ecc566; font-size:8px; font-weight:700; letter-spacing:1.4px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-banner h1 { margin:4px 0; color:#fff; font-size:21px; line-height:1.25; overflow-wrap:anywhere; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-banner p { margin:0; color:#d2e8d8; font-size:10px; line-height:1.5; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-code { padding:6px 10px; border:1px solid #e7bd6566; border-radius:7px; background:#ffffff0a; color:#f0d493; font-size:10px; font-weight:650; white-space:nowrap; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta { display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:12px; padding:0; margin:0 0 14px; background:transparent; border:0; border-radius:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta > div { min-width:0; padding:12px 14px; border:1px solid #dce8df; border-radius:10px; background:#fff; gap:11px; box-shadow:0 2px 8px #164f2404; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta > div:last-child { border:1px solid #dce8df; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta .tp-icon { width:34px; height:34px; border-radius:9px; background:var(--brand-green-soft); color:var(--brand-green-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta > div:nth-child(2) .tp-icon { background:var(--brand-gold-soft); color:var(--brand-gold-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta small { color:#819186; font-size:9px; margin-bottom:4px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta strong { color:#29583a; font-size:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); width:100%; box-sizing:border-box; padding:5px; gap:5px; margin-bottom:15px; background:#fff; border:1px solid #dce8df; border-radius:11px; box-shadow:0 2px 8px #164f2404; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-tabs .course-tab { min-height:38px; padding:9px 12px; border-radius:8px; color:#718277; font-size:11px; font-weight:650; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-tabs .course-tab.active,.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-tabs .course-tab[aria-selected=true],.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-tabs .course-tab[aria-current=page] { background:var(--brand-green-active); color:#fff; box-shadow:inset 0 -2px var(--brand-gold); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-tabs .course-tab:hover:not(.active):not(:disabled) { background:var(--brand-gold-tint); color:var(--brand-gold-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-tabs .course-tab.active:after { display:none; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metrics { gap:12px; margin-bottom:14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metric { padding:14px; gap:10px; border-color:#dce8df; border-radius:12px; background:linear-gradient(120deg,#fff,var(--brand-green-tint)); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metric:nth-child(3) { background:linear-gradient(120deg,#fff,var(--brand-gold-tint)); border-color:#e8ddc5; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metric .tp-icon { width:35px; height:35px; border-radius:10px; background:var(--brand-green-soft); color:var(--brand-green-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metric:nth-child(3) .tp-icon { background:var(--brand-gold-soft); color:var(--brand-gold-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metric h3 { font-size:10px; color:#6f8375; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metric strong { font-size:26px; color:var(--brand-green-deep); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metric p { font-size:9px; line-height:1.4; color:#8a998f; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-contract-progress { flex-wrap:wrap; gap:5px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-contract-progress progress { flex-basis:100%; height:5px; accent-color:var(--brand-green-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-contract-progress small { font-size:8px; white-space:normal; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-card { padding:0; overflow:hidden; border-color:#dce8df; border-radius:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-card > h3,.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-panel > header,.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview > .weekly-preview > .weekly-schedule-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0; padding:11px 14px; background:linear-gradient(120deg,var(--brand-green-deep),#075b34); color:#fff; box-shadow:inset 0 2px var(--brand-gold),inset 0 -2px var(--brand-gold); border:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-card > h3 { justify-content:flex-start; font-size:11px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-card > h3 svg,.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-panel > header h2 svg { color:#e7be61; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-content { padding:12px; margin:0; gap:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-ring { width:64px; height:64px; background:conic-gradient(var(--brand-green-active) var(--progress),#e7eee9 0); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-ring strong { color:var(--brand-green-deep); font-size:14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-content dl > div { font-size:9px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-content i.green { background:var(--brand-green-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-content i.amber { background:var(--brand-gold); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-progress-content i.blue { background:#96b89f; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview > .weekly-preview { border:1px solid #dce8df; border-radius:12px; margin:0 0 10px; background:#fff; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview > .weekly-preview .weekly-schedule-heading h3 { color:#fff; font-size:12px!important; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview > .weekly-preview .weekly-schedule-heading p { color:#d3e7d9; font-size:9px!important; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview > .weekly-preview .weekly-preview-slots { padding:11px 14px; gap:8px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview > .weekly-preview .weekly-preview-slots > span { background:var(--brand-green-tint); border:1px solid #dce8df; padding:6px 10px; border-radius:7px; font-size:11px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview > .weekly-preview .weekly-preview-slots strong { color:var(--brand-green-active); font-size:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview > .contract-muted { padding:0 2px; margin:0 0 15px; color:#8b998e; font-size:9px; line-height:1.5; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-main-grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-panel { border:1px solid #dce8df; border-radius:12px; overflow:hidden; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-panel > header h2 { display:flex; align-items:center; gap:9px; color:#fff; font-size:13px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-panel > header button { color:#edc971; background:transparent; border:0; padding:0; font-size:10px; font-weight:650; white-space:nowrap; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-about { padding:16px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-about h3 { color:#27593a; font-size:16px; margin-bottom:7px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-about > p { color:#819186; font-size:11px; line-height:1.6; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-about dl { gap:12px; margin-top:15px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-about dt { font-size:9px; color:#90a095; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-about dd { color:#42684c; font-size:11px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-recent-list { padding:5px 14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-recent-list li { gap:10px; padding:12px 0; border-color:#e8efea; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-recent-list .tp-icon { width:33px; height:36px; background:var(--brand-gold-soft); color:var(--brand-gold-active); border-radius:8px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-recent-list strong { color:#355d42; font-size:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-recent-list small { color:#91a095; font-size:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-empty { padding:26px 16px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-empty .tp-icon { background:var(--brand-gold-soft); color:var(--brand-gold-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-empty h3 { font-size:13px; color:#53775c; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-empty p { font-size:11px; color:#91a095; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-header { background:linear-gradient(120deg,var(--brand-green-deep),#075b34); box-shadow:inset 0 2px var(--brand-gold),inset 0 -2px var(--brand-gold); border:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-header h2,.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-header h2 > span { color:#fff; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-header h2 > span { background:#ffffff16; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-header p { color:#d1e6d7; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-eyebrow { color:#edc76d; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-heading-icon { background:#ffffff0a; color:#edc76d; border:1px solid #ffffff1a; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-cohort { color:#f0d59a; border-color:#dfb24f44; background:#ffffff08; }
+@media(max-width:1150px) { .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:750px) { .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-main-grid { grid-template-columns:minmax(0,1fr); } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta > div { padding:10px; gap:8px; } }
+@media(max-width:560px) { .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-banner { padding:13px; flex-wrap:wrap; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-banner h1 { font-size:18px; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-workspace-code { margin-left:56px; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-course-meta { grid-template-columns:minmax(0,1fr); } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metric { padding:12px; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-panel > header { flex-wrap:wrap; } }
+
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-contract-card .co-progress-content { background:var(--brand-gold-tint); }
+
+/* Keep the overview focused on contract and lesson progress. */
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+@media(max-width:560px) { .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-metrics { grid-template-columns:minmax(0,1fr); } }
+
+/* Overview headings use lighter surfaces and distinct section accents. */
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-progress-card { background:#fff; border-top:0; box-shadow:0 3px 12px #164f2405; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-progress-card > h3 { background:#fff; color:var(--brand-green-deep); box-shadow:none; padding:14px 16px 10px; border-bottom:1px solid #edf1ed; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-progress-card > h3 svg { color:var(--brand-green-active); padding:6px; width:29px; height:29px; box-sizing:content-box; border-radius:10px; background:var(--brand-green-soft); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-progress-card:not(.co-contract-card) > h3 svg { background:var(--brand-gold-soft); color:var(--brand-gold-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-progress-card .co-progress-content { background:#fff; padding:14px 16px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-contract-card { border-left:3px solid var(--brand-green-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-progress-card:not(.co-contract-card) { border-left:3px solid var(--brand-gold); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel > header { background:var(--brand-green-tint); color:var(--brand-green-deep); box-shadow:none; border-bottom:1px solid #dce8df; padding:13px 16px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel > header h2 { color:var(--brand-green-deep); margin:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel > header h2 svg { color:var(--brand-green-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel > header button { color:var(--brand-green-deep); background:#fff; border:1px solid #d4e4d8; border-radius:7px; padding:6px 9px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel:last-child > header { background:var(--brand-gold-soft); border-bottom-color:var(--brand-gold-border); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel:last-child > header h2 svg { color:var(--brand-gold-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel:last-child > header button { border-color:var(--brand-gold-border); color:var(--brand-gold-active); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel > header button:hover { background:var(--brand-green-soft); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview .co-main-grid .co-panel > header button:focus-visible { outline:2px solid var(--brand-gold); outline-offset:3px; }

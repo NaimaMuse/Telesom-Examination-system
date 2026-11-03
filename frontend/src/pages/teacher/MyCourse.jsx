@@ -1,3 +1,6 @@
+import './MyCourseDesign.css';
+import './StudyNotes.css';
+import CourseStudents from '../../components/CourseStudents';
 import CourseOverview from '../../components/CourseOverview';
 import TeachingIcon from '../../components/TeachingIcon';
 import {Navigate,useNavigate,useSearchParams} from 'react-router-dom';
@@ -117,181 +120,39 @@ export default function MyCourse({outlinePage=false}) {
     setParams(previous=>{const next=new URLSearchParams(previous);next.set('courseId',cohort.courseId);next.set('academicYear',cohort.academicYear);next.set('batch',cohort.batch);next.delete('contractId');return next;});
   };
 
+
   const renderOverview = () => <CourseOverview course={course} contract={workspace?.contract} lessonProgress={workspace?.lessonProgress} students={students} notes={notes.filter(note=>matchesPageSearch(search,note.title,note.description,note.filename))} upcoming={upcoming.filter(exam=>matchesPageSearch(search,exam.title,exam.type,exam.course?.title))} onTab={setTab}/>;
   const renderNotes = () => (
-    <div className="card study-notes-panel">
-      <div className="card-header">
-        <span className="card-title">Study Notes</span>
-      </div>
-      <div className="card-body">
-        <form onSubmit={handleUpload} style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label" htmlFor="course-note-title">Document Title *</label>
-              <input
-                className="form-control"
-                id="course-note-title" required
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                placeholder="Week 3 – Lecture notes"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="course-note-file">{editingNoteId?'Replace document (optional)':'Select Document *'}</label>
-              <input
-                className="form-control"
-                key={`${editingNoteId||'new'}-${revision}`}
-                id="course-note-file"
-                type="file"
-                accept=".pdf,.doc,.docx,.ppt,.pptx"
-                onChange={(event) => setForm((current) => ({ ...current, file: event.target.files?.[0] || null }))}
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="course-note-description">Description</label>
-            <textarea
-              className="form-control"
-              rows={3} id="course-note-description" maxLength={4000}
-              value={form.description}
-              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-              placeholder="Add a short summary for students..."
-            />
-          </div>
-
-          {noteError && (
-            <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#9f1239', borderRadius: 8, padding: '0.7rem 0.9rem', fontSize: '0.85rem' }}>
-              {noteError}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '0.75rem' }}>
-            <button type="submit" className="btn btn-primary" disabled={uploading}>
-              {uploading ? 'Uploading…' : editingNoteId ? 'Save Changes' : 'Upload Document'}
-            </button>
-            {(editingNoteId||form.title||form.description||form.file) && (
-              <button type="button" className="btn btn-secondary" onClick={() => { setEditingNoteId(null); setForm({ title: '', description: '', file: null }); }}>
-                Cancel
-              </button>
-            )}
-          </div>
+    <section className="study-notes-panel notes-library">
+      <header className="notes-library-header"><span className="notes-library-mark"><TeachingIcon name="folder" size={25}/></span><div><span>COURSE RESOURCES</span><h2>Study Notes</h2><p>Share learning materials with your students.</p></div><span className="notes-library-total">{notes.length} {notes.length===1?'document':'documents'}</span></header>
+      <div className="notes-library-body">
+        <form className="notes-upload-form" onSubmit={handleUpload}>
+          <div className="notes-form-title"><TeachingIcon name="file" size={18}/><h3>{editingNoteId?'Edit document':'Upload a document'}</h3><span>PDF · Word · PowerPoint</span></div>
+          <div className="notes-form-grid"><div className="notes-field"><label htmlFor="course-note-title">Document title <span>*</span></label><input id="course-note-title" required disabled={uploading} value={form.title} onChange={event=>setForm(current=>({...current,title:event.target.value}))} placeholder="e.g. Week 3 – Lecture notes"/></div>
+          <div className="notes-field"><label htmlFor="course-note-file">{editingNoteId?'Replace document (optional)':'Select document *'}</label><input key={(editingNoteId||'new')+'-'+revision} id="course-note-file" type="file" disabled={uploading} accept={NOTE_FILE_TYPES.join(',')} onChange={event=>setForm(current=>({...current,file:event.target.files?.[0]||null}))}/><small>PDF, DOC, DOCX, PPT or PPTX · Up to 15 MB</small></div></div>
+          <div className="notes-field"><label htmlFor="course-note-description">Description <small>Optional</small></label><textarea rows={2} maxLength={4000} id="course-note-description" disabled={uploading} value={form.description} onChange={event=>setForm(current=>({...current,description:event.target.value}))} placeholder="Add a short summary for your students…"/></div>
+          {noteError && <p className="notes-library-error" role="alert">{noteError}</p>}
+          <div className="notes-form-actions"><button type="submit" className="notes-button primary" disabled={uploading}><TeachingIcon name="file" size={15}/>{uploading?'Saving…':editingNoteId?'Save changes':'Upload document'}</button>{(editingNoteId||form.title||form.description||form.file)&&<button type="button" className="notes-button secondary" disabled={uploading} onClick={()=>{setEditingNoteId(null);setForm({title:'',description:'',file:null});setNoteError('');setRevision(value=>value+1);}}>Cancel</button>}</div>
         </form>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <div className="search-input-wrap" style={{ maxWidth: 360 }}>
-            <span style={{ color: 'var(--text-muted)' }}>🔍</span>
-            <input
-              placeholder="Search uploaded notes..."
-              value={noteSearch}
-              onChange={(event) => setNoteSearch(event.target.value)}
-            />
-          </div>
-        </div>
-
-        {filteredNotes.length === 0 ? (
-          <div className="empty-state" style={{ padding: '2rem' }}>
-            <div className="empty-state-icon">📄</div>
-            <h3>No notes uploaded yet</h3>
-            <p>Upload the first document for this course.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: '0.9rem' }}>
-            {filteredNotes.map((note) => (
-              <div key={note._id} style={{ border: '1px solid #E5E7EB', borderRadius: 10, padding: '1rem', display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 10, background: '#e8f5ee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>📄</div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{note.title}</div>
-                    <div style={{ color: '#6B7280', fontSize: '0.82rem', marginBottom: 4 }}>
-                      {note.filename || 'Document'} • {note.size || 'Unknown size'}
-                    </div>
-                    {note.description && (
-                      <div style={{ color: '#4B5563', fontSize: '0.82rem', lineHeight: 1.5 }}>{note.description}</div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}><button type="button" className="btn btn-sm btn-primary" onClick={()=>downloadNote(note)}>Download</button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-secondary"
-                    onClick={() => {
-                      setEditingNoteId(note._id);
-                      setForm({
-                        title: note.title,
-                        description: note.description || '',
-                        file: null,
-                      });
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDelete(note._id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <section className="notes-library-column" aria-label="Document library">
+        <div className="notes-library-toolbar"><div><h3>Document library <span>{filteredNotes.length}</span></h3><p>Materials for this course and batch</p></div><label className="notes-library-search"><TeachingIcon name="search" size={17}/><input type="search" aria-label="Search uploaded notes" placeholder="Search documents…" value={noteSearch} onChange={event=>setNoteSearch(event.target.value)}/></label></div>
+        {!filteredNotes.length ? <div className="notes-library-empty"><span><TeachingIcon name="folder" size={32}/></span><h3>{notes.length?'No matching documents':'No documents yet'}</h3><p>{notes.length?'Try another title, description or filename.':'Upload your first document to start the course library.'}</p></div> : <div className="notes-library-list">{filteredNotes.map(note=><article className={'notes-document'+(editingNoteId===note._id?' is-editing':'')} key={note._id}><div className="notes-document-icon"><TeachingIcon name="file" size={24}/><span>{note.fileType?.toUpperCase()||note.filename?.split('.').pop()?.toUpperCase()||'DOC'}</span></div><div className="notes-document-copy"><h4>{note.title}</h4><p className="notes-document-meta"><span>{note.filename||'Document'}</span><span>{note.size||'Size unavailable'}</span></p>{note.description&&<p className="notes-document-description">{note.description}</p>}</div><div className="notes-document-actions"><button type="button" className="notes-button primary" disabled={uploading} onClick={()=>downloadNote(note)}>Download</button><button type="button" className="notes-button secondary" disabled={uploading} onClick={()=>{setEditingNoteId(note._id);setForm({title:note.title,description:note.description||'',file:null});setNoteError('');}}>Edit</button><button type="button" className="notes-button delete" disabled={uploading} onClick={()=>handleDelete(note._id)}>Delete</button></div></article>)}</div>}
+        </section>
       </div>
-    </div>
+    </section>
   );
 
-  const visibleStudents = students.filter(student => matchesPageSearch(search, student.name, student.studentId, student.email, student.status));
-
-  const renderStudents = () => (
-    <div className="card">
-      <div className="card-header">
-        <span className="card-title">Students</span>
-      </div>
-      <div className="card-body">
-        {visibleStudents.length === 0 ? (
-          <div className="empty-state" style={{ padding: '2rem' }}>
-            <div className="empty-state-icon">🎓</div>
-            <h3>{search ? 'No matching students' : 'No students enrolled'}</h3>
-            <p>{search ? 'Try another name, student ID or email.' : 'There are no students assigned to this course yet.'}</p>
-          </div>
-        ) : (
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>ID</th>
-                  <th>Email</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleStudents.map((student) => (
-                  <tr key={student._id || student.studentId}>
-                    <td style={{ fontWeight: 600 }}>{student.name || 'Student'}</td>
-                    <td>{student.studentId || '—'}</td>
-                    <td>{student.email || '—'}</td>
-                    <td><span className="badge badge-success">{student.status || 'active'}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const renderStudents = () => <CourseStudents key={scopeKey} students={students} course={course} search={search}/>;
 
   if(!outlinePage&&tab==='outline')return <Navigate to={outlineUrl()} replace/>;
-  if(outlinePage)return <div className="teacher-scope teacher-course-page dedicated-outline-page">
-    {course&&<section className="co-course-meta" aria-label="Course details">{[['calendar','blue','Batch / Academic Year',[course.batch,course.academicYear].filter(Boolean).join(' · ')||'Not specified'],['star','amber','Credits',course.credits],['users','blue','Enrolled Students',students.length]].map(([icon,tone,label,value])=><div key={label}><span className={'tp-icon '+tone}><TeachingIcon name={icon}/></span><span><small>{label}</small><strong>{value??'Not specified'}</strong></span></div>)}</section>}
-    <nav className="course-tabs planner-navigation" aria-label="Course sections">{[['overview','grid','Overview'],['outline','book','Course Outline'],['notes','folder','Study Notes']].map(([key,icon,label])=><button type="button" key={key} className={'course-tab '+(key==='outline'?'active':'')} aria-current={key==='outline'?'page':undefined} disabled={hasDraft&&key!=='outline'} onClick={()=>{if(key==='outline')return;const next=new URLSearchParams(params);next.set('tab',key);navigate('/teacher/my-course?'+next.toString());}}><TeachingIcon name={icon} size={18}/><span>{label}</span></button>)}</nav>
+  if(outlinePage)return <div className="teacher-scope teacher-course-page professional-course-page dedicated-outline-page">
+    <nav className="course-tabs planner-navigation" aria-label="Course sections">{[['overview','grid','Overview'],['outline','book','Course Outline'],['notes','folder','Study Notes'],['students','users','Students']].map(([key,icon,label])=><button type="button" key={key} className={'course-tab '+(key==='outline'?'active':'')} aria-current={key==='outline'?'page':undefined} disabled={hasDraft&&key!=='outline'} onClick={()=>{if(key==='outline')return;const next=new URLSearchParams(params);next.set('tab',key);navigate('/teacher/my-course?'+next.toString());}}><TeachingIcon name={icon} size={18}/><span>{label}</span></button>)}</nav>
     {error&&<p className="profile-save-error" role="alert">{error}</p>}
     {loading?<div className="card course-loading"><div className="spinner-wrap"><div className="spinner"/></div></div>:workspace?.contract?<TeacherContracts key={workspace.scope.contractId} combined controlledContractId={workspace.scope.contractId} workspaceMode="outline" onContractUpdate={updateContract} onEditingChange={setChildBusy}/>:<section className="outline-start"><TeachingIcon name="book" size={32}/><h2>{course?'Teaching contract not configured':'No assigned course available'}</h2><p>{course?'Ask your administrator to assign a teaching contract before adding outlines and lessons.':'Your assigned course will appear here when it is available.'}</p></section>}
   </div>;
 
   return (
-    <div className="teacher-scope teacher-course-page">
-      {course&&<section className="co-course-meta" aria-label="Course details">{[['calendar','blue','Batch / Academic Year',[course.batch,course.academicYear].filter(Boolean).join(' · ')||'Not specified'],['star','amber','Credits',course.credits],['users','blue','Enrolled Students',students.length]].map(([icon,tone,label,value])=><div key={label}><span className={'tp-icon '+tone}><TeachingIcon name={icon}/></span><span><small>{label}</small><strong>{value??'Not specified'}</strong></span></div>)}</section>}
+    <div className="teacher-scope teacher-course-page professional-course-page">
 
       {error && (
         <div className="course-page-error" role="alert">
@@ -302,7 +163,7 @@ export default function MyCourse({outlinePage=false}) {
 
       {hasDraft&&<p className="course-draft-hint" role="status">Save or cancel your changes before switching course or tab.</p>}
       <div className="course-tabs" role="tablist" aria-label="Course sections">
-        {['overview', 'outline', 'notes'].map((nextTab) => (
+        {['overview', 'outline', 'notes', 'students'].map((nextTab) => (
           <button
             key={nextTab}
             type="button"

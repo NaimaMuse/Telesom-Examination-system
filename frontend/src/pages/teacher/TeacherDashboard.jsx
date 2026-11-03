@@ -86,8 +86,12 @@ export default function TeacherDashboard() {
     activeRef.current = true;
     load(true);
     const refresh = () => { if (!document.hidden) load(); };
-    const interval = setInterval(refresh, 5000);
+    const interval = setInterval(refresh, 3000);
+    const storageRefresh = event => { if(event.key === 'assessments:last-change') refresh(); };
     window.addEventListener('focus', refresh);
+    window.addEventListener('online', refresh);
+    window.addEventListener('assessments:changed', refresh);
+    window.addEventListener('storage', storageRefresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
       activeRef.current = false;
@@ -95,6 +99,9 @@ export default function TeacherDashboard() {
       requestRef.current = null;
       clearInterval(interval);
       window.removeEventListener('focus', refresh);
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('assessments:changed', refresh);
+      window.removeEventListener('storage', storageRefresh);
       document.removeEventListener('visibilitychange', refresh);
     };
   }, [load]);
@@ -129,9 +136,9 @@ export default function TeacherDashboard() {
     currentMonth: date.getMonth() === calendarMonth.getMonth(),
   }));
 
-  const selectedAssessments = examsByDate[selectedDate] || [];
+  const selectedAssessments = (examsByDate[selectedDate] || []).filter(exam => exam.status === 'scheduled');
   const todayKey = dateKey(new Date());
-  const nextAssessments = [...matchingExams].filter(exam=>{const date=parseExamDate(exam.examDate||exam.date);return date&&assessmentDateKey(exam.examDate||exam.date)>=todayKey;}).sort((a,b)=>parseExamDate(a.examDate||a.date)-parseExamDate(b.examDate||b.date)).slice(0,3);
+  const nextAssessments = [...matchingExams].filter(exam=>{const date=parseExamDate(exam.examDate||exam.date);return exam.status==='upcoming'&&date&&assessmentDateKey(exam.examDate||exam.date)>=todayKey;}).sort((a,b)=>parseExamDate(a.examDate||a.date)-parseExamDate(b.examDate||b.date)).slice(0,3);
 
   return (
     <div className="teacher-scope teacher-reference-dashboard teacher-gold-dashboard">
@@ -167,7 +174,7 @@ export default function TeacherDashboard() {
           {loading ? <p className="teacher-panel-message">Loading scheduled assessments…</p> : selectedAssessments.length ? <ul>{selectedAssessments.map(item=><li key={item.calendarKey}><span className="teacher-scheduled-time"><TeachingIcon name={item.type==='quiz'?'clipboard':'file'} size={19}/></span><div><Link to="/teacher/exams"><strong>{item.title}</strong></Link><small>{item.course?.title||item.course?.name||item.courseName||'Assigned course'}{item.batch?' · '+item.batch:''}</small><small className="teacher-assessment-timing"><TeachingIcon name="clock" size={12}/>{assessmentTime(item)}{item.durationMinutes?' · '+item.durationMinutes+' minutes':''}</small></div><span className={'teacher-scheduled-badge '+item.type}>{item.type||'Exam'}<small>{item.status}</small></span></li>)}</ul> : !assessmentsError && <p className="teacher-panel-message">No exams, quizzes or assessments scheduled for this date. Select a marked date in the calendar.</p>}
         </section>
 <section className="teacher-assessments-panel"><header><h2><TeachingIcon name="calendar"/> Upcoming Assessments</h2><Link to="/teacher/exams">View all <TeachingIcon name="arrow" size={16}/></Link></header>
-          {loading ? <p className="teacher-panel-message" role="status">Loading upcoming assessments…</p> : assessmentsError && !upcoming.length ? <p className="teacher-panel-message" role="alert">{assessmentsError}</p> : nextAssessments.length ? <ul>{nextAssessments.map(exam=><li key={exam.calendarKey||exam._id||exam.title}><span className="teacher-assessment-icon"><TeachingIcon name="file" size={25}/></span><div><Link to="/teacher/exams">{exam.title}</Link><p>{formatDate(parseExamDate(exam.examDate||exam.date),{weekday:'short',month:'short',day:'numeric',year:'numeric'})} · {assessmentTime(exam)}</p><small>{exam.course?.title||exam.courseName||'Assigned course'}</small></div><span className="teacher-assessment-type">{exam.status||'Upcoming'}</span></li>)}</ul> : <div className="teacher-assessments-empty"><TeachingIcon name="calendar" size={34}/><strong>No upcoming assessments scheduled.</strong><p>Your scheduled exams and quizzes will appear here.</p></div>}
+          {loading ? <p className="teacher-panel-message" role="status">Loading upcoming assessments…</p> : assessmentsError && !upcoming.length ? <p className="teacher-panel-message" role="alert">{assessmentsError}</p> : nextAssessments.length ? <ul>{nextAssessments.map(exam=><li key={exam.calendarKey||exam._id||exam.title}><span className="teacher-assessment-icon"><TeachingIcon name="file" size={25}/></span><div><Link to="/teacher/exams">{exam.title}</Link><p>{formatDate(parseExamDate(exam.examDate||exam.date),{weekday:'short',month:'short',day:'numeric',year:'numeric'})} · {assessmentTime(exam)}</p><small>{exam.course?.title||exam.courseName||'Assigned course'}</small></div><span className="teacher-assessment-type">{exam.status||'Upcoming'}</span></li>)}</ul> : <div className="teacher-assessments-empty"><TeachingIcon name="calendar" size={34}/><strong>No upcoming assessments.</strong><p>Your scheduled exams and quizzes will appear here.</p></div>}
         </section>
 
 <aside className="teacher-contract-side">

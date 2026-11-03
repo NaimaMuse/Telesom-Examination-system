@@ -1,3 +1,4 @@
+import { publishAssessmentChange } from './assessmentChanges.mjs';
 import axios from 'axios';
 
 /**
@@ -27,7 +28,7 @@ api.interceptors.request.use((config) => {
  * A full redirect is handled by the AuthContext / protected routes.
  */
 api.interceptors.response.use(
-  (response) => response,
+  (response) => publishAssessmentChange(response),
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');

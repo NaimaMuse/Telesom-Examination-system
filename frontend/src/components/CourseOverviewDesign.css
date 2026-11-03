@@ -1,0 +1,170 @@
+/* Reference-inspired course overview; all values come from the course workspace. */
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design { padding:14px; border-radius:20px; background:radial-gradient(ellipse at top left,#e8f2e8,transparent 45%),radial-gradient(ellipse at bottom right,#f9edcf,transparent 40%),#fafbf8; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-metrics { gap:18px; margin-bottom:20px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-panel { border:1px solid #cddfd1; border-radius:20px; background:#fff; box-shadow:0 6px 15px #163c2410; overflow:hidden; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header { background:linear-gradient(135deg,#10583b,#003b25); color:#fff; border:0; box-shadow:none; padding:17px 20px; min-height:66px; box-sizing:border-box; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3 { font-size:18px; gap:14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3 svg,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header h2 svg { color:#f2cc65; background:none; padding:0; width:30px; height:30px; border-radius:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card .co-progress-content { padding:22px; gap:28px; background:linear-gradient(145deg,#fff 70%,#eff6ef); min-height:160px; box-sizing:border-box; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring { width:116px; height:116px; background:conic-gradient(#075337 var(--progress),#e9ece8 0); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring::before { inset:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring strong { font-size:29px; color:#073b2a; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content dl { padding-left:26px; border-left:1px solid #eacb81; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content dl > div { font-size:13px; margin:14px 0; gap:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content dt { color:#214b3b; gap:9px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content i { width:10px; height:10px; flex-shrink:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid { gap:18px; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); align-items:start; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header h2 { font-size:18px; color:#fff; gap:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header button { border:1px solid #f1d37f; border-radius:24px; background:linear-gradient(120deg,#ffe69a,#f3c94f); color:#073b2a; padding:8px 14px; font-size:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel:first-child > header button { color:#fff4ce; background:transparent; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header button:hover { background:#f6d77b; color:#073b2a; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about { padding:20px; background:linear-gradient(150deg,#fff 80%,#f4e8c7); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about h3 { font-size:24px; color:#073b2a; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about > p { font-size:13px; color:#48675a; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl { gap:10px; margin-top:16px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div { border:0; background:#f0f6f0; border-radius:13px; padding:14px 12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div:last-child { grid-column:1 / -1; background:transparent; border-top:1px solid #e2e9e2; border-radius:0; padding-bottom:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dt { font-size:11px; color:#5d7767; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dd { font-size:13px; color:#123f2b; font-weight:550; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list { padding:14px; display:grid; gap:12px; margin:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list li { border:1px solid #e4eae4; border-radius:15px; padding:14px; gap:15px; background:linear-gradient(120deg,#fff,#fafcf9); box-shadow:0 2px 5px #103b2205; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list .tp-icon { width:50px; height:55px; background:#e0f0df; color:#075337; border-radius:13px; flex-shrink:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list strong { font-size:18px; color:#113f2b; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list small { display:flex; align-items:center; gap:7px; font-size:12px; margin-top:7px; color:#426452; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list li > svg { background:#e4f1e4; border-radius:50%; padding:8px; width:18px; height:18px; box-sizing:content-box; flex-shrink:0; }
+@media(max-width:1000px) { .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card .co-progress-content { gap:16px; padding:18px; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring { width:90px; height:90px; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content dl { padding-left:16px; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header { flex-wrap:wrap; gap:10px; } }
+@media(max-width:750px) { .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid { grid-template-columns:minmax(0,1fr); } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3 { font-size:15px; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design { padding:8px; } }
+@media(max-width:560px) { .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-metrics { grid-template-columns:minmax(0,1fr); } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content { flex-wrap:nowrap; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl { grid-template-columns:minmax(0,1fr); } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring { width:86px; height:86px; } }
+
+/* Curved brand accents and reference card details. */
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  { position:relative; isolation:isolate; padding:28px 16px 22px; background:radial-gradient(ellipse at center,#fff 35%,#edf3eb 100%); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design::before,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design::after { content:""; position:absolute; width:240px; height:65px; background:linear-gradient(165deg,#075236 42%,#e3b947 43%,#ffe8a4 60%,transparent 61%); z-index:-1; pointer-events:none; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design::before { top:0; left:0; border-radius:0 0 100% 0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design::after { bottom:0; right:0; transform:rotate(180deg); border-radius:0 0 100% 0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-panel { background:#06462e; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-main-grid .co-panel > header { background:radial-gradient(ellipse at bottom right,#1a6543,transparent 55%),linear-gradient(120deg,#064e33,#003b25); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card .co-progress-content { border-radius:20px 20px 0 0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-recent-list,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-empty { border-radius:20px 20px 0 0; background-color:#fff; position:relative; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header button { display:inline-flex; align-items:center; gap:8px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div { position:relative; padding-left:46px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div > svg { position:absolute; left:12px; top:16px; color:#0b6238; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div:last-child { padding-left:46px; min-height:48px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div:last-child > svg { color:#dfac23; fill:#edbd39; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details { margin-left:auto; font-size:12px; font-weight:500; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:9px 15px; border-radius:24px; color:#073b2a; background:linear-gradient(120deg,#ffe59a,#f2c647); white-space:nowrap; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details summary::-webkit-details-marker { display:none; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details summary svg { width:16px!important; height:16px!important; color:inherit!important; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details > div { padding:16px 20px; display:grid; gap:8px; color:#15452e; background:#fff9e9; border-bottom:1px solid #ecd08a; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details[open] { position:static; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details[open] > div { position:absolute; left:0; right:0; top:66px; z-index:3; box-shadow:0 6px 10px #073b2a20; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-card { position:relative; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details summary:focus-visible { outline:2px solid white; outline-offset:3px; }
+@media(max-width:1100px) { .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3 { flex-wrap:wrap; } .dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details { margin-left:0; } }
+
+/* Clean editorial variation with light cards and restrained brand accents. */
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  { padding:0; background:transparent; border-radius:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design::before,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design::after { display:none; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-metrics { gap:16px; margin-bottom:18px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-panel { background:#fff; border:1px solid #dce6df; border-radius:14px; box-shadow:0 3px 12px #164f2406; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-main-grid .co-panel > header { background:#fff; min-height:60px; padding:15px 18px; border-bottom:1px solid #e8eee9; color:#164f24; box-shadow:none; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-main-grid .co-panel > header h2 { color:#164f24; font-size:16px; gap:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3 svg,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-main-grid .co-panel > header h2 svg { width:23px; height:23px; color:#28764a; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card .co-progress-content { background:#fff; padding:20px; min-height:150px; gap:22px; border-radius:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-card { border-top:3px solid #28764a; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card:not(.co-contract-card) { border-top:3px solid #d7982f; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring { width:100px; height:100px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring strong { font-size:25px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content dl { border:0; padding-left:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content dl > div { font-size:12px; padding:7px 0; margin:0; border-bottom:1px solid #f0f3f0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content dl > div:last-child { border-bottom:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid { gap:16px; align-items:stretch; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header button,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-contract-details summary { background:#fdf5e5; color:#805a1a; border:1px solid #efdbaf; border-radius:8px; padding:7px 11px; font-size:11px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel:first-child > header button { background:#f3f8f4; color:#25613a; border-color:#d8e7dc; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header button:hover,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design  .co-contract-details summary:hover { background:#f7e9c9; color:#164f24; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about { background:#fff; padding:18px; border-radius:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about h3 { font-size:23px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about > p { font-size:12px; line-height:1.7; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl { gap:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div { background:#f6f9f6; border:1px solid #edf1ed; border-radius:10px; padding-top:13px; padding-bottom:13px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div:last-child { background:#fffaf0; border:1px solid #f2e4c5; border-radius:10px; min-height:0; padding-bottom:13px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dd { font-size:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list { background:#fff; padding:14px 18px; gap:10px; border-radius:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list li { background:#f8faf8; box-shadow:none; padding:14px; border:1px solid #e9eeea; border-radius:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list .tp-icon { width:40px; height:45px; background:#e9f3eb; border-radius:9px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list strong { font-size:16px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list li > svg { background:#fff; border:1px solid #dfebe1; padding:6px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details[open] > div { top:60px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details summary:focus-visible { outline-color:#d7982f; }
+
+/* Compact cards fit the overview without unnecessary page height. */
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-metrics { gap:12px; margin-bottom:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid { gap:12px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header { min-height:46px; padding:10px 14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header h2 { font-size:14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3 svg,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header h2 svg { width:20px; height:20px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card .co-progress-content { padding:12px 16px; min-height:112px; gap:18px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring { width:78px; height:78px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring::before { inset:8px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring strong { font-size:21px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-content dl > div { padding:5px 0; font-size:11px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel > header button,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details summary { padding:5px 9px; font-size:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about { padding:13px 15px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about h3 { font-size:20px; margin-bottom:5px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about > p { font-size:11px; line-height:1.5; margin-bottom:8px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl { margin-top:10px; gap:8px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div { padding:10px 9px 10px 38px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div > svg { left:10px; top:12px; width:18px; height:18px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div:last-child { padding:9px 9px 9px 38px; min-height:0; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dt { font-size:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dd { font-size:11px; margin-top:4px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list { padding:10px 13px; gap:8px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list li { padding:10px; gap:10px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list .tp-icon { width:34px; height:38px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list strong { font-size:14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list small { font-size:10px; margin-top:4px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-empty { padding:18px 14px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-contract-details[open] > div { top:46px; }
+
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-credits-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 8px; background:#fff8e9; border:1px solid #efdfbd; border-radius:8px; color:#80601f; font-size:10px; white-space:nowrap; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-credits-badge > svg { color:#d7982f; fill:#efc34c; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-credits-badge strong { margin-left:4px; color:#164f24; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div:last-child { grid-column:auto; background:#f6f9f6; border:1px solid #edf1ed; border-radius:10px; padding:10px 9px 10px 38px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div:last-child > svg { color:#0b6238; fill:none; }
+
+/* Richer green and gold accents across the overview. */
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card > h3 { background:linear-gradient(110deg,#edf7ef,#fff); border-bottom-color:#d3e5d7; color:#135330; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card:not(.co-contract-card) > h3 { background:linear-gradient(110deg,#fff1ce,#fffaf0); border-bottom-color:#efdbac; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-progress-card:not(.co-contract-card) > h3 svg { color:#b78220; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel:first-child > header { background:#0d5433; border-bottom:2px solid #d9aa3d; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel:first-child > header h2 { color:#fff; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel:first-child > header h2 svg { color:#efca69; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel:last-child > header { background:linear-gradient(110deg,#fff0c6,#fff9eb); border-bottom:2px solid #d9aa3d; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel:last-child > header h2 svg { color:#aa761c; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div,
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-about dl > div:last-child { background:#edf6ee; border-color:#d8e8dc; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list li { border-left:3px solid #d6aa43; background:linear-gradient(110deg,#fffaf0,#fff); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list .tp-icon { background:#dceede; color:#0d6135; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-recent-list li > svg { background:#e5f2e7; color:#14623a; border-color:#cde1d1; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-credits-badge { background:#ffe6a2; border-color:#dbb44d; color:#684a10; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-main-grid .co-panel:first-child > header button { background:#f8da83; border-color:#edc65f; color:#164f24; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .co-overview.co-reference-design .co-ring { background:conic-gradient(#176c3d var(--progress),#e6eee8 0); }
