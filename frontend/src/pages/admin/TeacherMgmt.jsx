@@ -1,3 +1,4 @@
+import './TeacherDirectory.css';
 import { WeeklySchedulePreview } from '../../components/WeeklySchedule';
 import { contractEndDate } from '../teacher/teachingSchedule.mjs';
 import useAutoRefresh from '../../hooks/useAutoRefresh';

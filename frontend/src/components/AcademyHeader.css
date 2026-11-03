@@ -27,3 +27,19 @@
 @media(min-width:1000px) { .dash-shell.academy-menu-open .dash-sidebar { transform:translateX(-100%); } .dash-shell.academy-menu-open .dash-main { margin-left:0; } .dash-shell.academy-menu-open .sidebar-overlay { display:none; } }
 @media(max-width:999px) { .dash-shell header.dash-topbar.academy-header { padding:0 16px; gap:12px; } .academy-header-brand { gap:12px; } .academy-header-brand strong { font-size:18px; } .academy-header-actions { gap:10px; } .academy-header-search { width:190px; } }
 @media(max-width:700px) { .academy-header-search { display:flex; width:min(40vw,230px); padding:8px 10px; } .academy-account-identity { display:none; } .academy-header-brand strong { font-size:16px; } .academy-header-brand span { font-size:11px; } .academy-header-actions { gap:8px; } .academy-account-avatar { width:32px; height:32px; } }
+
+/* One header size for every teacher route, including the dashboard. */
+.dash-shell.teacher-shell header.dash-topbar.academy-header { height:64px; min-height:64px; max-height:64px; flex:0 0 64px; padding:0 24px; box-sizing:border-box; }
+.dash-shell.teacher-shell header.academy-header .academy-header-search { box-sizing:border-box; height:42px; }
+@media(max-width:999px) { .dash-shell.teacher-shell header.dash-topbar.academy-header { padding:0 16px; } }
+@media(max-width:700px) { .dash-shell.teacher-shell header.dash-topbar.academy-header { height:56px; min-height:56px; max-height:56px; flex-basis:56px; } .dash-shell.teacher-shell header.academy-header .academy-header-search { height:36px; } }
+
+/* The same unpadded frame hosts the header on every teacher page. */
+.dash-shell.teacher-shell .dash-main > .dashboard-main { display:flex; flex-direction:column; flex:1 1 auto; width:100%; min-width:0; max-width:none; margin:0; padding:0; box-sizing:border-box; }
+.dash-shell.teacher-shell .dash-main > .dashboard-main > header.academy-header { margin:0; width:100%; align-self:stretch; line-height:normal; }
+.dash-shell.teacher-shell header.academy-header .academy-header-brand { gap:14px; }
+.dash-shell.teacher-shell header.academy-header .academy-header-actions { gap:16px; }
+.dash-shell.teacher-shell header.academy-header .academy-account-avatar { width:38px; height:38px; box-sizing:border-box; flex:0 0 38px; }
+.dash-shell.teacher-shell header.academy-header .academy-account-identity strong { font-size:12px; line-height:1.3; }
+.dash-shell.teacher-shell header.academy-header .academy-account-identity small { font-size:10px; line-height:1.3; }
+@media(max-width:700px) { .dash-shell.teacher-shell header.academy-header .academy-header-actions { gap:8px; } .dash-shell.teacher-shell header.academy-header .academy-account-avatar { width:32px; height:32px; flex-basis:32px; } }

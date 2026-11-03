@@ -1,0 +1,67 @@
+/* Student directory presentation only: dark green and academy gold. */
+.dash-shell .dash-content .student-management-header{padding:0;margin:0 0 15px;background:transparent;border:0;box-shadow:none}
+.dash-shell .dash-content .student-management-header .student-management-actions{gap:9px;justify-content:flex-end}
+.dash-shell .dash-content .student-management-header .btn{min-height:36px;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:650;line-height:1.3;transition:background .18s,border-color .18s,box-shadow .18s}
+.dash-shell .dash-content .student-management-header .student-view-toggle{background:#fff;border:1px solid #d6e4dc;color:#1b5a39}
+.dash-shell .dash-content .student-management-header .student-view-toggle[aria-pressed=true]{background:#e9f4ed;border-color:#8db89d}
+.dash-shell .dash-content .student-management-header .student-upload-trigger{background:#fff7e9;border:1px solid #e7cb94;color:#91671f}
+.dash-shell .dash-content .student-management-header .student-upload-trigger:hover{background:#fcedce;border-color:#D7982F}
+.dash-shell .dash-content .student-management-header .btn-primary{background:#124d34;border:1px solid #124d34;color:#fff;box-shadow:0 3px 9px #124d3418}
+.dash-shell .dash-content .student-management-header .btn-primary:hover{background:#0a3e28;border-color:#0a3e28}
+.dash-shell .dash-content .student-management-panel{border:1px solid #d9e5dc;border-top:3px solid #D7982F;border-radius:14px;background:#fff;box-shadow:0 6px 24px #153c2410;overflow:hidden}
+.dash-shell .dash-content .student-management-panel>.card-header{display:grid;grid-template-columns:minmax(145px,.7fr) minmax(0,3fr);align-items:center;gap:22px;padding:22px 23px;background:linear-gradient(115deg,#f4f9f6,#fffdf8);border-bottom:1px solid #e3ebe5;border-radius:0}
+.dash-shell .dash-content .student-management-panel .student-list-heading{display:grid;gap:6px}
+.dash-shell .dash-content .student-management-panel .student-section-kicker{color:#a67825;font-size:9px;font-weight:750;letter-spacing:1.6px;line-height:1.4}
+.dash-shell .dash-content .student-management-panel .card-title{display:flex;align-items:center;gap:9px;color:#124d34;font-size:21px;line-height:1.3;letter-spacing:-.35px;font-weight:750}
+.dash-shell .dash-content .student-management-panel .student-total-count{display:inline-grid;place-items:center;min-width:29px;padding:4px 8px;border-radius:8px;background:#124d34;color:#fff;font-size:12px;letter-spacing:0;margin:0}
+.dash-shell .dash-content .student-management-panel .filter-bar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;margin:0}
+.dash-shell .dash-content .student-management-panel .student-filter-select{width:100%;max-width:none;min-width:0;min-height:39px;height:39px;margin:0;border:1px solid #d7e3db;border-radius:9px;background-color:#fff;color:#315d45;font-size:12px;padding:8px 28px 8px 12px;box-shadow:0 1px 3px #193f2503}
+.dash-shell .dash-content .student-management-panel .student-filter-select:hover{border-color:#9ebaab}
+.dash-shell .dash-content .student-management-panel .student-filter-select:focus{outline:0;border-color:#D7982F;box-shadow:0 0 0 3px #d7982f17}
+.dash-shell .dash-content .student-management-panel .student-management-table{border:0;outline:0;margin:0;width:100%}
+.dash-shell .dash-content .student-management-panel .student-management-table thead th{background:#124d34;color:#fff;border:0;border-bottom:2px solid #D7982F;padding:14px 17px;font-size:10px;letter-spacing:.65px;font-weight:650;white-space:nowrap}
+.dash-shell .dash-content .student-management-panel .student-management-table tbody td{padding:15px 17px;background:#fff;border:0;border-bottom:1px solid #edf1ed;color:#607568;font-size:12px;line-height:1.5;transition:background .15s}
+.dash-shell .dash-content .student-management-panel .student-management-table tbody tr:nth-child(even)>td{background:#fbfcfa}
+.dash-shell .dash-content .student-management-panel .student-management-table tbody tr:hover>td{background:#f2f8f3}
+.dash-shell .dash-content .student-management-panel .student-management-table tbody td:first-child{color:#9eac9f;font-size:11px}
+.dash-shell .dash-content .student-management-panel .student-record-person{gap:11px}
+.dash-shell .dash-content .student-management-panel .student-record-person>span{width:36px;height:36px;border-radius:11px;background:#edf5ef;border:1px solid #dceade;color:#215c3b;font-size:11px;font-weight:750}
+.dash-shell .dash-content .student-management-panel .student-management-table tbody tr:nth-child(even) .student-record-person>span{background:#fff6e5;border-color:#edddbe;color:#96712c}
+.dash-shell .dash-content .student-management-panel .student-record-person strong{color:#254e37;font-size:12px;font-weight:650}
+.dash-shell .dash-content .student-management-panel .student-course-tag{display:inline-block;max-width:240px;white-space:normal;background:#f2f7f3;border:1px solid #dce8de;border-radius:7px;color:#3f6b50;font-size:11px;padding:5px 9px;line-height:1.5}
+.dash-shell .dash-content .student-management-panel .student-record-status{border-radius:999px;padding:5px 9px;font-size:10px;border:1px solid #ecdfc6;background:#fff9ef;color:#8a6b30}
+.dash-shell .dash-content .student-management-panel .student-record-status.is-active{background:#eaf5ee;border-color:#d5e9db;color:#23643d}
+.dash-shell .dash-content .student-management-panel .student-record-status.is-active i{background:#31B44A}
+.dash-shell .dash-content .student-management-panel .student-row-edit{border:1px solid #dfcdab;border-radius:7px;color:#916824;background:#fff9ee;padding:6px 10px;font-size:11px;font-weight:650}
+.dash-shell .dash-content .student-management-panel .student-row-edit:hover{background:#faedcf;border-color:#D7982F}
+.dash-shell .dash-content .student-management-panel .student-row-delete{border:1px solid #eadbd5;background:#fffaf8;color:#a86552;border-radius:7px;min-width:30px;min-height:30px;font-size:17px}
+.dash-shell .dash-content .student-management-panel .pagination{padding:14px 20px;background:#fcfdfb;border-top:1px solid #e4ece6;gap:6px}
+.dash-shell .dash-content .student-management-panel .page-info{font-size:11px;color:#829587}
+.dash-shell .dash-content .student-management-panel .page-btn{width:30px;height:30px;min-width:30px;border:1px solid #e0e8e1;border-radius:7px;background:white;color:#456d53;font-size:11px}
+.dash-shell .dash-content .student-management-panel .page-btn.active{background:#D7982F;border-color:#D7982F;color:#fff;font-weight:750}
+.dash-shell .dash-content .student-management-panel button:focus-visible,.dash-shell .dash-content .student-management-header button:focus-visible{outline:2px solid #D7982F;outline-offset:3px}
+@media(max-width:1100px){.dash-shell .dash-content .student-management-panel>.card-header{grid-template-columns:1fr;gap:16px;padding:19px}.dash-shell .dash-content .student-management-panel .student-list-heading{display:flex;align-items:center;justify-content:space-between}.dash-shell .dash-content .student-management-panel .card-title{font-size:19px}}
+@media(max-width:600px){.dash-shell .dash-content .student-management-panel .filter-bar{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dash-shell .dash-content .student-management-panel .student-filter-select:first-child{grid-column:auto}.dash-shell .dash-content .student-management-header .student-management-actions{display:flex;flex-wrap:wrap;width:100%}.dash-shell .dash-content .student-management-header .btn{padding:8px 10px;font-size:11px}.dash-shell .dash-content .student-management-panel>.card-header{padding:16px}.dash-shell .dash-content .student-management-panel .student-section-kicker{font-size:8px;letter-spacing:1px}.dash-shell .dash-content .student-management-panel .card-title{font-size:18px}}
+/* Match the staff directory hierarchy while retaining all student controls. */
+.student-directory-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 22px}
+.student-directory-summary article{display:grid;gap:6px;padding:18px 22px;background:#eef7f1;border:1px solid #bddcc8;border-left:4px solid #21733d;border-radius:11px}
+.student-directory-summary article:nth-child(2){background:#fff8e8;border-color:#ebcf91;border-left-color:#D7982F}
+.student-directory-summary article:nth-child(3){background:#f4f8f5;border-color:#cadfd0;border-left-color:#779b80}
+.student-directory-summary article>span{font-size:11px;font-weight:750;letter-spacing:.65px;text-transform:uppercase;color:#44654f}
+.student-directory-summary strong{font-size:24px;line-height:1.1;font-weight:750;letter-spacing:-.6px;color:#175630}
+.student-directory-summary small{font-size:11px;line-height:1.4;color:#7b9282}
+.dash-shell .dash-content .student-management-panel{border-top:1px solid #bddcc8}
+.dash-shell .dash-content .student-management-panel>.card-header{grid-template-columns:minmax(145px,1fr) auto;padding:24px;background:#f7fbf8;gap:20px;border-bottom:1px solid #dce8df}
+.dash-shell .dash-content .student-management-panel .student-management-header{margin:0}
+.dash-shell .dash-content .student-management-panel .student-section-kicker{color:#24864a;letter-spacing:.65px;font-size:10px}
+.dash-shell .dash-content .student-management-panel .student-directory-filters{padding:13px 23px;background:#fff;border-bottom:1px solid #e4ece6}
+.dash-shell .dash-content .student-management-panel .student-management-header .btn{min-height:37px}
+.dash-shell .dash-content .student-management-panel .student-management-header .student-view-toggle{background:#fff8e9;border-color:#e6c683;color:#8d641d}
+.dash-shell .dash-content .student-management-panel .student-management-header .btn-primary{background:#20713b;border-color:#20713b}
+@media(max-width:760px){.student-directory-summary{gap:9px;margin-bottom:16px}.student-directory-summary article{padding:14px 12px}.student-directory-summary article>span{font-size:9px}.student-directory-summary strong{font-size:22px}.student-directory-summary small{font-size:10px}.dash-shell .dash-content .student-management-panel>.card-header{grid-template-columns:1fr;padding:18px;gap:15px}.dash-shell .dash-content .student-management-panel .student-management-actions{justify-content:flex-start}.dash-shell .dash-content .student-management-panel .student-directory-filters{padding:12px 18px}}
+@media(max-width:380px){.student-directory-summary{grid-template-columns:1fr}.student-directory-summary article{grid-template-columns:1fr auto}.student-directory-summary article small{grid-column:1/-1}}
+/* Compact directory header matching the supplied student layout. */
+.dash-shell .dash-content .student-management-panel{border-top:3px solid #D7982F}
+.dash-shell .dash-content .student-management-panel>.card-header{grid-template-columns:minmax(145px,.7fr) minmax(0,3fr);padding:22px 23px;gap:22px;background:linear-gradient(115deg,#f4f9f6,#fffdf8)}
+.dash-shell .dash-content .student-management-panel .student-section-kicker{color:#a67825;font-size:9px;letter-spacing:1.6px}
+@media(max-width:1100px){.dash-shell .dash-content .student-management-panel>.card-header{grid-template-columns:1fr;gap:16px}}

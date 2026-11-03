@@ -1,6 +1,6 @@
 require('dotenv').config({path:require('path').join(__dirname,'../.env')});
 const assert=require('assert'),mongoose=require('mongoose'),crypto=require('crypto'),bcrypt=require('bcryptjs');
-const names=['User','Teacher','Student','Course','CourseTeacher','Enrollment','TeacherContract','TeachingLesson','CourseOutline','Exam','Quiz','ExamResult','QuizResult','Note'];
+const names=['User','Teacher','Student','Course','CourseTeacher','Enrollment','TeacherContract','TeachingLesson','CourseOutline','Exam','Quiz','ExamResult','QuizResult','Note','Batch'];
 const models=Object.fromEntries(names.map(n=>[n,require('../models/'+n)]));
 const {app}=require('../server'),token=require('../utils/generateToken');
 const cs=require('../services/teacherContractService');
@@ -24,14 +24,19 @@ const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let 
     await models.Enrollment.create({student:student._id,course:course._id,academicYear:'2026',batch,semester:'S1'});students.push({user,student});
   }
   const today=cs.teachingDay(),start=cs.teachingDay(new Date(Date.now()-7*86400000));
-  const contract=await cs.createContract(admin,{teacher:teacher._id,course:course._id,academicYear:'2026',batch:'Batch A',startDate:start,totalDays:30});
+  const contract=await cs.createContract(admin,{teacher:teacher._id,course:course._id,academicYear:'2026',batch:'Batch A',startDate:start,totalDays:30,dayBasis:'teaching'});
   server=process.env.WORKSPACE_UI_PREVIEW==='1'?app.listen(0,'localhost'):app.listen(0);await new Promise(resolve=>server.on('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/api`;
   const request=async(method,path,body,user=teacherUser)=>{
     const response=await fetch(base+path,{method,headers:{Authorization:'Bearer '+token(user._id),...(body instanceof FormData?{}:{'Content-Type':'application/json'})},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
     return {status:response.status,body:(response.headers.get('content-type')||'').includes('json')?await response.json():Buffer.from(await response.arrayBuffer())};
   };
+  await models.Batch.create([{name:'Batch C',academicYear:'2026'},{name:'Unassigned year',academicYear:'2025'}]);
   const scope={courseId:String(course._id),academicYear:'2026',batch:'Batch A'},query='?'+new URLSearchParams(scope),otherQuery='?'+new URLSearchParams({...scope,batch:'Batch B'});
   let result=await request('GET','/teacher/my-course'+query);
+  assert(result.body.cohorts.some(c=>c.batch==='Batch C'),'Saved system batches should be available');
+  assert(!result.body.cohorts.some(c=>c.academicYear==='2025'),'Unassigned years must remain inaccessible');
+  const emptyBatch=await request('GET','/teacher/my-course?'+new URLSearchParams({...scope,batch:'Batch C'}));
+  assert.strictEqual(emptyBatch.status,200);assert.strictEqual(emptyBatch.body.students.length,0);
   assert.strictEqual(result.status,200);assert.strictEqual(result.body.course.description,'Existing course description');assert.strictEqual(result.body.course.credits,3);
   assert.strictEqual(result.body.course.batch,'Batch A');assert.strictEqual(result.body.course.academicYear,'2026');assert.strictEqual(result.body.students.length,1);assert.strictEqual(result.body.students[0].studentId,students[0].student.studentId);assert.strictEqual(result.body.contract.remainingContractDays,30);
   assert.strictEqual((await request('GET','/teacher/my-course'+query.replace('2026','2027'))).status,403);
