@@ -1,3 +1,4 @@
+import Evaluations from './Evaluations';
 import AcademyHeader from './AcademyHeader';
 import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
@@ -70,6 +71,7 @@ const NAV = {
       section: 'Academic',
       items: [
         { to: '/admin/exams',      label: 'Exam & Quiz Mgmt',  icon: 'clipboard' },
+        { to: '/admin/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
         { to: '/admin/marks',      label: 'Marks & Results',   icon: 'chart' },
         { to: '/admin/attendance', label: 'Attendance',         icon: 'calendar' },
         { to: '/admin/reports', label: 'Reports Center', icon: 'file' },
@@ -104,6 +106,7 @@ const NAV = {
       section: 'Academics',
       items: [
         { to: '/student/courses',   label: 'My Courses',      icon: 'book' },
+        { to: '/student/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
         { to: '/student/exams',     label: 'Exams & Results', icon: 'chart' },
         { to: '/student/quizzes',   label: 'Quizzes',         icon: 'clipboard' },
         { to: '/student/makeup', label: 'Makeup Classes', icon: 'reschedule' },
@@ -130,6 +133,8 @@ const ROLE_ROUTES = {
   admin: (
     <Routes>
       <Route index            element={<AdminDashboard />} />
+      <Route path="evaluations" element={<Evaluations admin />} />
+      <Route path="evaluations/:id" element={<Evaluations admin />} />
       <Route path="students"  element={<StudentMgmt />} />
       <Route path="teachers"  element={<TeacherMgmt />} />
       <Route path="reports" element={<AcademyReports />} />
@@ -163,6 +168,8 @@ const ROLE_ROUTES = {
   student: (
     <Routes>
       <Route index              element={<StudentDashboard />} />
+      <Route path="evaluations" element={<Evaluations />} />
+      <Route path="evaluations/:id" element={<Evaluations />} />
       <Route path="courses"     element={<StudentCourses />} />
       <Route path="exams"       element={<StudentExams />} />
       <Route path="quizzes"     element={<StudentQuizzes />} />
@@ -177,6 +184,8 @@ const ROLE_ROUTES = {
 };
 
 const PAGE_META = {
+  '/admin/evaluations': {title:'Evaluation Forms',hint:'Create course evaluations and review student feedback.'},
+  '/student/evaluations': {title:'Evaluation Forms',hint:'Complete your assigned course evaluations.'},
   '/teacher/my-course/outline': {title:'Course Planner',hint:'Plan lessons, organize topics and track teaching progress.'},
   '/admin/reports': {title:'Reports Center',hint:'Filtered academy reports and exports.'},
   '/admin/batches': {title:'Years & Batches',hint:'Organize enrollments by academic year and batch.'},

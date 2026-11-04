@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import TelesomLogo from '../components/TelesomLogo';
 import './Login.css';
@@ -35,6 +35,9 @@ export default function LoginPage() {
       </>}
       <button type="submit" className="btn-submit" disabled={loading}>{loading?'Signing in…':`Sign in as ${role}`}</button>
     </form>
+    <div className="auth-extra-link" style={{ marginTop: '1rem', textAlign: 'center' }}>
+      <Link to="/admin/login">Admin login</Link>
+    </div>
     <p className="auth-bottom-tag">Accounts are created by the administrator. Contact the academy if you need access.</p>
   </div></div></div>;
 }

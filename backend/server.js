@@ -44,6 +44,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 app.use('/api/academy', require('./routes/academyRoutes'));
 app.use('/api/auth', authRoutes);
+app.use('/api/evaluations', require('./routes/evaluationRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/users', userRoutes);
 app.use('/api/students', studentRoutes);
@@ -72,6 +73,7 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   await connectDB();
+  await Promise.all(Object.values(require('./models/Evaluation')).map(model => model.init()));
   return app.listen(PORT, () => {
     console.log(
       `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`

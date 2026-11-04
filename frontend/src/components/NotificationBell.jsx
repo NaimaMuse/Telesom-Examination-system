@@ -33,24 +33,27 @@ export default function NotificationBell({ userId, onNavigate }) {
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
   }, [open]);
   const markRead = ids => {
+    const persisted = ids.filter(id => id.startsWith('evaluation:'));
+    if (persisted.length) api.patch('/notifications/evaluations/read', {ids:persisted}).catch(() => setError('Unable to save notification read state.'));
+    setItems(previous => previous.map(item => ids.includes(item.id) ? {...item, readAt:new Date().toISOString()} : item));
     setRead(previous => {
       const next = [...new Set([...ids, ...previous])].slice(0,1000);
       try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* Reading still works for this session. */ }
       return next;
     });
   };
-  const unread = items.filter(item => !read.includes(item.id));
+  const unread = items.filter(item => !(item.persisted ? item.readAt : read.includes(item.id)));
   return <div className="notification-bell" ref={wrapper}>
     <button ref={trigger} type="button" className="topbar-icon-btn" aria-label={`Notifications${unread.length ? `, ${unread.length} unread` : ''}`} aria-expanded={open} aria-controls="notification-panel" onClick={() => setOpen(value => !value)}>
       <TeachingIcon name="bell" size={20}/>{unread.length > 0 && <span className="notification-count">{unread.length > 99 ? '99+' : unread.length}</span>}
     </button>
     {open && <section className="notification-panel" id="notification-panel" aria-label="Notifications">
-      <header><div><strong>Important notices</strong><p>Upcoming exams, quizzes & assessments · next 7 days</p></div><button type="button" aria-label="Close notifications" onClick={() => {setOpen(false);trigger.current?.focus();}}>×</button></header>
+      <header><div><strong>Important notices</strong><p>Evaluations and upcoming assessments</p></div><button type="button" aria-label="Close notifications" onClick={() => {setOpen(false);trigger.current?.focus();}}>×</button></header>
       <div className="notification-tools"><span aria-live="polite">{unread.length} unread</span><button type="button" disabled={!unread.length} onClick={() => markRead(items.map(item=>item.id))}>Mark all read</button></div>
       {error && <div className="notification-error" role="alert">{error} <button type="button" onClick={() => setRefresh(value=>value+1)}>Retry</button></div>}
       <div className="notification-list">
-        {loading ? <p className="notification-empty">Loading updates…</p> : !items.length && !error ? <p className="notification-empty">No important notices right now.</p> : items.map(item => <Link className={`notification-item ${read.includes(item.id) ? '' : 'unread'}`} key={item.id} to={item.href} onClick={() => {markRead([item.id]);setOpen(false);onNavigate?.();}}>
-          <span className="notification-indicator" aria-label={read.includes(item.id) ? 'Read' : 'Unread'}/><div><strong>{item.title}</strong><time dateTime={item.scheduledAt}>{new Date(item.scheduledAt).toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'})}</time></div>
+        {loading ? <p className="notification-empty">Loading updates…</p> : !items.length && !error ? <p className="notification-empty">No important notices right now.</p> : items.map(item => <Link className={`notification-item ${(item.persisted ? item.readAt : read.includes(item.id)) ? '' : 'unread'}`} key={item.id} to={item.href} onClick={() => {markRead([item.id]);setOpen(false);onNavigate?.();}}>
+          <span className="notification-indicator" aria-label={(item.persisted ? item.readAt : read.includes(item.id)) ? 'Read' : 'Unread'}/><div><strong>{item.title}</strong><time dateTime={item.scheduledAt}>{new Date(item.scheduledAt).toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'})}</time></div>
         </Link>)}
       </div>
     </section>}
