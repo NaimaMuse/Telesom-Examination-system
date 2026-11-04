@@ -1,3 +1,4 @@
+import './StudentDirectory.css';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 /**
@@ -494,6 +495,7 @@ export default function StudentMgmt() {
             <span className="student-section-kicker">STUDENT RECORDS</span>
             <span className="card-title">Students <span className="student-total-count">{filtered.length}</span></span>
           </div>
+
           <div className="filter-bar" style={{ marginBottom: 0 }}>
             <select aria-label="Filter students by course" className="form-control student-filter-select" value={filterCourse} onChange={event => { setFilterCourse(event.target.value); setPage(1); }}>
               <option value="">All courses</option>

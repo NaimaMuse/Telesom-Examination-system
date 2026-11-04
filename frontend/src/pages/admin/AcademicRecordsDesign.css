@@ -1,0 +1,45 @@
+/* Shared dark green and gold treatment for admin academic records. */
+.dash-shell .dash-content .course-summary-grid,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-stats { gap:14px; margin-bottom:18px; }
+.dash-shell .dash-content .course-summary-grid > article,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-stats > div { background:#fff; border:1px solid #dbe6de; border-top:3px solid #155a35; border-left:1px solid #dbe6de; border-radius:12px; padding:17px 20px; box-shadow:0 3px 12px #164f2405; gap:14px; }
+.dash-shell .dash-content .course-summary-grid > article:nth-child(2),
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-stats > div:nth-child(2) { border-top-color:#d4a43a; background:#fff8e5; border-left-color:#eadbb8; }
+.dash-shell .dash-content .course-summary-grid strong,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-stats strong { font-size:25px; color:#114e2e; line-height:1.2; }
+.dash-shell .dash-content .course-summary-grid .course-summary-icon,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .exam-summary-icon { display:grid; place-items:center; width:38px; height:38px; border-radius:10px; background:#e9f3e7; color:#19623a; flex-shrink:0; }
+.dash-shell .dash-content .course-summary-grid article:nth-child(2) .course-summary-icon,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-stats > div:nth-child(2) .exam-summary-icon { background:#f9e8b4; color:#976d1b; }
+.dash-shell .dash-content .course-catalog-panel,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel { border:1px solid #d8e3dc; border-radius:13px; background:#fff; box-shadow:0 4px 16px #164f2405; overflow:hidden; }
+.dash-shell .dash-content .course-catalog-header { background:#104f30; border-top:2px solid #d9ad49; border-bottom:2px solid #d9ad49; padding:17px 20px; }
+.dash-shell .dash-content .course-catalog-header h2 { color:#fff; font-size:18px; }
+.dash-shell .dash-content .course-catalog-header .course-page-kicker { color:#e8c46e; font-size:9px; letter-spacing:1px; }
+.dash-shell .dash-content .course-catalog-header h2 > span { background:#ffffff1c; color:#f4d786; }
+.dash-shell .dash-content .course-catalog-header .course-add-button { background:#f1d17d; border:1px solid #e7be58; color:#164f24; border-radius:8px; padding:10px 14px; font-size:12px; }
+.dash-shell .dash-content .course-catalog-header select { background:#fff; color:#315c3d; border:1px solid #d6e3d8; border-radius:8px; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-filters { background:#f6f9f4; border-top:3px solid #155a35; border-bottom:1px solid #dfe8dc; padding:18px 20px; gap:15px; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-filters label { color:#325b3f; font-size:11px; font-weight:650; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-filters select,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-filters input { height:38px; border:1px solid #d2dfd4; border-radius:8px; background:#fff; color:#315d40; font-size:11px; box-sizing:border-box; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-list-heading { padding:16px 20px; background:#fff; border-bottom:0; gap:12px; flex-wrap:wrap; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-list-heading h2 { color:#154e2e; font-size:17px; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-list-heading h2 > span { background:#edf4e8; color:#2b683c; border:1px solid #d7e7d3; border-radius:6px; font-size:11px; }
+.dash-shell .dash-content .course-catalog-panel thead,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel > .ao-table-wrap thead { background:#104f30; }
+.dash-shell .dash-content .course-catalog-panel thead th,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel > .ao-table-wrap thead th { background:#104f30; color:#fff4ce; padding:14px 17px; font-size:11px; font-weight:650; text-transform:none; letter-spacing:.1px; border-top:2px solid #d5a73f; border-bottom:1px solid #d5a73f; border-right:1px solid #ffffff16; }
+.dash-shell .dash-content .course-catalog-panel tbody td,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel > .ao-table-wrap tbody td { padding:14px 17px; border-bottom:1px solid #e8eee7; font-size:11px; }
+.dash-shell .dash-content .course-catalog-panel tbody tr:nth-child(even),
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel > .ao-table-wrap tbody tr:nth-child(even) { background:#f9fbf7; }
+.dash-shell .dash-content .course-catalog-panel tbody tr:hover,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel > .ao-table-wrap tbody tr:hover { background:#fff8e7; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-view { background:#edf5eb; border:1px solid #d4e4d0; color:#235e35; border-radius:7px; font-size:10px; padding:7px 10px; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .marks-export { background:#fff2cb; border:1px solid #dfbd66; color:#785318; border-radius:8px; font-size:11px; padding:9px 13px; }
+.dash-shell .dash-content .course-catalog-pagination,
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-pagination { background:#fafcf8; border-top:1px solid #e1e9dd; padding:12px 18px; }
+.dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) select:focus-visible,
+.dash-shell .dash-content .course-catalog-header select:focus-visible { outline:2px solid #d3a43b; outline-offset:2px; }
+@media(max-width:650px) { .dash-shell .dash-content .course-catalog-header { padding:14px; flex-wrap:wrap; gap:12px; } .dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-filters { padding:14px; } }

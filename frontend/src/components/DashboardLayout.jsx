@@ -44,6 +44,9 @@ import StudentProfile    from '../pages/student/StudentProfile';
 
 import '../pages/teacher/TeacherDashboardLayout.css';
 import '../pages/teacher/TeacherDashboardReference.css';
+import '../pages/admin/AcademicRecordsDesign.css';
+import '../pages/admin/AdminOutlinesDesign.css';
+import '../pages/admin/AnalyticsMakeupDesign.css';
 
 function DashboardContentFrame({active, children}) {
   return active ? <div className="dashboard-main">{children}</div> : children;
@@ -139,8 +142,8 @@ const ROLE_ROUTES = {
       <Route path="teachers"  element={<TeacherMgmt />} />
       <Route path="reports" element={<AcademyReports />} />
       <Route path="batches" element={<BatchManagement />} />
-      <Route path="outlines" element={<TeacherContracts admin combined />} />
-      <Route path="makeup" element={<MakeupClasses role="admin" />} />
+      <Route path="outlines" element={<div className="admin-outlines-page"><TeacherContracts admin combined workspaceMode="outline" /></div>} />
+      <Route path="makeup" element={<div className="admin-makeup-design"><MakeupClasses role="admin" /></div>} />
       <Route path="contracts" element={<TeacherContracts admin combined />} />
       <Route path="courses"   element={<CourseMgmt />} />
       <Route path="exams"     element={<ExamMgmt />} />
@@ -358,7 +361,7 @@ export default function DashboardLayout({ role }) {
 
       {/* ── Main ── */}
       <div className="dash-main">
-        <DashboardContentFrame active={teacherHome}>
+        <DashboardContentFrame active={role === 'teacher'}>
         {/* Top Bar */}
         <AcademyHeader role={role} user={user} avatar={role==='teacher' ? teacherAvatar : user?.profilePicture || ''} onToggleMenu={()=>setSidebarOpen(previous=>!previous)} onLogout={handleLogout} search={search} onSearch={setSearch} pageTitle={pageMeta.title} onNotificationNavigate={()=>setDataVersion(value=>value+1)} />
 

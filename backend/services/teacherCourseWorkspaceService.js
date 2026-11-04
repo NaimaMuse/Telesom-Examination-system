@@ -17,10 +17,11 @@ async function resolveScope(user,query={}) {
     Enrollment.find({status:'enrolled',$or:pairs}).lean(),
     Contract.find({teacher:teacher._id,$or:pairs}).sort({status:1,startDate:-1}).lean(),
   ]):[[],[]];
+  const savedBatches=assignments.length?await require('../models/Batch').find({status:'active',academicYear:{$in:[...new Set(assignments.map(a=>a.academicYear))]}}).sort({academicYear:-1,name:1}).lean():[];
   const cohorts=[];
   for(const assignment of assignments){
     const matches=r=>id(r.course)===id(assignment.course)&&r.academicYear===assignment.academicYear;
-    const batches=[...new Set([...contracts.filter(matches).map(c=>c.batch),...enrollments.filter(matches).map(e=>e.batch||'')])];
+    const batches=[...new Set([...contracts.filter(matches).map(c=>c.batch),...enrollments.filter(matches).map(e=>e.batch||''),...savedBatches.filter(b=>b.academicYear===assignment.academicYear).map(b=>b.name)])];
     for(const batch of batches.length?batches:[''])cohorts.push({course:assignment.course,academicYear:assignment.academicYear,batch,semester:assignment.semester||assignment.course.semester||''});
   }
   if(query.contractId&&!query.courseId){const contract=contracts.find(c=>id(c)===query.contractId);if(!contract)fail('Contract is not assigned to you.',403);query={...query,courseId:id(contract.course),academicYear:query.academicYear||contract.academicYear,batch:query.batch??contract.batch};}

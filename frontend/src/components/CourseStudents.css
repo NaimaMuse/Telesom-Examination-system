@@ -46,3 +46,11 @@
 @media(max-width:600px) { .dash-shell.teacher-shell .teacher-course-page .course-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); } .course-students-header { flex-wrap:wrap; padding:15px; } .course-students-cohort { margin-left:46px; } .course-students-toolbar { padding:12px 15px; } .course-students-search { max-width:none; flex-basis:100%; } .course-students-panel th,.course-students-panel td { padding:11px 13px; } }
 
 .course-students-heading-icon > svg { width:21px; height:21px; }
+
+/* Align the batch selector with the right edge of the student list. */
+.course-students-toolbar .course-students-status-filter { margin-left:auto; }
+
+/* Gold table heading with the academy dark green lettering. */
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-panel thead { background:linear-gradient(110deg,#fff1c9,#f8e3a8); }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-panel thead th { background:transparent; color:#164f24; border-top:2px solid #d7a43b; border-bottom:1px solid #e0bc67; padding:13px 18px; font-size:11px; font-weight:700; letter-spacing:.2px; }
+.dash-shell.teacher-shell .teacher-scope.teacher-course-page.professional-course-page .course-students-panel tbody tr:hover { background:#fffaf0; }

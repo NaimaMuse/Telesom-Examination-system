@@ -1,4 +1,5 @@
 import './MyCourseDesign.css';
+import './CourseOutlineDesign.css';
 import './StudyNotes.css';
 import CourseStudents from '../../components/CourseStudents';
 import CourseOverview from '../../components/CourseOverview';
@@ -142,7 +143,7 @@ export default function MyCourse({outlinePage=false}) {
     </section>
   );
 
-  const renderStudents = () => <CourseStudents key={scopeKey} students={students} course={course} search={search}/>;
+  const renderStudents = () => <CourseStudents key={scopeKey} students={students} course={course} search={search} cohorts={workspace?.cohorts||[]} selectedScope={workspace?.scope} onBatchChange={cohort=>{setLoading(true);setParams(previous=>{const next=new URLSearchParams(previous);next.set('tab','students');next.set('courseId',cohort.courseId);next.set('academicYear',cohort.academicYear);next.set('batch',cohort.batch);next.delete('contractId');return next;});}}/>;
 
   if(!outlinePage&&tab==='outline')return <Navigate to={outlineUrl()} replace/>;
   if(outlinePage)return <div className="teacher-scope teacher-course-page professional-course-page dedicated-outline-page">
