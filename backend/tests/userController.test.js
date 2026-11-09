@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const {verifyPassword} = require('../utils/passwords');
 const { createStudent, createTeacher } = require('../controllers/userController');
 const User = require('../models/User');
 const Student = require('../models/Student');
@@ -243,7 +243,7 @@ const runTests = async () => {
     const {req,res,next,getResult}=createMock({name:'Hassan Teacher',email:' Hassan@Telesom.com ',password:'InitialTeacher123!',teacherId:'IGNORED'});
     await createTeacher(req,res,next);
     const result=getResult(), data=result.responseBody?.data, password=data?.credentials?.temporaryPassword;
-    assert(result.statusCode===201 && password==='InitialTeacher123!' && await bcrypt.compare(password,stored.password) && stored.mustChangePassword && data.credentials.email==='hassan@telesom.com' && /^TCH-[A-F0-9]{12}$/.test(data.teacher.teacherId) && !data.user.password && !data.teacher.password, 'Teacher receives admin-set initial credentials, only a hash is stored, and password change is required');
+    assert(result.statusCode===201 && password==='InitialTeacher123!' && stored.password.startsWith('$argon2id$') && await verifyPassword(password,stored.password) && !stored.mustChangePassword && data.credentials.email==='hassan@telesom.com' && /^TCH-[A-F0-9]{12}$/.test(data.teacher.teacherId) && !data.user.password && !data.teacher.password, 'Teacher receives an admin-managed password and only an Argon2id hash is stored');
   }
 
   {

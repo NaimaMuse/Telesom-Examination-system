@@ -7,32 +7,17 @@ import axios from 'axios';
  */
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
 });
 
-/**
- * Request interceptor: attach JWT token if present in localStorage.
- */
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-/**
- * Response interceptor: on 401, clear stored credentials.
- * A full redirect is handled by the AuthContext / protected routes.
- */
 api.interceptors.response.use(
   (response) => publishAssessmentChange(response),
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+    if (error.response?.status === 401 && !['/auth/login','/auth/session'].includes(error.config?.url)) {
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
     return Promise.reject(error);

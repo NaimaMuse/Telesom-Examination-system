@@ -35,7 +35,7 @@ const parsePositiveInteger = (value, fallback, label, max = Infinity) => {
   if (value === undefined) {
     return fallback;
   }
-  if (!/^\d+$/.test(String(value)) || Number(value) < 1) {
+  if (!/^\d+$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) < 1) {
     const error = new Error(`${label} must be a positive integer`);
     error.statusCode = 400;
     throw error;

@@ -1,8 +1,22 @@
-const bcrypt = require('bcryptjs');
+const {hashPassword, verifyPassword, isLegacyHash} = require('../utils/passwords');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 const generateToken = require('../utils/generateToken');
+const {startSession,endSession} = require('../services/sessionService');
+const {asyncHandler} = require('./resourceController');
+const dummyHash = '$argon2id$v=19$m=19456,t=2,p=1$x0EoN30zbT3WfLJuIxbAqw$rzEKbDC5C8qLpmc8ui6dlV+qCLtjp5bkS8cwg9nN4Kg';
+
+async function sessionUser(user, studentProfile) {
+  const teacher = user.role === 'teacher' ? await Teacher.findOne({user:user._id}) : null;
+  return {
+    _id:user._id, name:user.name, email:user.email, role:user.role,
+    isActive:user.isActive, lastLogin:user.lastLogin,
+    mustChangePassword:user.role !== 'teacher' && !!user.mustChangePassword,
+    ...(studentProfile ? {studentId:studentProfile.studentId,studentProfileId:studentProfile._id,phone:studentProfile.phone} : {}),
+    ...(teacher ? {teacherId:teacher.teacherId,teacherProfileId:teacher._id,department:teacher.department,phone:teacher.phone} : {}),
+  };
+}
 
 /**
  * Authenticate students with their student ID and staff with email/password.
@@ -12,6 +26,11 @@ const generateToken = require('../utils/generateToken');
 const login = async (req, res, next) => {
   try {
     const { email, studentId, identifier, password } = req.body;
+    if ([email,studentId,identifier,password,req.body.role].some(value => value !== undefined &&
+        (typeof value !== 'string' || value.length > 1024))) {
+      res.status(400);
+      return next(new Error('Invalid sign-in fields'));
+    }
 
     // Check if any login identifier is provided
     const hasStudentId = Boolean(studentId && String(studentId).trim());
@@ -52,15 +71,9 @@ const login = async (req, res, next) => {
       // Find associated user account
       user = await User.findById(student.user);
 
-      if (!user) {
+      if (!user || user.role !== 'student' || !user.isActive) {
         res.status(401);
         return next(new Error('Invalid credentials'));
-      }
-
-      // Reject inactive student accounts
-      if (!user.isActive) {
-        res.status(401);
-        return next(new Error('Account is inactive, please contact administrator'));
       }
 
       studentProfile = student;
@@ -78,78 +91,30 @@ const login = async (req, res, next) => {
       // Find user account by email, including password hash for verification
       user = await User.findOne({ email: normalizedEmail }).select('+password');
 
-      if (!user) {
-        res.status(401);
-        return next(new Error('Invalid credentials'));
-      }
-
-      // Students must not use email login
-      if (user.role === 'student') {
-        res.status(401);
-        return next(new Error('Invalid credentials'));
-      }
-
-      // Reject inactive staff accounts
-      if (!user.isActive) {
-        res.status(401);
-        return next(new Error('Account is inactive, please contact administrator'));
-      }
-
-      // Verify submitted password against stored bcrypt hash
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
+      const eligible = user && ['teacher','admin'].includes(user.role) && user.isActive;
+      const isMatch = await verifyPassword(password, (eligible && user.password) || dummyHash);
+      if (!eligible || !isMatch) {
         res.status(401);
         return next(new Error('Invalid credentials'));
       }
     }
 
-    if (req.body.role && req.body.role !== user.role) { res.status(401); return next(new Error('Invalid credentials for the selected role')); }
+    if (req.body.role && req.body.role !== user.role) { res.status(401); return next(new Error('Invalid credentials')); }
+
+    if (!studentProfile && isLegacyHash(user.password)) {
+      await User.updateOne({_id:user._id,password:user.password},{$set:{password:await hashPassword(password)}});
+    }
 
     // Update lastLogin timestamp
     const loginTime = new Date();
     await User.findByIdAndUpdate(user._id, { lastLogin: loginTime });
 
-    // Generate JWT token
-    const token = generateToken(user._id, user.authVersion || 0);
-
-    let teacherProfile = null;
-    if (user.role === 'teacher') {
-      try {
-        teacherProfile = await Teacher.findOne({ user: user._id });
-      } catch {
-        teacherProfile = null;
-      }
-    }
-
-    // Return safe user information (never expose password or password hash)
-    res.status(200).json({
-      success: true,
-      token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-        lastLogin: loginTime,
-        mustChangePassword: !!user.mustChangePassword,
-        ...(studentProfile
-          ? {
-              studentId: studentProfile.studentId,
-              studentProfileId: studentProfile._id,
-              phone: studentProfile.phone,
-            }
-          : {}),
-        ...(teacherProfile
-          ? {
-              teacherId: teacherProfile.teacherId,
-              teacherProfileId: teacherProfile._id,
-              department: teacherProfile.department,
-              phone: teacherProfile.phone,
-            }
-          : {}),
-      },
-    });
+    const safeUser = await sessionUser(user, studentProfile);
+    req.auditActor = user._id;
+    safeUser.lastLogin = loginTime;
+    const browser = req.headers?.origin || req.headers?.['x-session-mode'] === 'cookie';
+    if (browser) await startSession(req,res,user);
+    res.status(200).json({success:true,user:safeUser,...(browser ? {} : {token:generateToken(user._id,user.authVersion || 0)})});
   } catch (error) {
     res.status(500);
     next(error);
@@ -158,4 +123,14 @@ const login = async (req, res, next) => {
 
 // Accounts can only be provisioned by the administrator.
 const register = (req, res) => res.status(403).json({ success: false, message: 'Public registration is disabled. Contact the administrator for an account.' });
-module.exports = { login, register };
+const currentSession = asyncHandler(async (req,res) => {
+  const student = req.user.role === 'student' ? await Student.findOne({user:req.user._id}) : null;
+  res.json({success:true,user:await sessionUser(req.user,student)});
+});
+const logout = asyncHandler(async (req,res) => {
+  req.securityEvent = 'logout';
+  if (!req.browserSession && req.user) await User.updateOne({_id:req.user._id},{$inc:{authVersion:1}});
+  req.auditActor = await endSession(req,res);
+  res.status(204).end();
+});
+module.exports = { login, register, currentSession, logout };

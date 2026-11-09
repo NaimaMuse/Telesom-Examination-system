@@ -1,0 +1,75 @@
+.internships-workspace { container-type: inline-size; }
+.internship-columns {
+  display: grid;
+  grid-template-columns: minmax(325px, 2fr) minmax(0, 3fr);
+  align-items: start;
+  gap: 14px;
+}
+.internships-workspace .internship-columns .academy-panel.internship-panel {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--brand-green-border);
+  border-radius: 12px;
+}
+.internship-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--brand-gold);
+  background: var(--brand-green-deep);
+  color: white;
+}
+.internship-panel-icon {
+  display: grid;
+  flex: 0 0 32px;
+  place-items: center;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--brand-gold-soft);
+  color: var(--brand-green-deep);
+}
+.internships-workspace .internship-panel-header h2 { margin: 0; color: white; font-size: 15px; }
+.internship-panel-header p { margin: 2px 0 0; color: var(--brand-green-soft); font-size: 11px; }
+
+.internship-form { padding: 12px; gap: 9px; }
+.internship-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.internship-selection { grid-column: 1 / -1; }
+.internship-form-fields .academy-field { min-width: 0; gap: 4px; }
+.internship-form-fields :is(input, select) { min-width: 0; min-height: 32px; padding: 5px 7px; }
+.internship-end-date input { background: var(--brand-gold-tint); border-color: var(--brand-gold-border); }
+.internship-schedule { min-width: 0; margin: 0; padding: 0; border: 0; }
+.internship-schedule .weekly-schedule { margin-top: 0; border-radius: 9px; }
+.internship-schedule .weekly-schedule-heading { padding: 8px; }
+.internship-schedule .weekly-day-picker { padding: 8px; gap: 4px; }
+.internship-schedule .weekly-day-chip { padding: 6px 0; }
+.internship-schedule .weekly-schedule-rows { padding-inline: 8px; }
+.internship-schedule .weekly-schedule-row { min-height: 40px; flex-wrap: wrap; padding-block: 5px; gap: 5px; }
+.internship-schedule .weekly-time-range { flex-wrap: wrap; }
+.internship-schedule .weekly-time-range input { min-width: 0; padding: 4px; }
+.internship-schedule .weekly-schedule > .weekly-preview { margin: 6px 8px 8px; }
+.internship-schedule .weekly-preview-slots { padding: 7px; gap: 4px; }
+.internship-schedule .weekly-preview-slots > span { padding: 4px 6px; }
+.internship-form-footer { display: flex; justify-content: flex-end; padding-top: 8px; border-top: 1px solid var(--brand-green-border); }
+.internship-notice { margin: 0; padding: 6px 8px; border-radius: 6px; background: var(--brand-green-soft); color: var(--brand-green-deep); font-size: 12px; }
+
+.internships-workspace .internship-panel .internship-table { border: 0; outline: 0; }
+.internships-workspace .internship-panel .internship-table th { background: var(--brand-green-soft); color: var(--brand-green-deep); }
+.internships-workspace .internship-panel .internship-table :is(th, td) { padding: 8px 9px; font-size: 11px; }
+.internship-table td { vertical-align: top; overflow-wrap: anywhere; }
+.internship-table td > small { display: block; margin-top: 3px; color: var(--text-secondary); }
+.internship-duration-badge { display: inline-block; margin-top: 4px; padding: 1px 5px; border-radius: 5px; background: var(--brand-gold-soft); color: var(--brand-green-deep); }
+.internship-record-slot { display: flex; flex-wrap: wrap; gap: 0 5px; }
+.internship-record-message { margin: 0; padding: 14px 12px; font-size: 12px; }
+.internship-record-empty { display: grid; justify-items: center; gap: 7px; padding: 24px 12px; color: var(--brand-green-deep); }
+.internship-record-empty p { margin: 0; }
+.internship-panel .pagination { margin: 0; padding: 8px 10px; }
+
+@container (max-width: 760px) {
+  .internship-columns { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 330px) {
+  .internship-form-fields { grid-template-columns: minmax(0, 1fr); }
+}

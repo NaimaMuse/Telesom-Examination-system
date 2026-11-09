@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import './WeeklySchedule.css';
 export const WEEK_DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-export function WeeklySchedulePreview({schedule = [], title = 'Weekly teaching schedule'}) {
+export function WeeklySchedulePreview({schedule = [], title = 'Weekly teaching schedule', emptyMessage = 'No weekly schedule configured. Add teaching days in Edit course.'}) {
   const hours = schedule.reduce((sum,row) => { const minutes = value => Number(value.slice(0,2))*60+Number(value.slice(3)); return sum + (minutes(row.endTime)-minutes(row.startTime))/60; },0);
-  return <section className="weekly-preview"><div className="weekly-schedule-heading"><div><h3>{title}</h3><p>Nairobi time · {schedule.length} days / week · {Number(hours.toFixed(2))} hours / week</p></div></div>{schedule.length ? <div className="weekly-preview-slots">{[...schedule].sort((a,b)=>a.day-b.day).map(row=><span key={row.day}><strong>{WEEK_DAYS[row.day]}</strong>{row.startTime}–{row.endTime}</span>)}</div> : <p className="weekly-schedule-empty">No weekly schedule configured. Add teaching days in Edit course.</p>}</section>;
+  return <section className="weekly-preview"><div className="weekly-schedule-heading"><div><h3>{title}</h3><p>Nairobi time · {schedule.length} days / week · {Number(hours.toFixed(2))} hours / week</p></div></div>{schedule.length ? <div className="weekly-preview-slots">{[...schedule].sort((a,b)=>a.day-b.day).map(row=><span key={row.day}><strong>{WEEK_DAYS[row.day]}</strong>{row.startTime}–{row.endTime}</span>)}</div> : <p className="weekly-schedule-empty">{emptyMessage}</p>}</section>;
 }
-export default function WeeklySchedule({value = [], onChange}) {
+export default function WeeklySchedule({
+  value = [], onChange, title = 'Weekly teaching schedule',
+  description = 'Choose teaching days and class times.', daysLabel = 'Teaching days', emptyMessage,
+}) {
   const [sameTime, setSameTime] = useState(() => value.every(row => row.startTime === value[0]?.startTime && row.endTime === value[0]?.endTime));
   const [sharedTime, setSharedTime] = useState(() => ({startTime:value[0]?.startTime || '08:00', endTime:value[0]?.endTime || '10:00'}));
   const updateSharedTime = (key, next) => {
@@ -14,12 +17,12 @@ export default function WeeklySchedule({value = [], onChange}) {
     onChange(value.map(row => ({...row, ...times})));
   };
   return (
-    <section className="weekly-schedule" aria-label="Weekly teaching schedule">
+    <section className="weekly-schedule" aria-label={title}>
       <div className="weekly-schedule-heading">
-        <div><h3>Weekly teaching schedule</h3><p>Choose teaching days and class times.</p></div>
+        <div><h3>{title}</h3><p>{description}</p></div>
         <span className="weekly-timezone">Nairobi · UTC+3</span>
       </div>
-      <div className="weekly-day-picker" role="group" aria-label="Teaching days">
+      <div className="weekly-day-picker" role="group" aria-label={daysLabel}>
         {WEEK_DAYS.map((day, index) => {
           const selected = value.some(row => row.day === index);
           return <button type="button" key={day} className={'weekly-day-chip' + (selected ? ' is-selected' : '')} aria-label={day} aria-pressed={selected} onClick={() => onChange(selected ? value.filter(row => row.day !== index) : [...value, {day:index, ...(sameTime ? sharedTime : {startTime:'08:00', endTime:'10:00'})}])}>{day.slice(0,3)}</button>;
@@ -53,7 +56,7 @@ export default function WeeklySchedule({value = [], onChange}) {
           </div>;
         })}
       </div>
-      <WeeklySchedulePreview schedule={value} title="Schedule summary"/>
+      <WeeklySchedulePreview schedule={value} title="Schedule summary" emptyMessage={emptyMessage}/>
     </section>
   );
 }

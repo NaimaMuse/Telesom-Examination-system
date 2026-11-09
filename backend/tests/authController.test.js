@@ -1,9 +1,10 @@
-const bcrypt = require('bcryptjs');
+const {hashPassword} = require('../utils/passwords');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { login } = require('../controllers/authController');
 const User = require('../models/User');
 const Student = require('../models/Student');
+const Teacher = require('../models/Teacher');
 
 process.env.JWT_SECRET = 'test_secret_for_login_tests_12345';
 process.env.JWT_ALGORITHM = 'HS256';
@@ -59,13 +60,15 @@ const runTests = async () => {
   };
 
   const plainPassword = 'SecretPassword123';
-  const hashedPassword = await bcrypt.hash(plainPassword, 10);
+  const hashedPassword = await hashPassword(plainPassword);
 
   // Save original model methods
   const origStudentFindOne = Student.findOne;
   const origUserFindById = User.findById;
   const origUserFindOne = User.findOne;
   const origUserFindByIdAndUpdate = User.findByIdAndUpdate;
+  const origTeacherFindOne = Teacher.findOne;
+  Teacher.findOne = async () => null;
 
   console.log('--- Running Login Controller Tests (Student ID-Only Login & Staff Login) ---\n');
 
@@ -190,7 +193,7 @@ const runTests = async () => {
     assert(
       result.nextCalled &&
       result.statusCode === 401 &&
-      result.nextError?.message.includes('Account is inactive'),
+      result.nextError?.message === 'Invalid credentials',
       'Inactive student account returns 401'
     );
   }
@@ -307,6 +310,7 @@ const runTests = async () => {
   User.findById = origUserFindById;
   User.findOne = origUserFindOne;
   User.findByIdAndUpdate = origUserFindByIdAndUpdate;
+  Teacher.findOne = origTeacherFindOne;
 
   console.log(`\nTests finished: ${passed} passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);

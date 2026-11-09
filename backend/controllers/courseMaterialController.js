@@ -1,10 +1,11 @@
 const multer=require('multer'),mongoose=require('mongoose');
 const Note=require('../models/Note');
 const {asyncHandler}=require('./resourceController');
+const {validateInput}=require('../middleware/security');
 const {resolveScope,materialFilter,safeMaterial}=require('../services/teacherCourseWorkspaceService');
 const fail=(message,statusCode=400)=>{throw Object.assign(new Error(message),{statusCode});};
 const receive=multer({storage:multer.memoryStorage(),limits:{files:1,fields:8,fieldSize:8000,fileSize:15*1024*1024}}).single('file');
-const upload=(req,res,next)=>receive(req,res,error=>{if(error){error.statusCode=error.code==='LIMIT_FILE_SIZE'?413:400;error.message=error.code==='LIMIT_FILE_SIZE'?'The document must be 15 MB or smaller.':error.message;}next(error);});
+const upload=(req,res,next)=>receive(req,res,error=>{if(error){error.statusCode=error.code==='LIMIT_FILE_SIZE'?413:400;error.message=error.code==='LIMIT_FILE_SIZE'?'The document must be 15 MB or smaller.':error.message;return next(error);}validateInput(req,res,next);});
 function attachment(file){
   if(!file)return null;
   const ext=file.originalname.split('.').pop().toLowerCase(),b=file.buffer;
@@ -15,6 +16,7 @@ function attachment(file){
   const legacy=['doc','ppt'].includes(ext)&&b.subarray(0,8).equals(Buffer.from([208,207,17,224,161,177,26,225]));
   if(!pdf&&!docx&&!pptx&&!legacy)fail('Select a valid PDF, DOC, DOCX, PPT or PPTX document.');
   const mime={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}[ext];
+  if (![mime,'application/octet-stream'].includes(file.mimetype)) fail('Document type does not match the uploaded file.');
   return {filename:file.originalname.replace(/[\/\\\x00-\x1f]/g,'_').slice(0,200),mime,size:file.size,data:b};
 }
 async function loadOwned(req){

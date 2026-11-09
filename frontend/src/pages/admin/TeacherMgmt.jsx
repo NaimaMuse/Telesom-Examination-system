@@ -4,6 +4,9 @@ import { contractEndDate, contractDurationDays, contractDurationLabel } from '..
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import TeachingIcon from '../../components/TeachingIcon';
+import TeacherAttendance from './TeacherAttendance';
 import api from '../../services/api';
 
 const TEACHER_FIELDS = [
@@ -14,6 +17,7 @@ const TEACHER_FIELDS = [
 
 const TEACHER_EDIT_FIELDS = [
   ...TEACHER_FIELDS,
+  { key: 'newPassword', label: 'New password (optional)', type: 'password' },
   { key: 'teacherId', label: 'Teacher ID', type: 'text', required: true },
   { key: 'gender', label: 'Gender', type: 'select', options: ['male', 'female'] },
   { key: 'status', label: 'Status', type: 'select', options: ['active', 'on_leave', 'inactive'], required: true },
@@ -88,7 +92,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
               ))}
             </div>
             {selectedCourse && <WeeklySchedulePreview schedule={selectedCourse.teachingSchedule || []} title="Assigned course schedule" />}
-            {!initial?._id && <p className="teacher-password-hint">Teachers change their temporary password at first sign-in.</p>}
+            <p className="teacher-password-hint">{initial?._id ? 'Leave the password field blank to keep the current password.' : 'The teacher signs in with the password you set.'}</p>
             {initial?._id && <section className="teacher-edit-contract"><h3>Teaching contract</h3>
               {contractsLoading?<p>Loading contracts…</p>:contractLoadError?<p role="alert">{contractLoadError}</p>:!teacherContracts.length?<p>No saved contract found. Create one in Teaching &amp; Outlines.</p>:<>
               <label className="form-label" htmlFor="teacher-edit-contract">Course / Year / Batch</label><select id="teacher-edit-contract" className="form-control" value={form.editContractId||''} onChange={event=>chooseContract(teacherContracts.find(contract=>contract._id===event.target.value))}>{teacherContracts.map(contract=><option key={contract._id} value={contract._id}>{contract.course?.title||contract.course?.name} · {contract.academicYear} / {contract.batch} · {contract.contractStatus}</option>)}</select>
@@ -190,7 +194,7 @@ function TeacherCredentialsModal({ credentials, onClose }) {
   const credentialRows = [
     ['Email address', credentials.email],
     ['Teacher ID', credentials.teacherId],
-    ['Temporary password', credentials.temporaryPassword],
+    ['Password', credentials.temporaryPassword],
   ];
 
   return (
@@ -209,7 +213,7 @@ function TeacherCredentialsModal({ credentials, onClose }) {
             <h3 className="visually-hidden">Sign-in credentials</h3>
             <div className="teacher-credential-list">
               {credentialRows.map(([label, value]) => (
-                <div className={`teacher-credential-row ${label === 'Temporary password' ? 'password' : ''}`} key={label}>
+                <div className={`teacher-credential-row ${label === 'Password' ? 'password' : ''}`} key={label}>
                   <div><span>{label}</span><strong>{value}</strong></div>
                   <button type="button" className={`teacher-credential-copy ${copied === label ? 'is-copied' : ''}`} onClick={() => copyValue(label, value)} aria-label={`Copy ${label}`}>
                     {copied === label ? 'Copied' : 'Copy'}
@@ -217,7 +221,7 @@ function TeacherCredentialsModal({ credentials, onClose }) {
                 </div>
               ))}
             </div>
-            <p className="teacher-credential-hint">The teacher must change this initial password at their first sign-in.</p>
+            <p className="teacher-credential-hint">Only an administrator can reset this password.</p>
           </section>
           <section className={`teacher-course-assignment ${credentials.warning ? 'has-warning' : ''}`} aria-label="Course assignment">
             <span className="teacher-course-assignment-icon" aria-hidden="true">{credentials.warning ? '!' : '▤'}</span>
@@ -239,6 +243,23 @@ function TeacherCredentialsModal({ credentials, onClose }) {
 const PAGE_SIZE = 8;
 
 export default function TeacherMgmt() {
+  const [params] = useSearchParams();
+  const isAttendance = params.get('view') === 'attendance';
+
+  return <>
+    <nav className="teacher-management-nav" aria-label="Teacher management">
+      <Link to="/admin/teachers" aria-current={!isAttendance ? 'page' : undefined}>
+        <TeachingIcon name="users" size={16}/> Directory
+      </Link>
+      <Link to="/admin/teachers?view=attendance" aria-current={isAttendance ? 'page' : undefined}>
+        <TeachingIcon name="calendar" size={16}/> Teacher Attendance
+      </Link>
+    </nav>
+    {isAttendance ? <TeacherAttendance/> : <TeacherDirectory/>}
+  </>;
+}
+
+function TeacherDirectory() {
   const [search] = usePageSearch();
   const [teachers, setTeachers] = useState([]);
   const [courseAssignments, setCourseAssignments] = useState([]);
@@ -356,7 +377,7 @@ export default function TeacherMgmt() {
         phone: form.phone,
         teacherId: form.teacherId,
         gender: form.gender,
-
+        ...(form.newPassword ? {newPassword:form.newPassword} : {}),
         status: form.status,
       });
       const assignment = getTeacherAssignment(editTarget);
@@ -503,7 +524,7 @@ export default function TeacherMgmt() {
         </footer>
       </section>
 
-      {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_EDIT_FIELDS : [...TEACHER_FIELDS, { key: 'password', label: 'Temporary password', type: 'password', required: true }, { key: 'course', label: 'Course', type: 'course', required: true }, { key: 'contractDays', label: 'Contract duration', type: 'number', required: true }, { key: 'contractDurationUnit', label: 'Duration unit', type: 'select', options: ['Days', 'Months'] }, { key: 'contractBatch', label: 'Contract batch', type: 'batch', required: true }, { key: 'contractStart', label: 'Start date', type: 'date', required: true }, { key: 'contractEnd', label: 'End date (calculated)', type: 'date' }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
+      {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_EDIT_FIELDS : [...TEACHER_FIELDS, { key: 'password', label: 'Password', type: 'password', required: true }, { key: 'course', label: 'Course', type: 'course', required: true }, { key: 'contractDays', label: 'Contract duration', type: 'number', required: true }, { key: 'contractDurationUnit', label: 'Duration unit', type: 'select', options: ['Days', 'Months'] }, { key: 'contractBatch', label: 'Contract batch', type: 'batch', required: true }, { key: 'contractStart', label: 'Start date', type: 'date', required: true }, { key: 'contractEnd', label: 'End date (calculated)', type: 'date' }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
       {deleteTarget && <ConfirmModal message={`Delete "${deleteTarget.name}"?`} onConfirm={handleDelete} onCancel={()=>setDeleteTarget(null)} loading={deleting} />}
       {createdCredentials && <TeacherCredentialsModal credentials={createdCredentials} onClose={() => setCreatedCredentials(null)} />}
       {selectedTeacher && <TeacherDetailsModal teacher={selectedTeacher} courseAssignment={selectedTeacher.assignedCourse || null} loading={teacherDetailsLoading} error={teacherDetailsError} onClose={() => { teacherDetailsRequest.current += 1; setSelectedTeacher(null); setTeacherDetailsError(''); }} />}

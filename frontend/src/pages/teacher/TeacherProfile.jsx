@@ -1,6 +1,5 @@
 import {TeacherPicture} from '../../components/AcademyWorkspace';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
-import ChangePasswordModal from '../../components/ChangePasswordModal';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -8,8 +7,6 @@ import api from '../../services/api';
 
 export default function TeacherProfile() {
   const [search] = usePageSearch();
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordChanged, setPasswordChanged] = useState(false);
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -37,7 +34,7 @@ export default function TeacherProfile() {
       setForm({ name:details.name || '', email:details.email || '', phone:details.phone || '', department:details.department || '', subjects:details.specialization || '', bio:details.qualification || '' });
       setSaveError('');
     } catch (err) { if (isCurrent()) setSaveError(err.response?.data?.message || 'Profile could not refresh. Retrying automatically.'); }
-  }, { enabled: !editing && !saving && !showPasswordModal });
+  }, { enabled: !editing && !saving });
 
   const handleSave = async(e) => {
     e.preventDefault();
@@ -156,8 +153,6 @@ export default function TeacherProfile() {
           )}
         </div>
       </section>
-      <div style={{marginTop:20}}><button type="button" className="btn btn-secondary" onClick={()=>{setPasswordChanged(false);setShowPasswordModal(true);}}>Change password</button>{passwordChanged && <p role="status" style={{marginTop:10,color:'var(--brand-green-active)'}}>Password changed successfully.</p>}</div>
-      {showPasswordModal && !user?.mustChangePassword && <ChangePasswordModal onClose={()=>setShowPasswordModal(false)} onSuccess={()=>{setShowPasswordModal(false);setPasswordChanged(true);}} />}
     </div>
   );
 }

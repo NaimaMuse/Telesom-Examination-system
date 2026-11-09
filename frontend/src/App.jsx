@@ -1,3 +1,4 @@
+import { Component } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -5,6 +6,24 @@ import LoginPage from './pages/Login';
 import AdminLoginPage from './pages/admin/AdminLogin';
 import RoleRedirect from './pages/RoleRedirect';
 import DashboardLayout from './components/DashboardLayout';
+
+class AppErrorBoundary extends Component {
+  state = { failed:false };
+
+  static getDerivedStateFromError() {
+    return {failed:true};
+  }
+
+  render() {
+    if (this.state.failed) {
+      return <main className="card card-body" role="alert">
+        <h1>This page could not load</h1>
+        <button className="btn btn-primary" type="button" onClick={()=>window.location.reload()}>Reload page</button>
+      </main>;
+    }
+    return this.props.children;
+  }
+}
 
 /**
  * App — root router + auth context wrapper.
@@ -20,6 +39,7 @@ import DashboardLayout from './components/DashboardLayout';
  */
 export default function App() {
   return (
+    <AppErrorBoundary>
     <BrowserRouter>
       <AuthProvider>
         <Routes>
@@ -76,5 +96,6 @@ export default function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
+    </AppErrorBoundary>
   );
 }

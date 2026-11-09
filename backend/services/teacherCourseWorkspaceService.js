@@ -4,6 +4,7 @@ const Teacher=require('../models/Teacher'),Assignment=require('../models/CourseT
 const Enrollment=require('../models/Enrollment'),Contract=require('../models/TeacherContract');
 const Lesson=require('../models/TeachingLesson'),Exam=require('../models/Exam'),Quiz=require('../models/Quiz'),Note=require('../models/Note');
 const {summary,teachingDay}=require('./teacherContractService');
+const {enrollmentBatch}=require('./batchService');
 const fail=(message,statusCode=400)=>{throw Object.assign(new Error(message),{statusCode});};
 const publicCourse=course=>{const {performanceWriteLock,__v,...safe}=course;return safe;};
 const id=value=>String(value?._id||value||'');
@@ -21,7 +22,7 @@ async function resolveScope(user,query={}) {
   const cohorts=[];
   for(const assignment of assignments){
     const matches=r=>id(r.course)===id(assignment.course)&&r.academicYear===assignment.academicYear;
-    const batches=[...new Set([...contracts.filter(matches).map(c=>c.batch),...enrollments.filter(matches).map(e=>e.batch||''),...savedBatches.filter(b=>b.academicYear===assignment.academicYear).map(b=>b.name)])];
+    const batches=[...new Set([...contracts.filter(matches).map(c=>c.batch),...enrollments.filter(matches).map(e=>enrollmentBatch({...e,course:assignment.course})),...savedBatches.filter(b=>b.academicYear===assignment.academicYear).map(b=>b.name)])];
     for(const batch of batches.length?batches:[''])cohorts.push({course:assignment.course,academicYear:assignment.academicYear,batch,semester:assignment.semester||assignment.course.semester||''});
   }
   if(query.contractId&&!query.courseId){const contract=contracts.find(c=>id(c)===query.contractId);if(!contract)fail('Contract is not assigned to you.',403);query={...query,courseId:id(contract.course),academicYear:query.academicYear||contract.academicYear,batch:query.batch??contract.batch};}
@@ -29,7 +30,10 @@ async function resolveScope(user,query={}) {
   if(query.courseId&&!courseMatches.length)fail('This course is not assigned to you.',403);
   const yearMatches=courseMatches.filter(c=>!query.academicYear||c.academicYear===query.academicYear);
   if(query.academicYear&&!yearMatches.length)fail('This academic year is not assigned to you.',403);
-  const selected=query.batch!==undefined?yearMatches.find(c=>c.batch===query.batch):yearMatches[0];
+  const selected=query.batch!==undefined
+    ? yearMatches.find(c=>c.batch===query.batch) ||
+      (query.batch==='' && yearMatches.find(c=>c.batch===enrollmentBatch({course:c.course,academicYear:c.academicYear})))
+    : yearMatches[0];
   if(query.batch!==undefined&&!selected)fail('Batch not found in your assigned course and year.',403);
   if(!selected)return {teacher,cohorts,contracts:[],selected:null,courses:[]};
   const matchingContracts=contracts.filter(c=>cohortKey(c)===cohortKey(selected));
@@ -38,7 +42,14 @@ async function resolveScope(user,query={}) {
   const courses=[...new Map(assignments.map(a=>[id(a.course),a.course])).values()];
   return {teacher,cohorts,courses,contracts:matchingContracts,selected,contract};
 }
-const enrollmentFilter=scope=>({course:scope.course._id,academicYear:scope.academicYear,status:'enrolled',...(scope.batch?{batch:scope.batch}:{$or:[{batch:''},{batch:{$exists:false}}]})});
+function enrollmentFilter(scope) {
+  const configuredBatch=enrollmentBatch({course:scope.course,academicYear:scope.academicYear});
+  const batch=scope.batch||'';
+  return {
+    course:scope.course._id,academicYear:scope.academicYear,status:'enrolled',
+    batch:batch===configuredBatch?{$in:[batch,'',null]}:batch,
+  };
+}
 const assessmentFilter=scope=>({course:scope.course._id,academicYear:scope.academicYear,$and:[{$or:[{batch:scope.batch||''},{batch:''},{batch:{$exists:false}}]},...(scope.semester?[{$or:[{semester:scope.semester},{semester:''},{semester:{$exists:false}}]}]:[])]});
 const materialFilter=(user,scope)=>({createdBy:user._id,course:scope.course._id,academicYear:scope.academicYear,batch:scope.batch||'',material:true,archivedAt:null});
 const safeMaterial=note=>({_id:note._id,title:note.title,description:note.content,filename:note.attachment?.filename||'',fileType:note.attachment?.filename?.split('.').pop()||'',size:note.attachment?.size?`${(note.attachment.size/1024/1024).toFixed(1)} MB`:'',hasAttachment:!!note.attachment?.filename,uploadedAt:note.updatedAt,course:note.course,batch:note.batch,academicYear:note.academicYear});

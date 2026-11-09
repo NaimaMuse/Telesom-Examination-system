@@ -6,7 +6,6 @@ import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
 import {AcademyReports,BatchManagement,CourseOutlines,MakeupClasses} from './AcademyWorkspace';
 import TeacherContracts from './TeacherContracts';
-import ChangePasswordModal from './ChangePasswordModal';
 import NotificationBell from './NotificationBell';
 import TelesomLogo from './TelesomLogo';
 import { useState, useEffect } from 'react';
@@ -20,6 +19,7 @@ import { PageSearchContext } from '../context/PageSearchContext';
 // ─── Admin Pages ───────────────────────────────────────────────
 import AdminDashboard    from '../pages/admin/AdminDashboard';
 import StudentMgmt       from '../pages/admin/StudentMgmt';
+import Internships       from '../pages/admin/Internships';
 import TeacherMgmt       from '../pages/admin/TeacherMgmt';
 import CourseMgmt        from '../pages/admin/CourseMgmt';
 import ExamMgmt          from '../pages/admin/ExamMgmt';
@@ -67,6 +67,7 @@ const NAV = {
       section: 'Management',
       items: [
         { to: '/admin/students',   label: 'Student Management', icon: 'graduate' },
+        { to: '/admin/internships', label: 'Internships', icon: 'briefcase' },
         { to: '/admin/teachers',   label: 'Teacher Management', icon: 'teacher' },
         { to: '/admin/batches', label: 'Years & Batches', icon: 'reschedule' },
         { to: '/admin/courses',    label: 'Course Management',  icon: 'book' },
@@ -93,7 +94,6 @@ const NAV = {
       items: [
         { to: '/teacher', label: 'Dashboard', icon: 'grid', end: true },
         { to: '/teacher/my-course', label: 'My Course', icon: 'book' },
-        { to: '/teacher/students', label: 'Students', icon: 'users' },
         { to: '/teacher/exams', label: 'Exams & Quizzes', icon: 'clipboard' },
         { to: '/teacher/results', label: 'Results & Marks', icon: 'clipboard' },
         { to: '/teacher/performance', label: 'Student Performance', icon: 'chart' },
@@ -143,6 +143,7 @@ const ROLE_ROUTES = {
       <Route path="evaluations" element={<Evaluations admin />} />
       <Route path="evaluations/:id" element={<Evaluations admin />} />
       <Route path="students"  element={<StudentMgmt />} />
+      <Route path="internships" element={<Internships />} />
       <Route path="teachers"  element={<TeacherMgmt />} />
       <Route path="reports" element={<AcademyReports />} />
       <Route path="batches" element={<BatchManagement />} />
@@ -205,6 +206,7 @@ const PAGE_META = {
   '/student/outlines': {title:'Course Outlines',hint:'Published lessons and course progress.'},
   '/admin': { title: 'Admin Dashboard', hint: 'Overview of students, courses, exams, and reports.' },
   '/admin/students': { title: 'Student Management', hint: 'Add, edit, and manage student records.' },
+  '/admin/internships': { title: 'Internships', hint: 'Record internship students and their placement dates.' },
   '/admin/contracts': { title: 'Teacher Contracts', hint: 'Monitor completed teaching days and contract balances.' },
   '/admin/teachers': { title: 'Teacher Management', hint: 'Manage faculty accounts and assignments.' },
   '/admin/courses': { title: 'Course Management', hint: 'Create and organize academic courses.' },
@@ -298,15 +300,18 @@ export default function DashboardLayout({ role }) {
         : pageMeta.title;
   const profilePath = role === 'admin' ? '/admin' : `/${role}/profile`;
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch {
+      window.alert('Could not sign out. Please try again.');
+    }
   };
 
   return (
     <div className={`dash-shell ${role === 'teacher' ? 'teacher-shell' : ''} ${teacherHome ? 'teacher-dashboard-shell' : ''} ${sidebarOpen ? 'academy-menu-open' : ''} ${teacherHome && sidebarOpen ? 'teacher-dashboard-collapsed' : ''} ${role === 'admin' && location.pathname === '/admin' ? 'admin-home-shell' : ''}`}>
-      {role === 'teacher' && user?.mustChangePassword && <ChangePasswordModal required onSignOut={handleLogout} />}
-      {showGreeting && !teacherHome && !user?.mustChangePassword && <div className="dashboard-greeting-popup" role="status">
+      {showGreeting && !teacherHome && <div className="dashboard-greeting-popup" role="status">
         <span className="dashboard-greeting-mark" aria-hidden="true">☀</span>
         <div><strong>{greeting()}, {firstName}</strong><p>Welcome to your {role} dashboard.</p></div>
         <button type="button" aria-label="Dismiss greeting" onClick={() => setShowGreeting(false)}>×</button>

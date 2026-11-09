@@ -14,7 +14,9 @@ import { useAuth } from '../context/AuthContext';
  *   <ProtectedRoute roles={['teacher']}>    — teacher only
  */
 export default function ProtectedRoute({ children, roles }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, authLoading } = useAuth();
+
+  if (authLoading) return <div className="spinner-wrap" role="status" aria-label="Checking session"><div className="spinner"/></div>;
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

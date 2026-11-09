@@ -83,8 +83,8 @@ export default function TeacherAttendance() {
             <td>{record.course}<small>{record.academicYear} · {record.batch}</small></td>
             <td><span className={'teacher-attendance-status is-'+(record.attendance?.status||'unmarked')}>{record.attendance?.status==='present'?'Present':record.attendance?.status==='absent'?'Absent':'Not marked'}</span></td>
             <td><div className="academy-actions teacher-attendance-actions">
-              <button type="button" className="btn btn-sm btn-secondary attendance-present" disabled={busy||record.attendance?.status==='present'||record.attendance?.hasMakeup} onClick={()=>mark(record.contract,'present')}>Mark present</button>
-              <button type="button" className="btn btn-sm btn-secondary attendance-absent" disabled={busy||record.attendance?.status==='absent'} onClick={()=>mark(record.contract,'absent')}>Mark absent</button>
+              <button type="button" className="btn btn-sm btn-secondary attendance-present" aria-label="Mark present" title="Mark present" disabled={busy||record.attendance?.status==='present'||record.attendance?.hasMakeup} onClick={()=>mark(record.contract,'present')}><TeachingIcon name="check" size={17}/></button>
+              <button type="button" className="btn btn-sm btn-secondary attendance-absent" aria-label="Mark absent" title="Mark absent" disabled={busy||record.attendance?.status==='absent'} onClick={()=>mark(record.contract,'absent')}><TeachingIcon name="cross" size={17}/></button>
               {record.attendance?.status==='absent'&&(record.attendance.hasMakeup?<Link to="/admin/makeup">View makeup</Link>:
                 <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={()=>{setError('');setAbsence({...record,date});}}>Schedule makeup class</button>)}
             </div></td>

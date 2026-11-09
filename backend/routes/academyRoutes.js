@@ -1,5 +1,6 @@
 const {orderPlan,lessonProgress,numberChapters,moveItem}=require('../services/outlinePlanService');
 const express=require('express'),multer=require('multer'),mongoose=require('mongoose');
+const sharp=require('sharp');
 const {protect}=require('../middleware/authMiddleware');
 const {authorizeRoles}=require('../middleware/roleMiddleware');
 const {asyncHandler,pick}=require('../controllers/resourceController');
@@ -15,7 +16,8 @@ const {withCourseLock}=require('../services/gradebookIntegrityService');
 const router=express.Router();router.use(protect);
 const fail=(message,statusCode=400)=>{throw Object.assign(new Error(message),{statusCode});};
 const id=value=>{if(!mongoose.isValidObjectId(value))fail('Invalid record ID.');return value;};
-const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024,files:1}});
+const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024,files:1,fields:0,parts:2}});
+const profileUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:2*1024*1024,files:1,fields:0,parts:2}});
 const teacherFor=async user=>{const t=await Teacher.findOne({user:user._id});if(!t)fail('Teacher not found.',404);return t;};
 async function outlineAccess(user,outline,write=false) {
   if(!outline)fail('Outline not found.',404);
@@ -76,9 +78,16 @@ const saveProfilePicture = asyncHandler(async(req,res)=>{
   const b=file.buffer;
   const type=b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'image/png':b[0]===255&&b[1]===216&&b[2]===255?'image/jpeg':b.toString('ascii',0,4)==='RIFF'&&b.toString('ascii',8,12)==='WEBP'?'image/webp':null;
   if(!type||type!==file.mimetype)fail('Only valid PNG, JPEG and WebP images are supported.');
-  teacher.profilePicture=`data:${type};base64,${b.toString('base64')}`;await teacher.save();res.json({picture:teacher.profilePicture});
+  let image;
+  try {
+    image=await sharp(b,{animated:true,limitInputPixels:16_000_000}).autoOrient().toBuffer();
+  } catch {
+    fail('The image could not be decoded. Select a valid PNG, JPEG or WebP image.');
+  }
+  if(image.length>2*1024*1024)fail('The processed image exceeds the 2 MB limit.');
+  teacher.profilePicture=`data:${type};base64,${image.toString('base64')}`;await teacher.save();res.json({picture:teacher.profilePicture});
 });
-router.put('/profile-picture',authorizeRoles('teacher'),upload.single('file'),saveProfilePicture);
+router.put('/profile-picture',authorizeRoles('teacher'),profileUpload.single('file'),saveProfilePicture);
 router.put('/profile-picture/:teacherId',asyncHandler(async()=>{fail('Teachers can only update their own profile picture from their account.',403);}));
 router.delete('/profile-picture',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{const teacher=await teacherFor(req.user);teacher.profilePicture='';await teacher.save();res.json({picture:''});}));
 router.get('/outlines',asyncHandler(async(req,res)=>{
@@ -164,7 +173,9 @@ router.put('/outlines/:id/document',authorizeRoles('teacher'),upload.single('fil
   const pdf=file.buffer.toString('ascii',0,5)==='%PDF-'&&/\.pdf$/i.test(file.originalname);
   const docx=file.buffer.toString('ascii',0,2)==='PK'&&file.buffer.includes(Buffer.from('word/document.xml'))&&/\.docx$/i.test(file.originalname);
   if(!pdf&&!docx)fail('Only valid PDF or DOCX documents are supported.');
-  outline.document={name:file.originalname.slice(0,200),mime:pdf?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',data:file.buffer};await outline.save();res.json({message:'Document uploaded.'});
+  const mime=pdf?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (![mime,'application/octet-stream'].includes(file.mimetype)) fail('Document type does not match the uploaded file.');
+  outline.document={name:file.originalname.replace(/[\/\\\x00-\x1f]/g,'_').slice(0,200),mime,data:file.buffer};await outline.save();res.json({message:'Document uploaded.'});
 }));
 router.get('/outlines/:id/document',asyncHandler(async(req,res)=>{
   const outline=await Outline.findById(id(req.params.id)).select('+document.data');await outlineAccess(req.user,outline);

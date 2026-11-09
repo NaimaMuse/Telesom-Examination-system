@@ -1,84 +1,48 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const {sessionId,readSession} = require('../services/sessionService');
 
-/**
- * Authentication middleware that verifies JWT and attaches user to req.user
- */
-const protect = async (req, res, next) => {
+const deny = (res, next, status, message) => {
+  res.status(status);
+  return next(new Error(message));
+};
+
+async function protect(req, res, next) {
   try {
-    let token;
-
-    // 1. Check for Authorization header with Bearer token
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    }
-
-    if (!token) {
-      res.status(401);
-      return next(new Error('Not authorized, no token provided or invalid format'));
-    }
-
-    // 2. Ensure JWT_SECRET is configured
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      res.status(500);
-      return next(new Error('Server configuration error: JWT_SECRET is not set'));
-    }
-
-    // 3. Verify token with secret and configured algorithm
-    const algorithm = process.env.JWT_ALGORITHM || 'HS256';
-    let decoded;
-
-    try {
-      decoded = jwt.verify(token, jwtSecret, { algorithms: [algorithm] });
-    } catch (err) {
-      res.status(401);
-      if (err.name === 'TokenExpiredError') {
-        return next(new Error('Not authorized, token has expired'));
+    const id = sessionId(req);
+    const authorization = req.headers.authorization;
+    let userId, authVersion;
+    if (id) {
+      const session = await readSession(id);
+      userId = session?.user;
+      authVersion = session?.authVersion;
+      req.browserSession = true;
+    } else {
+      if (!authorization?.startsWith('Bearer ')) return deny(res,next,401,'Not authorized, no token provided or invalid format');
+      const secret = process.env.JWT_SECRET;
+      const algorithm = process.env.JWT_ALGORITHM || 'HS256';
+      if (!secret || !['HS256','HS384','HS512'].includes(algorithm)) throw new Error('Invalid JWT configuration');
+      try {
+        const decoded = jwt.verify(authorization.slice(7), secret, {algorithms:[algorithm],maxAge:'1h'});
+        userId = decoded.id || decoded.userId || decoded._id;
+        authVersion = decoded.authVersion;
+      } catch (error) {
+        return deny(res,next,401,error.name === 'TokenExpiredError' ? 'Session expired. Please sign in again.' : 'Not authorized, invalid or malformed token');
       }
-      return next(new Error('Not authorized, invalid or malformed token'));
     }
-
-    // 4. Extract and validate user ID from decoded payload
-    const userId = decoded.id || decoded.userId || decoded._id;
-
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      res.status(401);
-      return next(new Error('Not authorized, invalid user ID in token payload'));
-    }
-
-    // 5. Load user from database excluding password
+    if (!mongoose.isValidObjectId(userId)) return deny(res,next,401,'Session expired. Please sign in again.');
     const user = await User.findById(userId).select('-password');
+    if (!user) return deny(res,next,401,'Session expired. Please sign in again.');
+    if (!user.isActive) return deny(res,next,403,'Account is inactive, please contact administrator');
+    if ((authVersion || 0) !== (user.authVersion || 0)) return deny(res,next,401,'Session expired. Please sign in again.');
 
-    // 6. Check if user still exists
-    if (!user) {
-      res.status(401);
-      return next(new Error('Not authorized, user account not found or deleted'));
-    }
-
-    // 7. Check if user account is active
-    if (!user.isActive) {
-      res.status(403);
-      return next(new Error('Account is inactive, please contact administrator'));
-    }
-
-    if ((decoded.authVersion || 0) !== (user.authVersion || 0)) {
-      res.status(401); return next(new Error('Session expired. Please sign in again.'));
-    }
-
-    // 8. Attach authenticated user to request object
     req.user = user;
-    next();
+    return next();
   } catch (error) {
-    // Forward unexpected errors to the centralized error handler
     res.status(500);
     next(error);
   }
-};
+}
 
-module.exports = {
-  protect,
-  authMiddleware: protect,
-};
+module.exports = {protect,authMiddleware:protect};

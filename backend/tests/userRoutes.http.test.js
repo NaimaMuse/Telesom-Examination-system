@@ -3,6 +3,7 @@ const fs = require('fs/promises');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const {verifyPassword} = require('../utils/passwords');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
@@ -262,11 +263,11 @@ const run = async () => {
     '+password'
   );
   const teacherHashMatches = storedTeacherUser?.password
-    ? await bcrypt.compare(teacherPassword, storedTeacherUser.password)
+    ? await verifyPassword(teacherPassword, storedTeacherUser.password)
     : false;
   assert(
     teacherHashMatches,
-    'Created teacher password is stored as a bcrypt hash'
+    'Created teacher password is stored as a verifiable hash'
   );
 
   const teacherLogin = await requestJson('POST', '/api/auth/login', {

@@ -2,7 +2,7 @@
  * Middleware to handle 404 Not Found routes
  */
 const notFound = (req, res, next) => {
-  const error = new Error(`Resource Not Found - ${req.originalUrl}`);
+  const error = new Error('Resource not found');
   res.status(404);
   next(error);
 };
@@ -20,11 +20,12 @@ const errorHandler = (err, req, res, next) => {
       ? requestedStatus
       : 500;
 
+  const message = statusCode >= 500 ? 'The server could not complete the request.'
+    : err.code === 11000 ? 'A record with the same unique value already exists.'
+    : err.message;
   res.status(statusCode).json({
     success: false,
-    message: err.message,
-    // Only show stack trace in development mode for easier debugging
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+    message,
   });
 };
 

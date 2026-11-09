@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const {hashPassword} = require('../utils/passwords');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
@@ -196,6 +196,10 @@ const createStudent = async (req, res, next) => {
   }
 };
 
+const isValidTeacherPassword = password =>
+  typeof password === 'string' && password.length >= 8 && password.length <= 128 &&
+  Buffer.byteLength(password, 'utf8') <= 72;
+
 // @desc    Create a teacher account
 // @route   POST /api/users/teachers
 // @access  Admin only
@@ -221,7 +225,7 @@ const createTeacher = async (req, res, next) => {
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const normalizedTeacherId = 'TCH-' + crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase();
-    if (req.body.password !== undefined && (typeof req.body.password !== 'string' || req.body.password.length < 8 || req.body.password.length > 128 || Buffer.byteLength(req.body.password, 'utf8') > 72)) {
+    if (req.body.password !== undefined && !isValidTeacherPassword(req.body.password)) {
       res.status(400);
       return next(new Error('Initial password must be 8–128 characters and at most 72 UTF-8 bytes.'));
     }
@@ -254,7 +258,7 @@ const createTeacher = async (req, res, next) => {
       return next(new Error('Teacher ID already exists'));
     }
 
-    const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
+    const hashedPassword = await hashPassword(temporaryPassword);
 
     const { user, profile: teacher } = await createUserWithProfile({
       userData: {
@@ -262,7 +266,6 @@ const createTeacher = async (req, res, next) => {
         email: normalizedEmail,
         password: hashedPassword,
         role: 'teacher',
-        mustChangePassword: true,
         isActive: true,
       },
       ProfileModel: Teacher,
@@ -298,4 +301,5 @@ const createTeacher = async (req, res, next) => {
 module.exports = {
   createStudent,
   createTeacher,
+  isValidTeacherPassword,
 };

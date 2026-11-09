@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const {hashPassword} = require('../utils/passwords');
 const Teacher = require('../models/Teacher');
 const CourseTeacher = require('../models/CourseTeacher');
 const User = require('../models/User');
@@ -6,7 +7,7 @@ const {
   asyncHandler,
   createResourceController,
 } = require('./resourceController');
-const { createTeacher } = require('./userController');
+const { createTeacher, isValidTeacherPassword } = require('./userController');
 
 const controller = createResourceController(Teacher, {
   fields: [
@@ -35,7 +36,7 @@ const updateTeacherProfile = asyncHandler(async (req, res) => {
     throw new Error('Teacher not found');
   }
 
-  const { name, email, phone } = req.body;
+  const { name, email, phone, newPassword } = req.body;
   if (!name || !email) {
     res.status(400);
     throw new Error('Full name and email are required');
@@ -64,6 +65,10 @@ const updateTeacherProfile = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Teacher account not found');
   }
+  if (newPassword !== undefined && (user.role !== 'teacher' || !isValidTeacherPassword(newPassword))) {
+    res.status(400);
+    throw new Error('Enter a teacher password of at least 8 characters and at most 72 UTF-8 bytes.');
+  }
 
   if (req.body.teacherId !== undefined) {
     const teacherId = String(req.body.teacherId).trim().toUpperCase();
@@ -86,6 +91,12 @@ const updateTeacherProfile = asyncHandler(async (req, res) => {
   await teacher.validate();
   user.name = normalizedName;
   user.email = normalizedEmail;
+  if (newPassword !== undefined) {
+    user.password = await hashPassword(newPassword);
+    user.mustChangePassword = false;
+    user.$inc('authVersion', 1);
+    req.securityEvent = 'teacher_password_reset';
+  }
   await user.save();
   teacher.phone = phone ? String(phone).trim() : '';
   await teacher.save();

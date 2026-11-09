@@ -11,8 +11,9 @@ const generateToken = (userId, authVersion = 0) => {
     throw new Error('Server configuration error: JWT_SECRET is not set');
   }
 
-  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+  const expiresIn = process.env.JWT_EXPIRES_IN || '1h';
   const algorithm = process.env.JWT_ALGORITHM || 'HS256';
+  if (!['HS256','HS384','HS512'].includes(algorithm)) throw new Error('Invalid JWT algorithm');
 
   return jwt.sign({ id: userId, authVersion }, secret, {
     expiresIn,

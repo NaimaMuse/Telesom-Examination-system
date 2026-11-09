@@ -96,6 +96,13 @@ const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let 
   assert.strictEqual((await request('GET','/teacher/results/exam/'+globalExam._id+query)).body.students[0].marksObtained,18);
   await request('DELETE','/teacher/materials/'+note._id);assert(await models.Note.exists({_id:note._id,archivedAt:{$ne:null}}));assert(await models.Note.exists({_id:privateNote._id}));
   assert.strictEqual((await request('GET','/teacher/my-course'+query)).body.notes.length,0);
+  await models.Course.updateOne({_id:course._id},{$set:{batch:'Batch A'}});
+  await models.Enrollment.updateOne({student:students[0].student._id},{$unset:{batch:1}});
+  const legacyRoster=(await request('GET','/teacher/my-course'+query)).body;
+  assert.deepStrictEqual(legacyRoster.students.map(student=>student.studentId),[students[0].student.studentId]);
+  assert(!legacyRoster.cohorts.some(cohort=>cohort.batch===''),'Legacy enrollment belongs to the configured batch');
+  assert.deepStrictEqual((await request('GET','/teacher/my-course'+otherQuery)).body.students.map(student=>student.studentId),[students[1].student.studentId]);
+  assert.strictEqual((await request('GET','/teacher/my-course?'+new URLSearchParams({...scope,batch:''}))).body.scope.batch,'Batch A');
   assert.strictEqual(await models.CourseOutline.countDocuments(),1);assert.strictEqual(await models.TeacherContract.countDocuments(),1);assert.strictEqual(await models.TeachingLesson.countDocuments(),2);
   if(process.env.WORKSPACE_UI_PREVIEW==='1'){
     console.log('WORKSPACE_PREVIEW_PORT='+server.address().port);

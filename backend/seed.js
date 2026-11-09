@@ -1,5 +1,5 @@
 const dotenv = require('dotenv');
-const bcrypt = require('bcryptjs');
+const {hashPassword} = require('./utils/passwords');
 const mongoose = require('mongoose');
 
 dotenv.config();
@@ -20,6 +20,7 @@ const Note = require('./models/Note');
 
 const seedData = async () => {
   try {
+    if (process.env.NODE_ENV === 'production') throw new Error('Demo seeding is disabled in production.');
     await connectDB();
     console.log('Connected to MongoDB. Starting database seed...');
 
@@ -41,7 +42,7 @@ const seedData = async () => {
     console.log('Cleared existing data.');
 
     // 1. Create Admin
-    const adminPassword = await bcrypt.hash('admin123', 10);
+    const adminPassword = await hashPassword('admin123');
     const adminUser = await User.create({
       name: 'Telesom Academy Admin Office',
       email: 'admin@telesom.com',
@@ -52,7 +53,7 @@ const seedData = async () => {
     console.log(`Admin created: ${adminUser.email}`);
 
     // 2. Create Teacher
-    const teacherPassword = await bcrypt.hash('password123', 10);
+    const teacherPassword = await hashPassword('password123');
     const teacherUser = await User.create({
       name: 'Dr. Sahra Cabdi Warsame',
       email: 'teacher@telesom.com',

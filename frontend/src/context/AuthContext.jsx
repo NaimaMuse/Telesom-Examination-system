@@ -1,114 +1,74 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { loginUser, signupUser } from '../services/authService';
+import {createContext,useContext,useState,useCallback,useEffect,useRef} from 'react';
+import {loginUser,signupUser} from '../services/authService';
+import api from '../services/api';
 
-/**
- * AuthContext — MERN Stack Authentication State Provider.
- *
- * Provides: { user, token, login, signup, logout, isAuthenticated }
- *
- * Persists token and user session in localStorage, attaching bearer tokens
- * via Axios interceptors.
- */
 const AuthContext = createContext(null);
+const tabAccountKey = 'telesom:signed-in-account';
 
-const loadStoredAuth = () => {
-  try {
-    const token = localStorage.getItem('token');
-    const userJson = localStorage.getItem('user');
-    if (token && userJson && token.split('.').length === 3) {
-      return { token, user: JSON.parse(userJson) };
-    }
-  } catch {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  }
-  return { token: null, user: null };
-};
-
-export function AuthProvider({ children }) {
-  const [{ token, user }, setAuth] = useState(loadStoredAuth);
+export function AuthProvider({children}) {
+  const [user,setUser] = useState(null);
+  const [authLoading,setAuthLoading] = useState(true);
+  const bootstrap = useRef(null);
 
   useEffect(() => {
-    const clearAuth = () => setAuth({ token: null, user: null });
-    window.addEventListener('auth:unauthorized', clearAuth);
-    return () => window.removeEventListener('auth:unauthorized', clearAuth);
-  }, []);
-
-  /**
-   * login()
-   * @param {Object} credentials - { studentId } OR { email, password }
-   * @returns {Object} user object from backend
-   */
-  const login = useCallback(async (credentials) => {
-    const response = await loginUser(credentials);
-    const { token: newToken, user: newUser } = response.data;
-
-    // Role comes from backend verification
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(newUser));
-    setAuth({ token: newToken, user: newUser });
-
-    return newUser;
-  }, []);
-
-  /**
-   * signup()
-   * @param {Object} userData - registration details (name, email, studentId/phone, etc.)
-   * @returns {Object} registration response data
-   */
-  const signup = useCallback(async (userData) => {
-    const response = await signupUser(userData);
-
-    // If backend returns immediate login token on registration:
-    if (response.data?.token && response.data?.user) {
-      const { token: newToken, user: newUser } = response.data;
-      localStorage.setItem('token', newToken);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      setAuth({ token: newToken, user: newUser });
-    }
-
-    return response.data;
-  }, []);
-
-  const logout = useCallback(() => {
+    const controller = new AbortController();
+    bootstrap.current = controller;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setAuth({ token: null, user: null });
-  }, []);
+    const clearAuth = () => {
+      sessionStorage.removeItem(tabAccountKey);
+      setUser(null);
+    };
+    window.addEventListener('auth:unauthorized',clearAuth);
+    const tabAccount = sessionStorage.getItem(tabAccountKey);
+    if (tabAccount) {
+      api.get('/auth/session',{signal:controller.signal})
+        .then(({data}) => {
+          if (controller.signal.aborted) return;
+          if (String(data.user?._id) === tabAccount) setUser(data.user);
+          else clearAuth();
+        })
+        .catch(error => {
+          if (!controller.signal.aborted && [401,403].includes(error.response?.status)) clearAuth();
+        })
+        .finally(() => { if (!controller.signal.aborted) setAuthLoading(false); });
+    } else {
+      setAuthLoading(false);
+    }
+    return () => {
+      controller.abort();
+      window.removeEventListener('auth:unauthorized',clearAuth);
+    };
+  },[]);
 
-  const updateUser = useCallback((updated) => {
-    setAuth(current => {
-      const nextUser = { ...current.user, ...updated };
-      localStorage.setItem('user', JSON.stringify(nextUser));
-      return { ...current, user: nextUser };
-    });
-  }, []);
+  const login = useCallback(async credentials => {
+    bootstrap.current?.abort();
+    try {
+      const {data} = await loginUser(credentials);
+      sessionStorage.setItem(tabAccountKey,String(data.user._id));
+      setUser(data.user);
+      return data.user;
+    } finally {
+      setAuthLoading(false);
+    }
+  },[]);
 
-  const updateSession = useCallback((newToken, updates) => {
-    localStorage.setItem('token', newToken);
-    setAuth(current => {const nextUser={...current.user,...updates};localStorage.setItem('user',JSON.stringify(nextUser));return {token:newToken,user:nextUser};});
-  }, []);
-  const value = {
-    updateSession,
-    updateUser,
-    user,
-    token,
-    login,
-    signup,
-    logout,
-    isAuthenticated: Boolean(token && user),
-  };
+  const signup = useCallback(async userData => (await signupUser(userData)).data,[]);
+  const logout = useCallback(async () => {
+    await api.post('/auth/logout');
+    sessionStorage.removeItem(tabAccountKey);
+    setUser(null);
+  },[]);
+  const updateUser = useCallback(updates => setUser(current => current ? {...current,...updates} : null),[]);
+  const updateSession = useCallback((_unusedToken,updates) => updateUser(updates),[updateUser]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{user,authLoading,isAuthenticated:Boolean(user),login,logout,signup,updateUser,updateSession}}>
+    {children}
+  </AuthContext.Provider>;
 }
 
-/**
- * useAuth — convenience hook to consume AuthContext.
- */
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used inside <AuthProvider>');
-  }
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used inside <AuthProvider>');
+  return context;
 }

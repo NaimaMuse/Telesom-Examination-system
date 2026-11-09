@@ -43,3 +43,36 @@
 .dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) select:focus-visible,
 .dash-shell .dash-content .course-catalog-header select:focus-visible { outline:2px solid #d3a43b; outline-offset:2px; }
 @media(max-width:650px) { .dash-shell .dash-content .course-catalog-header { padding:14px; flex-wrap:wrap; gap:12px; } .dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-filters { padding:14px; } }
+
+.dash-shell .dash-content .course-management-page .course-summary-grid { gap:8px; margin-bottom:10px; }
+.dash-shell .dash-content .course-management-page .course-summary-grid > article { min-height:0; padding:7px 10px; gap:8px; border-radius:8px; }
+.dash-shell .dash-content .course-management-page .course-summary-grid strong { font-size:17px; }
+.dash-shell .dash-content .course-management-page .course-summary-icon { width:27px; height:27px; flex-basis:27px; border-radius:6px; font-size:13px; }
+.dash-shell .dash-content .course-management-page .course-catalog-header {
+  min-height:0;
+  padding:8px 12px;
+  gap:8px;
+  background:var(--brand-green-tint);
+  border-bottom:1px solid var(--brand-green-border);
+}
+.dash-shell .dash-content .course-management-page .course-catalog-header h2 { color:var(--brand-green-deep); font-size:15px; }
+.dash-shell .dash-content .course-management-page .course-catalog-header .course-page-kicker { color:var(--brand-gold-active); }
+.dash-shell .dash-content .course-management-page .course-catalog-header h2 > span { background:var(--brand-green-soft); color:var(--brand-green-deep); }
+.dash-shell .dash-content .course-management-page .course-catalog-filters :is(.course-add-button,select) { min-height:30px; padding-block:4px; }
+.dash-shell .dash-content .course-management-page .course-catalog-table :is(th,td) { padding:7px 10px; }
+.dash-shell .dash-content .course-management-page .course-record > span { width:26px; height:26px; flex-basis:26px; }
+.dash-shell .dash-content .course-management-page .course-catalog-pagination { min-height:0; padding:6px 10px; }
+
+.dash-shell .dash-content .exam-mgmt-container .ao-stats { gap:8px; margin-bottom:10px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-stats > div { min-height:0; padding:7px 10px; gap:8px; border-radius:8px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-stats strong { font-size:17px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-stats .exam-summary-icon { width:27px; height:27px; flex-basis:27px; border-radius:6px; font-size:13px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-filters { padding:8px 10px; gap:8px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-filters select { height:30px; margin-top:4px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-list-heading { padding:7px 10px; gap:8px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-list-heading h2 { font-size:15px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-list-heading select { height:30px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-panel > .ao-table-wrap table :is(th,td) { padding:7px 9px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-panel > .ao-table-wrap table { outline:0; }
+.dash-shell .dash-content .exam-mgmt-container .ao-view { padding:4px 7px; }
+.dash-shell .dash-content .exam-mgmt-container .ao-pagination { padding:6px 10px; }

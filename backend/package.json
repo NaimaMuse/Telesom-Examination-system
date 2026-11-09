@@ -28,15 +28,24 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "argon2": "^0.45.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.7.3",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.9.5",
-    "multer": "^2.4.0"
+    "multer": "^2.4.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
+  },
+  "overrides": {
+    "nodemon": {
+      "minimatch": "11.0.1"
+    }
   }
 }

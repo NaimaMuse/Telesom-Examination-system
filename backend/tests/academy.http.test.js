@@ -1,6 +1,6 @@
 require('dotenv').config({path:require('path').join(__dirname,'../.env')});
 const assert=require('assert'),crypto=require('crypto'),mongoose=require('mongoose'),bcrypt=require('bcryptjs');
-const names=['User','Teacher','Student','Course','CourseTeacher','Enrollment','Batch','TeacherContract','TeacherAttendance','TeachingLesson','CourseOutline','MakeupClass','Exam','Quiz','ExamResult','QuizResult','Attendance'];
+const names=['User','Teacher','Student','Course','CourseTeacher','Enrollment','Batch','TeacherContract','TeacherAttendance','TeachingLesson','CourseOutline','MakeupClass','Exam','Quiz','ExamResult','QuizResult','Attendance','Internship'];
 const m=Object.fromEntries(names.map(n=>[n,require('../models/'+n)]));
 const {app}=require('../server'),token=require('../utils/generateToken'),cs=require('../services/teacherContractService');
 const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let server;
@@ -18,6 +18,23 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   await m.Enrollment.create({student:student._id,course:course._id,academicYear:'2026',semester:'S1',batch:'Batch 1',enrollmentDate:'2026-01-01'});
   server=app.listen(0);await new Promise(resolve=>server.on('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/api`;
   async function request(method,path,body,user=admin){const response=await fetch(base+path,{method,headers:{Authorization:'Bearer '+token(user._id),...(body instanceof FormData?{}:{'Content-Type':'application/json'})},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});const content=response.headers.get('content-type')||'';return {status:response.status,body:content.includes('json')?await response.json():await response.arrayBuffer()};}
+  const attendanceSchedule=[{day:1,startTime:'08:00',endTime:'10:00'}];
+  const internship={courseId:String(course._id),studentId:String(student._id),startDate:'2026-11-09',totalDays:30,attendanceSchedule};
+  const internshipRoster='/internships/courses/'+course._id+'/students';
+  assert.strictEqual((await request('GET','/internships',null,tu)).status,403);
+  assert.strictEqual((await request('GET',internshipRoster,null,tu)).status,403);
+  assert.strictEqual((await request('POST','/internships',internship,su)).status,403);
+  assert.deepStrictEqual((await request('GET',internshipRoster)).body.students,[{_id:String(student._id),name:'Student',code:'TL-2026-01'}]);
+  assert.strictEqual((await request('POST','/internships',{...internship,totalDays:0})).status,400);
+  assert.strictEqual((await request('POST','/internships',{...internship,startDate:'2026-02-30'})).status,400);
+  assert.strictEqual((await request('POST','/internships',{...internship,attendanceSchedule:[]})).status,400);
+  assert.strictEqual((await request('POST','/internships',{...internship,attendanceSchedule:[{day:1,startTime:'10:00',endTime:'08:00'}]})).status,400);
+  const savedInternship=await request('POST','/internships',{...internship,studentName:'Forged name',endDate:'2026-11-08'});
+  assert.strictEqual(savedInternship.status,201,JSON.stringify(savedInternship.body));
+  const internships=await request('GET','/internships');
+  assert.strictEqual(internships.status,200);
+  assert.deepStrictEqual(internships.body.data.map(({studentName,courseName,startDate,endDate,totalDays,attendanceSchedule})=>({studentName,courseName,startDate,endDate,totalDays,attendanceSchedule})),
+    [{studentName:'Student',courseName:'Real course',startDate:internship.startDate,endDate:'2026-12-08',totalDays:30,attendanceSchedule}]);
   assert.strictEqual((await request('GET','/academy/reports/activities',null,tu)).status,403);
   assert.strictEqual((await request('POST','/attendance',{student:student._id,course:course._id,date:'2026-10-01',status:'present'},tu)).status,403);
   assert.strictEqual((await request('GET','/attendance',null,tu)).status,403);
@@ -81,7 +98,9 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   await request('PATCH','/academy/outlines/'+outline._id,{published:false},tu);
   assert.strictEqual((await request('GET','/academy/outlines/'+outline._id+'/document',null,su)).status,403);
   form=new FormData();form.append('file',new Blob(['not an image'],{type:'image/png'}),'fake.png');assert.strictEqual((await request('PUT','/academy/profile-picture',form,tu)).status,400);
-  form=new FormData();form.append('file',new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64')],{type:'image/png'}),'avatar.png');
+  form=new FormData();form.append('file',new Blob([Buffer.from([137,80,78,71,13,10,26,10])],{type:'image/png'}),'truncated.png');assert.strictEqual((await request('PUT','/academy/profile-picture',form,tu)).status,400);
+  const avatar=await require('sharp')({create:{width:2,height:2,channels:3,background:'#22743b'}}).png().toBuffer();
+  form=new FormData();form.append('file',new Blob([avatar],{type:'image/png'}),'avatar.png');
   response=await request('PUT','/academy/profile-picture',form,tu);assert.strictEqual(response.status,200);assert(response.body.picture.startsWith('data:image/png;base64,'));
   assert.strictEqual((await request('GET','/teacher/profile',null,tu)).body.teacher.profilePicture,response.body.picture,'Own profile must return the saved picture');
   assert.strictEqual((await request('PUT','/academy/profile-picture',form)).status,403,'Admin cannot upload a teacher picture');
@@ -192,6 +211,8 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   assert.strictEqual((await request('GET','/academy/makeup-classes',null,su)).body.classes.length,0);
   await request('DELETE','/students/'+student._id);assert(await m.Student.exists({_id:student._id}));assert.strictEqual((await m.Enrollment.findOne({student:student._id})).status,'dropped');
   response=await request('GET','/academy/reports/dropped');assert.strictEqual(response.body.cards['Total dropped students'],1);assert(response.body.rows[0].date);
+  assert.deepStrictEqual((await request('GET',internshipRoster)).body.students,[]);
+  assert.strictEqual((await request('POST','/internships',internship)).status,400,'A dropped student cannot be selected');
   console.log('Academy integration passed: all report categories, role isolation, 90+10 marks, batch uniqueness, hidden quizzes, documents, profile images, missed lessons, makeup completion/reversal and historical dropped students.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
   if(server)await new Promise(resolve=>server.close(resolve));
