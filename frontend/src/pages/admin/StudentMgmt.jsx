@@ -5,8 +5,9 @@ import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContex
  * Shared CRUD page factory for management pages.
  * Provides: search, pagination, add/edit modal, delete confirm.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../services/api';
+import TeachingIcon from '../../components/TeachingIcon';
 
 // ─────────────────── STUDENT MANAGEMENT ────────────────────────
 const STUDENT_FIELDS = [
@@ -21,6 +22,48 @@ const STUDENT_FIELDS = [
   { key: 'batch', label: 'Batch', type: 'batch', guidance:'Optional. Use an active batch from the Available Batches sheet matching the academic year.' },
   { key: 'status', label: 'Status', type: 'select', options: ['active','inactive','graduated','suspended','dropped'], example: 'active', guidance: 'Optional. Use active, inactive, graduated or suspended. Defaults to active.' },
 ];
+
+function StudentDetailsDialog({ student, course, academicYear, batch, onClose }) {
+  const dialog = useRef(null);
+  useEffect(() => {
+    const element = dialog.current;
+    element.showModal();
+    return () => element.close();
+  }, []);
+
+  const details = [
+    ['Student ID', student.studentId],
+    ['Email', student.email],
+    ['Phone', student.phone],
+    ['Gender', student.gender],
+    ['Address', student.address],
+    ['Course', course],
+    ['Academic year', academicYear],
+    ['Batch', batch],
+    ['Student status', student.status || 'active'],
+    ['Login status', student.user?.isActive == null ? '' : student.user.isActive ? 'Active' : 'Disabled'],
+  ];
+  if (student.droppedAt) {
+    details.push(['Dropped on', new Intl.DateTimeFormat('en-GB', {
+      dateStyle: 'medium', timeZone: 'Africa/Nairobi',
+    }).format(new Date(student.droppedAt))]);
+  }
+
+  return (
+    <dialog ref={dialog} className="modal-box student-details-dialog" aria-labelledby="student-details-title"
+      onCancel={event => { event.preventDefault(); onClose(); }}>
+      <header className="modal-header">
+        <h2 id="student-details-title" className="modal-title">{student.name || 'Student details'}</h2>
+        <button type="button" className="modal-close" aria-label="Close student details" onClick={onClose}>×</button>
+      </header>
+      <dl className="modal-body student-details-fields">
+        {details.map(([label, value]) => (
+          <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>
+        ))}
+      </dl>
+    </dialog>
+  );
+}
 
 function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, onClose }) {
   const [form, setForm] = useState({...initial,academicYear:initial?.academicYear||String(new Date().getFullYear())});
@@ -275,6 +318,7 @@ export default function StudentMgmt() {
   useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal]   = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [viewTarget, setViewTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting]     = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -589,6 +633,10 @@ export default function StudentMgmt() {
                     {showAllDetails && <><td><code>{s.studentId || '—'}</code></td><td>{s.email || '—'}</td><td>{s.gender || '—'}</td><td>{s.address || '—'}</td></>}
                     <td>
                       <div style={{ display: 'flex', gap: '6px' }}>
+                        <button type="button" className="student-row-edit student-row-view" title="View student details"
+                          aria-label={`View details for ${s.name || 'student'}`} aria-haspopup="dialog" onClick={() => setViewTarget(s)}>
+                          <TeachingIcon name="eye" size={16} />
+                        </button>
                         <button type="button" className="student-row-edit" onClick={() => { const enrollment = getStudentEnrollment(s); setEditTarget({ ...s, course: enrollment?.course?._id || enrollment?.course || '' }); setShowModal(true); }}>Edit</button>
                         <button type="button" className="student-row-delete" aria-label={`Delete ${s.name || 'student'}`} onClick={() => setDeleteTarget(s)}>×</button>
                       </div>
@@ -625,6 +673,11 @@ export default function StudentMgmt() {
       )}
 
       {/* Delete confirm */}
+      {viewTarget && (
+        <StudentDetailsDialog student={viewTarget} course={getStudentCourseName(viewTarget)}
+          academicYear={getStudentAcademicYear(viewTarget)} batch={getStudentEnrollment(viewTarget)?.batch || viewTarget.batch}
+          onClose={() => setViewTarget(null)} />
+      )}
       {deleteTarget && (
         <ConfirmModal
           message={`Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`}
