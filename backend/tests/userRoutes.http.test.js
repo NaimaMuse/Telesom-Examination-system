@@ -445,19 +445,19 @@ const run = async () => {
     'Student deactivation preserves records and disables account access'
   );
 
-  const deactivatedTeacher = await requestJson(
+  const deletedTeacher = await requestJson(
     'DELETE',
     `/api/teachers/${createdIds.teacherProfile}`,
     { token: adminToken }
   );
-  const teacherAccountAfterDeactivation = await User.findById(
-    createdIds.teacherUser
-  );
+  const [teacherAccount, teacherProfile, courseAssignment] = await Promise.all([
+    User.exists({ _id: createdIds.teacherUser }),
+    Teacher.exists({ _id: createdIds.teacherProfile }),
+    require('../models/CourseTeacher').exists({ teacher: createdIds.teacherProfile }),
+  ]);
   assert(
-    deactivatedTeacher.status === 200 &&
-      deactivatedTeacher.json?.data?.status === 'inactive' &&
-      teacherAccountAfterDeactivation?.isActive === false,
-    'Teacher deactivation preserves records and disables account access'
+    deletedTeacher.status === 200 && !teacherAccount && !teacherProfile && !courseAssignment,
+    'Teacher deletion removes the account, profile, and course assignment'
   );
 
   console.log(`\nHTTP tests finished: ${passed} passed, ${failed} failed.`);

@@ -162,14 +162,19 @@ function TeacherDetailsModal({ teacher, courseAssignment, loading, error, onClos
   );
 }
 
-function ConfirmModal({ message, onConfirm, onCancel, loading }) {
+function ConfirmModal({ message, error, onConfirm, onCancel, loading }) {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay" onClick={loading ? undefined : onCancel}>
       <div className="modal-box" onClick={e=>e.stopPropagation()} style={{maxWidth:380}}>
-        <div className="modal-body confirm-content"><div className="confirm-icon">⚠️</div><h3>Confirm Delete</h3><p>{message}</p></div>
+        <div className="modal-body confirm-content">
+          <div className="confirm-icon">⚠️</div>
+          <h3>Confirm Delete</h3>
+          <p>{message}</p>
+          {error && <div className="teacher-create-error" role="alert">{error}</div>}
+        </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-danger" onClick={onConfirm} disabled={loading}>{loading?'Deleting…':'Delete'}</button>
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={loading}>Cancel</button>
+          <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={loading}>{loading?'Deleting…':'Delete'}</button>
         </div>
       </div>
     </div>
@@ -278,6 +283,7 @@ function TeacherDirectory() {
   const [showInactive, setShowInactive] = useState(false);
   const [showDirectoryDetails, setShowDirectoryDetails] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
 
   const fetchTeachers = useCallback(async (background = false, context = {}) => {
@@ -336,6 +342,7 @@ function TeacherDirectory() {
   const currentTeachers = teachers.filter(teacher => teacher.status !== 'inactive' && teacher.user?.isActive !== false);
   const filtered = (showInactive ? teachers : currentTeachers).filter(teacher => matchesPageSearch(search, teacher.name, teacher.email, teacher.phone, teacher.teacherId, teacher.department, teacher.subjects, courseAssignments.filter(a => String(a.teacher?._id || a.teacher) === String(teacher._id)).map(a => [a.course?.title, a.course?.name, a.course?.courseCode])));
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  useEffect(() => { setPage(current => Math.min(current, totalPages)); }, [totalPages]);
   const paginated  = filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
   const activeTeachers = currentTeachers.filter((teacher) => (teacher.status || 'active') === 'active').length;
   const assignedTeacherIds = new Set(courseAssignments.map(assignment => String(assignment.teacher?._id || assignment.teacher)));
@@ -435,10 +442,17 @@ function TeacherDirectory() {
   };
 
   const handleDelete = async () => {
+    setDeleteError('');
     setDeleting(true);
-    try { await api.delete(`/admin/teachers/${deleteTarget._id}`); await fetchTeachers(); }
-    catch { setTeachers(prev=>prev.filter(t=>t._id!==deleteTarget._id)); }
-    finally { setDeleting(false); setDeleteTarget(null); }
+    try {
+      await api.delete(`/teachers/${deleteTarget._id}`);
+      setTeachers(current => current.filter(teacher => teacher._id !== deleteTarget._id));
+      setDeleteTarget(null);
+    } catch (error) {
+      setDeleteError(error.response?.data?.message || 'Could not delete this teacher. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -503,7 +517,7 @@ function TeacherDirectory() {
                       <div className="teacher-directory-actions">
                         <button type="button" className="teacher-directory-edit" onClick={() => viewTeacherDetails(teacher)}>View</button>
                         <button type="button" className="teacher-directory-edit" onClick={() => { setEditTarget({...teacher, course: getTeacherAssignment(teacher)?.course?._id || getTeacherAssignment(teacher)?.course || '', status: teacher.status || 'active'}); setShowModal(true); }}>Edit</button>
-                        <button type="button" className="teacher-directory-delete" aria-label={`Delete ${teacher.name || 'teacher'}`} title="Delete teacher" onClick={() => setDeleteTarget(teacher)}>×</button>
+                        <button type="button" className="teacher-directory-delete" aria-label={`Delete ${teacher.name || 'teacher'}`} title="Delete teacher" onClick={() => { setDeleteError(''); setDeleteTarget(teacher); }}>×</button>
                       </div>
                     </td>
                   </tr>
@@ -525,7 +539,7 @@ function TeacherDirectory() {
       </section>
 
       {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_EDIT_FIELDS : [...TEACHER_FIELDS, { key: 'password', label: 'Password', type: 'password', required: true }, { key: 'course', label: 'Course', type: 'course', required: true }, { key: 'contractDays', label: 'Contract duration', type: 'number', required: true }, { key: 'contractDurationUnit', label: 'Duration unit', type: 'select', options: ['Days', 'Months'] }, { key: 'contractBatch', label: 'Contract batch', type: 'batch', required: true }, { key: 'contractStart', label: 'Start date', type: 'date', required: true }, { key: 'contractEnd', label: 'End date (calculated)', type: 'date' }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
-      {deleteTarget && <ConfirmModal message={`Delete "${deleteTarget.name}"?`} onConfirm={handleDelete} onCancel={()=>setDeleteTarget(null)} loading={deleting} />}
+      {deleteTarget && <ConfirmModal message={`Permanently delete "${deleteTarget.name}" and their login account? This cannot be undone.`} error={deleteError} onConfirm={handleDelete} onCancel={()=>setDeleteTarget(null)} loading={deleting} />}
       {createdCredentials && <TeacherCredentialsModal credentials={createdCredentials} onClose={() => setCreatedCredentials(null)} />}
       {selectedTeacher && <TeacherDetailsModal teacher={selectedTeacher} courseAssignment={selectedTeacher.assignedCourse || null} loading={teacherDetailsLoading} error={teacherDetailsError} onClose={() => { teacherDetailsRequest.current += 1; setSelectedTeacher(null); setTeacherDetailsError(''); }} />}
     </div>
