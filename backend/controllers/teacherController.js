@@ -132,25 +132,38 @@ const getTeacherDetails = asyncHandler(async (req, res) => {
   });
 });
 
-const deactivateTeacher = asyncHandler(async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+const deleteTeacher = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     res.status(400);
     throw new Error('Invalid teacher ID');
   }
-  const teacher = await Teacher.findById(req.params.id);
-  if (!teacher) {
-    res.status(404);
-    throw new Error('Teacher not found');
+
+  const remove = async (session) => {
+    const options = session ? { session } : {};
+    const teacher = await Teacher.findById(id, 'user', options);
+    if (!teacher) {
+      throw Object.assign(new Error('Teacher not found'), { statusCode: 404 });
+    }
+    if (teacher.user) {
+      await User.deleteOne({ _id: teacher.user, role: 'teacher' }, options);
+    }
+    await CourseTeacher.deleteMany({ teacher: teacher._id }, options);
+    // Keep the profile until cleanup succeeds so standalone deletes can be retried.
+    await Teacher.deleteOne({ _id: teacher._id }, options);
+  };
+
+  try {
+    await mongoose.connection.transaction(remove);
+  } catch (error) {
+    if (!error.message?.includes('Transaction numbers are only allowed on a replica set member or mongos')) {
+      throw error;
+    }
+    await remove();
   }
-  if (teacher.user) {
-    await User.findByIdAndUpdate(teacher.user, { isActive: false });
-  }
-  teacher.status = 'inactive';
-  await teacher.save();
   return res.status(200).json({
     success: true,
-    message: 'Teacher account deactivated',
-    data: teacher,
+    message: 'Teacher deleted',
   });
 });
 
@@ -160,5 +173,5 @@ module.exports = {
   getTeacherById: controller.getById,
   createTeacher,
   updateTeacher: updateTeacherProfile,
-  deleteTeacher: deactivateTeacher,
+  deleteTeacher,
 };
