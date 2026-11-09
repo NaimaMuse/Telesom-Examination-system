@@ -80,7 +80,6 @@ const NAV = {
         { to: '/admin/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
         { to: '/admin/marks',      label: 'Marks & Results',   icon: 'chart' },
         { to: '/admin/attendance', label: 'Attendance',         icon: 'calendar' },
-        { to: '/admin/teacher-attendance', label: 'Teacher Attendance', icon: 'calendar' },
         { to: '/admin/reports', label: 'Reports Center', icon: 'file' },
         { to: '/admin/outlines', label: 'Teaching & Outlines', icon: 'book' },
         { to: '/admin/makeup', label: 'Makeup Classes', icon: 'reschedule' },

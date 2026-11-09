@@ -13,7 +13,7 @@ const run=async()=>{
  try{
   for(const role of ['teacher','student','student']) users.push(await User.create({name:role==='teacher'?'Performance Teacher':`Student ${users.length}`,email:`${marker}-${users.length}@example.test`,role,...(role==='teacher'?{password:'test-password-hash'}:{})}));
   teacher=await Teacher.create({user:users[0]._id,teacherId:marker});
-  for(let i=0;i<3;i++)courses.push(await Course.create({title:`${marker} course ${i}`,courseCode:`${marker}-${i}`,academicYear:'2026-2027',semester:''}));
+  for(let i=0;i<3;i++)courses.push(await Course.create({title:`${marker} course ${i}`,courseCode:`${marker}-${i}`,academicYear:'2026-2027',semester:'',teachingSchedule:[0,1,2].map(day=>({day,startTime:'08:00',endTime:'10:00'}))}));
   for(const course of courses.slice(0,2))await CourseTeacher.create({teacher:teacher._id,course:course._id,academicYear:'2026-2027'});
   for(let i=0;i<2;i++)students.push(await Student.create({user:users[i+1]._id,studentId:`${marker}-${i}`,gender:'male'}));
   await Enrollment.create([{student:students[0]._id,course:courses[0]._id,academicYear:'2026-2027'},{student:students[0]._id,course:courses[0]._id,academicYear:'2025-2026'},{student:students[0]._id,course:courses[1]._id,academicYear:'2026-2027'},{student:students[1]._id,course:courses[2]._id,academicYear:'2026-2027'}]);
@@ -110,7 +110,7 @@ const run=async()=>{
   assert.ok(marksOverview.assessments.length);assert.ok(marksOverview.teachers.some(t=>String(t._id)===String(users[0]._id)));assert.ok(marksOverview.batches.includes('2024-2025'));
   result=await request('/attendance/register?course='+courses[0]._id+'&date=2026-10-25');assert.strictEqual(result.status,403,'Attendance register is admin-only');
   const attendanceRequest=async(path,method='GET',body)=>{const response=await fetch(base+'/attendance'+path,{method,headers:{Authorization:'Bearer '+token(overviewAdmin._id),'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,data:await response.json()};};
-  let attendance=await attendanceRequest('/register?course='+courses[0]._id+'&date=2026-10-25');assert.strictEqual(attendance.status,200);assert.strictEqual(attendance.data.students.length,2);assert.ok(attendance.data.students.every(s=>s.status===''));
+  let attendance=await attendanceRequest('/register?course='+courses[0]._id+'&date=2026-10-25');assert.strictEqual(attendance.status,200);assert.strictEqual(attendance.data.canMark,true);assert.deepStrictEqual(attendance.data.teachingDays,[0,1,2]);assert.strictEqual(attendance.data.students.length,2);assert.ok(attendance.data.students.every(s=>s.status===''));
   attendance=await attendanceRequest('/register?course='+courses[0]._id+'&date=2026-10-25&batch=2024-2025');assert.strictEqual(attendance.data.students.length,1);assert.strictEqual(attendance.data.students[0].studentId,batchStudent.studentId);
   const attendanceBody={course:String(courses[0]._id),date:'2026-10-25',records:[{student:String(students[0]._id),status:'present',remarks:'On time'}]};
   attendance=await attendanceRequest('/register','PUT',attendanceBody);assert.strictEqual(attendance.status,200,JSON.stringify(attendance.data));assert.strictEqual(attendance.data.savedCount,1);
@@ -119,6 +119,10 @@ const run=async()=>{
   attendance=await attendanceRequest('/register','PUT',{...attendanceBody,records:[{student:String(students[1]._id),status:'present'}]});assert.strictEqual(attendance.status,400,'Cross-course student blocked');
   attendance=await attendanceRequest('/register','PUT',{...attendanceBody,date:'2026-02-30'});assert.strictEqual(attendance.status,400,'Invalid dates blocked');
   attendance=await attendanceRequest('/register','PUT',{...attendanceBody,records:[...attendanceBody.records,...attendanceBody.records]});assert.strictEqual(attendance.status,400,'Duplicate submitted students blocked');
+  attendance=await attendanceRequest('/register?course='+courses[0]._id+'&date=2026-10-28');
+  assert.strictEqual(attendance.status,200);assert.strictEqual(attendance.data.canMark,false);assert.deepStrictEqual(attendance.data.students,[]);
+  attendance=await attendanceRequest('/register','PUT',{...attendanceBody,date:'2026-10-28'});
+  assert.strictEqual(attendance.status,400,'Non-teaching days cannot be marked');
   for(const [date,status] of [['2026-10-26','absent'],['2026-10-27','excused']]){attendance=await attendanceRequest('/register','PUT',{...attendanceBody,date,records:[{student:String(students[0]._id),status}]});assert.strictEqual(attendance.status,200);}
   attendance=await attendanceRequest('/report?course='+courses[0]._id+'&from=2026-10-25&to=2026-10-27');assert.strictEqual(attendance.status,200);const attendanceStudent=attendance.data.students.find(s=>String(s._id)===String(students[0]._id));assert.strictEqual(attendanceStudent.attendanceRate,50);assert.strictEqual(attendanceStudent.excused,1);assert.strictEqual(attendanceStudent.history.length,3);assert.strictEqual(attendanceStudent.history[0].recordedBy,'Overview Admin');assert.strictEqual(attendance.data.students.find(s=>String(s._id)===String(batchStudent._id)).attendanceRate,null);
   result=await request('/reports/analytics');assert.strictEqual(result.status,403,'Analytics is admin-only');

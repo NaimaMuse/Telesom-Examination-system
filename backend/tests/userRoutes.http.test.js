@@ -286,12 +286,14 @@ const run = async () => {
     'Created student can log in with Student ID only'
   );
 
+  const attendanceDate = new Date().toISOString().slice(0, 10);
   const createdCourse = await requestJson('POST', '/api/courses', {
     token: adminToken,
     body: {
       courseCode: `INT-${stamp}`,
       title: 'Integration Test Course',
       credits: 3,
+      teachingSchedule: [{day:new Date(attendanceDate).getUTCDay(),startTime:'08:00',endTime:'10:00'}],
       academicYear: '2026',
     },
   });
@@ -384,7 +386,6 @@ const run = async () => {
     'Quiz results calculate percentage and pass status'
   );
 
-  const attendanceDate = new Date().toISOString().slice(0, 10);
   const attendanceMonth = attendanceDate.slice(0, 7);
   const attendanceForm = new FormData();
   attendanceForm.append('course', createdIds.course);

@@ -7,6 +7,7 @@ const Course = require('../models/Course');
 const Student = require('../models/Student');
 const { asyncHandler } = require('./resourceController');
 const { parseAttendanceCsv } = require('../services/attendanceImportService');
+const { getAttendanceSession, requireScheduledAttendance } = require('../services/attendanceScheduleService');
 
 const requireId = (id, label) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -68,6 +69,7 @@ const importAttendance = asyncHandler(async (req, res) => {
     keepUploadedFile = Boolean(req.file);
 
     const errorLogs = [];
+    const sessionsByDate = new Map();
     let successfulRecords = 0;
     let duplicateRecords = 0;
 
@@ -96,6 +98,11 @@ const importAttendance = asyncHandler(async (req, res) => {
         if (!student && !(await Student.exists({ _id: studentId }))) {
           throw new Error('Student not found');
         }
+        const dateKey = attendanceDate.toISOString().slice(0,10);
+        if (!sessionsByDate.has(dateKey)) {
+          sessionsByDate.set(dateKey,await getAttendanceSession(course,attendanceDate));
+        }
+        requireScheduledAttendance(sessionsByDate.get(dateKey),studentId);
         await Attendance.create({
           student: studentId,
           course,

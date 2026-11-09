@@ -57,11 +57,15 @@
 
 .internships-workspace .internship-panel .internship-table { border: 0; outline: 0; }
 .internships-workspace .internship-panel .internship-table th { background: var(--brand-green-soft); color: var(--brand-green-deep); }
-.internships-workspace .internship-panel .internship-table :is(th, td) { padding: 8px 9px; font-size: 11px; }
-.internship-table td { vertical-align: top; overflow-wrap: anywhere; }
+.internships-workspace .internship-panel .internship-table :is(th, td) { padding: 6px 8px; font-size: 11px; }
+.internships-workspace .internship-panel .internship-table td { vertical-align: top; overflow-wrap: anywhere; line-height: 1.35; }
 .internship-table td > small { display: block; margin-top: 3px; color: var(--text-secondary); }
-.internship-duration-badge { display: inline-block; margin-top: 4px; padding: 1px 5px; border-radius: 5px; background: var(--brand-gold-soft); color: var(--brand-green-deep); }
-.internship-record-slot { display: flex; flex-wrap: wrap; gap: 0 5px; }
+.internship-duration-badge { display: inline-block; margin-top: 3px; padding: 1px 4px; border-radius: 4px; background: var(--brand-gold-soft); color: var(--brand-green-deep); font-size: 10px; }
+.internship-record-slots { display: grid; gap: 4px; }
+.internship-record-slot { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; }
+.internship-slot-days { display: flex; flex-wrap: wrap; gap: 3px; }
+.internship-slot-days abbr { padding: 1px 4px; border-radius: 4px; background: var(--brand-green-soft); color: var(--brand-green-deep); font-size: 10px; font-weight: 700; text-decoration: none; }
+.internship-slot-time { color: var(--text-secondary); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .internship-record-message { margin: 0; padding: 14px 12px; font-size: 12px; }
 .internship-record-empty { display: grid; justify-items: center; gap: 7px; padding: 24px 12px; color: var(--brand-green-deep); }
 .internship-record-empty p { margin: 0; }

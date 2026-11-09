@@ -3,6 +3,7 @@ const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const Attendance = require('../models/Attendance');
 const { withCourseLock } = require('../services/gradebookIntegrityService');
+const { getAttendanceSession, canMarkAttendance, requireScheduledAttendance } = require('../services/attendanceScheduleService');
 const statuses = ['present','absent','late','excused'];
 const fail = message => { throw Object.assign(new Error(message),{statusCode:400}); };
 function day(value){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))fail('Choose a valid date.');const date=new Date(value+'T00:00:00.000Z');if(Number.isNaN(date.getTime())||date.toISOString().slice(0,10)!==value)fail('Choose a valid date.');return date;}
@@ -17,19 +18,24 @@ async function roster(course,batch=''){
 exports.getRegister=async(req,res,next)=>{try{
   const courses=await Course.find().select('title courseCode').sort({title:1}).lean();
   const courseId=req.query.course||courses[0]?._id;
-  if(!courseId)return res.json({courses,batches:[],students:[],courseId:null});
-  const date=day(req.query.date),data=await roster(courseId,req.query.batch||'');
+  if(!courseId)return res.json({courses,batches:[],students:[],courseId:null,canMark:false,teachingDays:[]});
+  const date=day(req.query.date);
+  const [data,session]=await Promise.all([roster(courseId,req.query.batch||''),getAttendanceSession(courseId,date)]);
   const records=await Attendance.find({course:courseId,student:{$in:data.students.map(s=>s._id)},date:{$gte:date,$lt:nextDay(date)}}).sort({updatedAt:1}).lean();
   const saved=new Map(records.map(row=>[String(row.student),row]));
-  res.json({courses,courseId,batches:data.batches,students:data.students.map(student=>({...student,status:saved.get(String(student._id))?.status||'',remarks:saved.get(String(student._id))?.remarks||''}))});
+  const eligible=data.students.filter(student=>canMarkAttendance(session,student._id));
+  const canMark=session.kind==='regular'||eligible.length>0;
+  const visible=canMark?eligible:data.students.filter(student=>saved.has(String(student._id)));
+  res.json({courses,courseId,batches:data.batches,canMark,teachingDays:session.teachingDays,sessionKind:session.kind,students:visible.map(student=>({...student,status:saved.get(String(student._id))?.status||'',remarks:saved.get(String(student._id))?.remarks||''}))});
 }catch(error){next(error);}};
 exports.saveRegister=async(req,res,next)=>{try{
   const {course,batch='',date,records}=req.body;const normalized=day(date);
   if(!Array.isArray(records)||!records.length)fail('Mark at least one student.');
   if(!mongoose.isValidObjectId(course))fail('Choose a valid course.');
   const savedCount=await withCourseLock(course,async()=>{
-    const {students}=await roster(course,batch),allowed=new Set(students.map(s=>String(s._id))),seen=new Set();
-    for(const record of records){const id=String(record.student);if(!allowed.has(id))fail('Student is not enrolled in the selected course and batch.');if(seen.has(id))fail('Duplicate student in submission.');seen.add(id);if(!statuses.includes(record.status))fail('Invalid attendance status.');if(typeof(record.remarks??'')!=='string'||(record.remarks||'').length>250)fail('Remarks must be at most 250 characters.');}
+    const [{students},session]=await Promise.all([roster(course,batch),getAttendanceSession(course,normalized)]);
+    const allowed=new Set(students.map(s=>String(s._id))),seen=new Set();
+    for(const record of records){const id=String(record.student);if(!allowed.has(id))fail('Student is not enrolled in the selected course and batch.');requireScheduledAttendance(session,id);if(seen.has(id))fail('Duplicate student in submission.');seen.add(id);if(!statuses.includes(record.status))fail('Invalid attendance status.');if(typeof(record.remarks??'')!=='string'||(record.remarks||'').length>250)fail('Remarks must be at most 250 characters.');}
     const previous=await Attendance.find({course,student:{$in:[...seen]},date:{$gte:normalized,$lt:nextDay(normalized)}}).sort({updatedAt:1}).lean();
     const byStudent=new Map(previous.map(row=>[String(row.student),row]));
     await Attendance.bulkWrite(records.map(record=>({updateOne:{filter:byStudent.has(String(record.student))?{_id:byStudent.get(String(record.student))._id}:{course,student:record.student,date:normalized},update:{$set:{status:record.status,remarks:(record.remarks||'').trim(),recordedBy:req.user._id}},upsert:true}})),{ordered:true});

@@ -176,6 +176,12 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   const booked=await request('POST','/academy/makeup-classes',fromAbsence);
   assert.strictEqual(booked.status,201,JSON.stringify(booked.body));
   assert.strictEqual(booked.body.class.originalDate,today);
+  const makeupRegister='/attendance/register?course='+course._id+'&date=';
+  const makeupRoster=await request('GET',makeupRegister+makeupDate);
+  assert.strictEqual(makeupRoster.status,200);
+  assert.strictEqual(makeupRoster.body.canMark,true);
+  assert.strictEqual(makeupRoster.body.sessionKind,'makeup');
+  assert.deepStrictEqual(makeupRoster.body.students.map(row=>row._id),[String(student._id)]);
   for (const user of [tu,su]) {
     const calendarSource=await request('GET','/academy/makeup-classes',null,user);
     assert.strictEqual(calendarSource.status,200);
@@ -190,6 +196,8 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   assert.strictEqual(rescheduled.status,200,JSON.stringify(rescheduled.body));
   assert.strictEqual(rescheduled.body.class.date,contract.endDate);
   assert.strictEqual((await request('PATCH','/academy/makeup-classes/'+booked.body.class._id,{status:'cancelled'})).status,200);
+  assert.strictEqual((await request('GET',makeupRegister+contract.endDate)).body.canMark,false);
+  assert.strictEqual((await request('POST','/attendance',{course:course._id,student:student._id,date:contract.endDate,status:'present'})).status,400);
   assert.strictEqual((await request('PUT','/academy/teacher-attendance',{...attendanceRequest,status:'present'})).status,200);
   const studentCourses=await request('GET','/student/courses',null,su);
   assert.strictEqual(studentCourses.status,200);

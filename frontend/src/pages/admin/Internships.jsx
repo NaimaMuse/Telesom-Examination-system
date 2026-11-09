@@ -11,6 +11,24 @@ const dateFormat = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
 });
 
+function AttendanceSlots({ schedule }) {
+  if (!schedule?.length) return '—';
+  const groups = new Map();
+  for (const {day, startTime, endTime} of [...schedule].sort((a,b) => a.day-b.day)) {
+    const time = startTime + '–' + endTime;
+    if (!groups.has(time)) groups.set(time, []);
+    groups.get(time).push(WEEK_DAYS[day]);
+  }
+  return <div className="internship-record-slots">
+    {[...groups].map(([time, days]) => <div className="internship-record-slot" key={time}>
+      <span className="internship-slot-days">
+        {days.map(day => <abbr key={day} title={day}>{day.slice(0,3)}</abbr>)}
+      </span>
+      <span className="internship-slot-time">{time}</span>
+    </div>)}
+  </div>;
+}
+
 export default function Internships() {
   const [form, setForm] = useState(emptyForm);
   const [courses, setCourses] = useState(null);
@@ -180,9 +198,7 @@ export default function Internships() {
                   <div>To <time dateTime={record.endDate}>{dateFormat.format(new Date(record.endDate))}</time></div>
                   {record.totalDays && <span className="internship-duration-badge">{contractDurationLabel({...record, dayBasis:'calendar', totalContractDays:record.totalDays})}</span>}
                 </td>
-                <td>{record.attendanceSchedule?.length ? [...record.attendanceSchedule].sort((a,b) => a.day-b.day).map(slot =>
-                  <div className="internship-record-slot" key={slot.day}><strong>{WEEK_DAYS[slot.day]}</strong> <span>{slot.startTime}–{slot.endTime}</span></div>
-                ) : '—'}</td>
+                <td><AttendanceSlots schedule={record.attendanceSchedule}/></td>
               </tr>)}</tbody>
             </table>
           </div> : <div className="internship-record-message internship-record-empty"><TeachingIcon name="clipboard" size={24}/><p>No internships recorded yet.</p></div>}
