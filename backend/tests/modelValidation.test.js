@@ -27,4 +27,6 @@ for (const email of invalidEmails) {
   assert(user.validateSync()?.errors.email, `${email} should be rejected`);
 }
 
+assert(!new User({name:'Student Without Email', role:'student'}).validateSync());
+assert(new User({name:'Admin Without Email', role:'admin',password:'ValidPassword1'}).validateSync()?.errors.email);
 console.log('User model validation tests passed.');

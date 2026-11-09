@@ -391,6 +391,7 @@ const getTeacherAssessmentResults = async (req, res, next) => {
         _id: assessment._id,
         title: assessment.title,
         type: assessmentType,
+        batch: assessment.batch || '',
         totalMarks: assessment.totalMarks,
         passingMarks: assessment.passingMarks,
       },

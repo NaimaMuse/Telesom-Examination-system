@@ -10,15 +10,15 @@ import api from '../../services/api';
 
 // ─────────────────── STUDENT MANAGEMENT ────────────────────────
 const STUDENT_FIELDS = [
-  { key: 'name', label: 'Full Name', type: 'text', required: true, example: 'Amina Hassan', guidance: 'Required. Enter the full name (2–100 characters).' },
+  { key: 'name', label: 'Name', type: 'text', required: true, example: 'Amina Hassan', guidance: 'Required. Enter the full name (2–100 characters).' },
   { key: 'studentId', label: 'Student ID (automatic)', type: 'text', readOnly: true },
-  { key: 'email', label: 'Email', type: 'email', required: true, example: 'amina@example.com', guidance: 'Required. Use a valid, unique email address.' },
-  { key: 'gender', label: 'Gender', type: 'select', options: ['male', 'female'], required: true, example: 'female', guidance: 'Required. Use male or female.' },
+  { key: 'email', label: 'Email', type: 'email', example: 'amina@example.com', guidance: 'Optional. Enter a valid, unique email address or add it later.' },
+  { key: 'gender', label: 'Gender', type: 'select', options: ['male', 'female'], example: 'female', guidance: 'Optional. Use male or female if known.' },
   { key: 'phone', label: 'Phone', type: 'tel', example: '+252 61 1234567', guidance: 'Optional. Enter as text to keep the country code and leading zeros.' },
   { key: 'course', label: 'Course', type: 'course', required: true, guidance: 'Required. Use an existing course name from the Available Courses sheet.' },
   { key: 'address', label: 'Address', type: 'text', example: 'Hargeisa', guidance: 'Optional. Enter the student address.' },
   { key: 'academicYear', label: 'Academic year', type: 'year', required:true, guidance: 'Required. Select the academic year that owns the batch.' },
-  { key: 'batch', label: 'Batch', type: 'batch', required:true, guidance:'Required. Use an active batch from the Available Batches sheet matching the academic year.' },
+  { key: 'batch', label: 'Batch', type: 'batch', guidance:'Optional. Use an active batch from the Available Batches sheet matching the academic year.' },
   { key: 'status', label: 'Status', type: 'select', options: ['active','inactive','graduated','suspended','dropped'], example: 'active', guidance: 'Optional. Use active, inactive, graduated or suspended. Defaults to active.' },
 ];
 
@@ -54,7 +54,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
               {fields.map(f => (
                 <div className="form-group" key={f.key}>
                   <label className="form-label" htmlFor={`student-${f.key}`}>{f.label}{f.required && ' *'}</label>
-                  {f.type === 'year' ? <select id={`student-${f.key}`} className="form-control" required value={form.academicYear||''} onChange={e=>setForm(p=>({...p,academicYear:e.target.value,batch:''}))}><option value="">Select academic year</option>{[...new Set([form.academicYear,...batches.map(b=>b.academicYear)].filter(Boolean))].sort().map(y=><option key={y}>{y}</option>)}</select> : f.type === 'batch' ? <select id={`student-${f.key}`} className="form-control" required value={form.batch||''} onChange={e=>handleChange('batch',e.target.value)}><option value="">Select batch</option>{batches.filter(b=>b.academicYear===form.academicYear).map(b=><option key={b._id} value={b.name}>{b.name}</option>)}{form.batch&&!batches.some(b=>b.name===form.batch&&b.academicYear===form.academicYear)&&<option>{form.batch}</option>}</select> : f.type === 'course' ? (
+                  {f.type === 'year' ? <select id={`student-${f.key}`} className="form-control" required value={form.academicYear||''} onChange={e=>setForm(p=>({...p,academicYear:e.target.value,batch:''}))}><option value="">Select academic year</option>{[...new Set([form.academicYear,...batches.map(b=>b.academicYear)].filter(Boolean))].sort().map(y=><option key={y}>{y}</option>)}</select> : f.type === 'batch' ? <select id={`student-${f.key}`} className="form-control" value={form.batch||''} onChange={e=>handleChange('batch',e.target.value)}><option value="">No batch assigned</option>{batches.filter(b=>b.academicYear===form.academicYear).map(b=><option key={b._id} value={b.name}>{b.name}</option>)}{form.batch&&!batches.some(b=>b.name===form.batch&&b.academicYear===form.academicYear)&&<option>{form.batch}</option>}</select> : f.type === 'course' ? (
                     <select id={`student-${f.key}`} className="form-control" required={f.required} value={form.course || ''} disabled={coursesLoading || courses.length === 0} onChange={e => handleChange(f.key, e.target.value)}>
                       <option value="">{coursesLoading ? 'Loading courses…' : courses.length ? 'Select a course' : 'No courses available'}</option>
                       {courses.map(course => <option key={course._id} value={course._id}>{course.title || course.name || 'Course'}</option>)}
@@ -115,9 +115,12 @@ function ConfirmModal({ message, onConfirm, onCancel, loading }) {
 
 const PAGE_SIZE = 8;
 
-const STUDENT_IMPORT_FIELDS = STUDENT_FIELDS.filter(field => !field.readOnly);
+const STUDENT_IMPORT_FIELDS = ['name','email','course','phone'].map(key => {
+  const field = STUDENT_FIELDS.find(item => item.key === key);
+  return key === 'phone' ? {...field,label:'Mobile'} : field;
+});
 const STUDENT_REQUIRED_FIELDS = STUDENT_IMPORT_FIELDS.filter(field => field.required);
-const STUDENT_TEMPLATE_COLUMNS = STUDENT_IMPORT_FIELDS.map(field => `${field.label}${field.required ? ' *' : ''}`);
+const STUDENT_TEMPLATE_COLUMNS = STUDENT_IMPORT_FIELDS.map(field => field.label);
 
 const normalizeHeader = (value) => String(value || '')
   .trim()
@@ -135,6 +138,7 @@ const STUDENT_COLUMN_MAP = {
   gender: 'gender',
   sex: 'gender',
   phone: 'phone',
+  mobile: 'phone',
   phonenumber: 'phone',
   address: 'address',
   batchyear: 'academicYear',
@@ -142,6 +146,7 @@ const STUDENT_COLUMN_MAP = {
   academicyear: 'academicYear',
   year: 'academicYear',
   course: 'course',
+  alias: 'course',
   courseid: 'course',
   coursecode: 'course',
 };
@@ -156,10 +161,8 @@ function mapStudentRows(rows) {
 
 function downloadStudentTemplate(courses) {
   return import('xlsx').then(async (XLSX) => {
-    const batches=(await api.get('/academy/batches')).data.batches.filter(b=>b.status==='active');
     const sampleCourse = courses[0];
-    const currentYear = new Intl.DateTimeFormat('en-US', {timeZone:'Africa/Nairobi', year:'numeric'}).format(new Date());
-    const examples = { batch:batches.find(b=>b.academicYear===(sampleCourse?.academicYear||currentYear))?.name||'SELECT_A_BATCH', course: sampleCourse?.title || sampleCourse?.name || 'REPLACE_WITH_COURSE_NAME', academicYear: sampleCourse?.academicYear || currentYear };
+    const examples = {course:sampleCourse?.title || sampleCourse?.name || 'REPLACE_WITH_COURSE_NAME'};
     const worksheet = XLSX.utils.aoa_to_sheet([
       STUDENT_TEMPLATE_COLUMNS,
       STUDENT_IMPORT_FIELDS.map(field => examples[field.key] || field.example || ''),
@@ -171,7 +174,7 @@ function downloadStudentTemplate(courses) {
     const instructions = XLSX.utils.aoa_to_sheet([
       ['Student import template', 'Instructions'],
       ['Students sheet', 'Replace the example row with real student data. Keep headings in row 1. One student per row.'],
-      ['Required fields', STUDENT_REQUIRED_FIELDS.map(field => field.label).join(', ') + '. Headings marked * are required.'],
+      ['Required fields', STUDENT_REQUIRED_FIELDS.map(field => field.label).join(', ') + '.'],
       ['Student ID', 'Generated by the system as TL-YYYY-01. Do not enter a Student ID.'],
       ...STUDENT_IMPORT_FIELDS.map(field => [field.label, field.guidance]),
     ]);
@@ -185,8 +188,6 @@ function downloadStudentTemplate(courses) {
       courseSheet['!cols'] = [{wch:55}, {wch:20}];
       XLSX.utils.book_append_sheet(workbook, courseSheet, 'Available Courses');
     }
-    const batchSheet=XLSX.utils.aoa_to_sheet([['Batch','Academic year'],...batches.map(b=>[b.name,b.academicYear])]);
-    batchSheet['!cols']=[{wch:35},{wch:25}];XLSX.utils.book_append_sheet(workbook,batchSheet,'Available Batches');
     XLSX.writeFile(workbook, 'student-upload-template.xlsx');
   });
 }
@@ -244,6 +245,7 @@ function ImportStudentsModal({ courses = [], onClose, onImport, importing, repor
           {report && (
             <div className="student-import-report" role="status">
               <strong>{report.successCount} of {report.total} student rows imported.</strong>
+              {!!report.skippedCount && <p>{report.skippedCount} duplicate {report.skippedCount===1?'row':'rows'} skipped.</p>}
               {report.errors.length > 0 && <ul>{report.errors.slice(0, 8).map((item) => <li key={`${item.row}-${item.message}`}>Row {item.row}: {item.message}</li>)}</ul>}
               {report.errors.length > 8 && <small>And {report.errors.length - 8} more row errors.</small>}
             </div>
@@ -409,7 +411,27 @@ export default function StudentMgmt() {
     setImporting(true);
     const errors = [];
     let successCount = 0;
+    let skippedCount = 0;
     try {
+      const normalizeName = value => String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const normalizeEmail = value => String(value || '').trim().toLowerCase();
+      const emails = new Set();
+      const names = new Set();
+      const namesWithoutEmail = new Set();
+      const rememberStudent = (name, email) => {
+        names.add(name);
+        if (email) emails.add(email);
+        else namesWithoutEmail.add(name);
+      };
+      let pages = 1;
+      for (let page = 1; page <= pages; page++) {
+        const { data } = await api.get('/students', {params:{page,limit:100}});
+        if (!Array.isArray(data.data)) throw new Error('Could not verify existing students.');
+        pages = data.pagination?.pages ?? 1;
+        for (const record of data.data) {
+          rememberStudent(normalizeName(record.user?.name || record.name), normalizeEmail(record.user?.email || record.email));
+        }
+      }
       for (const student of rows) {
         const { _rowNumber: row, ...payload } = student;
         const missing = STUDENT_REQUIRED_FIELDS.filter(field => !String(payload[field.key] || '').trim()).map(field => field.label);
@@ -417,8 +439,14 @@ export default function StudentMgmt() {
           errors.push({ row, message: `Missing ${missing.join(', ')}.` });
           continue;
         }
-        payload.gender = String(payload.gender).trim().toLowerCase();
-        if (!['male', 'female'].includes(payload.gender)) {
+        const name = normalizeName(payload.name);
+        const email = normalizeEmail(payload.email);
+        if ((email && emails.has(email)) || namesWithoutEmail.has(name) || (!email && names.has(name))) {
+          skippedCount++;
+          continue;
+        }
+        payload.gender = String(payload.gender || '').trim().toLowerCase();
+        if (payload.gender && !['male', 'female'].includes(payload.gender)) {
           errors.push({ row, message: 'Gender must be male or female.' });
           continue;
         }
@@ -444,16 +472,21 @@ export default function StudentMgmt() {
             semester: selectedCourse.semester || '',
             status: 'enrolled',
           });
+          rememberStudent(name, email);
           successCount += 1;
         } catch (error) {
           errors.push({ row, message: error.response?.data?.message || error.message || 'Student could not be created.' });
         }
       }
-      setImportReport({ total: rows.length, successCount, errors });
+      setImportReport({ total: rows.length, successCount, skippedCount, errors });
       if (successCount) {
         setPage(1);
         await Promise.all([fetchStudents(), fetchEnrollments()]);
       }
+    } catch {
+      setImportReport({total:rows.length,successCount,skippedCount,errors:[
+        ...errors,{row:'check',message:'Could not verify existing students. Please reopen the upload and try again.'}
+      ]});
     } finally {
       setImporting(false);
     }
@@ -531,7 +564,7 @@ export default function StudentMgmt() {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Student</th>
+                  <th>Name</th>
                   <th>Phone</th>
                   <th>Course</th>
                   <th>Batch / Year</th>

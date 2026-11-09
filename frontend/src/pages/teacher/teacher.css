@@ -1539,3 +1539,28 @@
 .teacher-calendar-day.has-classes .calendar-cell-event { font-weight: 600; }
 .teacher-home-contract-grid .weekly-preview .weekly-schedule-heading { padding: 10px 12px; }
 .teacher-home-contract-grid .weekly-preview-slots { padding: 10px; gap: 5px; }
+
+.teacher-results-page .results-import {
+  margin-bottom: 16px;
+  border: 1px solid #d6e6db;
+  border-left: 3px solid #d7982f;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  color: #193c2c;
+  font-size: 12px;
+}
+.results-import-main { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.teacher-results-page .results-import h2 { margin: 4px 0; font-size: 16px; color: #005b35; }
+.teacher-results-page .results-import p { margin: 2px 0; font-size: 12px; color: #4a6355; }
+.results-import-picker { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.results-import-picker label { padding: 7px 12px; border-radius: 7px; background: #005b35; color: white; cursor: pointer; font-weight: 700; }
+.results-import-picker input:disabled + label { opacity: .6; cursor: default; }
+.results-import-picker input:focus-visible + label { outline: 2px solid #d7982f; outline-offset: 2px; }
+.results-import-picker span { color: #526a5c; font-size: 11px; }
+.teacher-results-page .results-import .results-import-file { display: flex; gap: 5px 10px; flex-wrap: wrap; margin-top: 10px; padding: 8px 10px; border-radius: 7px; background: #edf6ef; overflow-wrap: anywhere; }
+.results-import-issues { margin-top: 10px; padding: 8px 10px; border: 1px solid #f0d69e; border-radius: 7px; background: #fff8e8; color: #674514; }
+.results-import-issues summary { cursor: pointer; font-weight: 700; }
+.results-import-issues ul { max-height: 148px; overflow-y: auto; list-style: none; margin: 6px 0 0; padding: 0; }
+.results-import-issues li { display: flex; gap: 9px; padding: 5px 0; border-top: 1px solid #f2e4c3; }
+.results-import-issues li strong { flex-shrink: 0; }

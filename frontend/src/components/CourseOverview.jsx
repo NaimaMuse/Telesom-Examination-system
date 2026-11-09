@@ -1,25 +1,23 @@
+import {contractDurationLabel} from '../pages/teacher/teachingSchedule.mjs';
 import TeachingIcon from './TeachingIcon';
 import './TeachingPages.css';
 import './CourseOverviewDesign.css';
 
 function OverviewProgressCard({title,icon,percent,rows,available=true,className='',details}) {
-  return <article className={'co-progress-card '+className}><h3><TeachingIcon name={icon} size={18}/>{title}{details&&<details className="co-contract-details"><summary>View details <TeachingIcon name="arrow" size={16}/></summary><div>{details}</div></details>}</h3><div className="co-progress-content"><div className="co-ring" style={{'--progress':percent+'%'}} role="img" aria-label={available?percent+'% '+title:'Contract not configured'}><strong>{available?percent+'%':'—'}</strong></div><dl>{rows.map(([tone,label,value])=><div key={label}><dt><i className={tone}/>{label}</dt><dd>{available?value:'—'}</dd></div>)}</dl></div></article>;
+  return <article className={'co-progress-card '+className}><h3><TeachingIcon name={icon} size={18}/>{title}{details&&<details className="co-contract-details"><summary>View details <TeachingIcon name="arrow" size={16}/></summary><div>{details}</div></details>}</h3><div className="co-progress-content">{percent!=null&&<div className="co-ring" style={{'--progress':percent+'%'}} role="img" aria-label={available?percent+'% '+title:'Contract not configured'}><strong>{available?percent+'%':'—'}</strong></div>}<dl>{rows.map(([tone,label,value])=><div key={label}><dt><i className={tone}/>{label}</dt><dd>{available?value:'—'}</dd></div>)}</dl></div></article>;
 }
 
 export default function CourseOverview({course,contract,lessonProgress,upcoming,onTab}) {
-  const total=Number(contract?.totalContractDays)||0, completed=Number(contract?.completedTeachingDays)||0;
-  const elapsed=contract?.dayBasis==='calendar'?Number(contract.elapsedCalendarDays)||0:completed;
   const lessonTotal=Number(lessonProgress?.total)||0, lessonsDone=Number(lessonProgress?.completed)||0;
   const percent=Math.min(100,Math.max(0,Number(lessonProgress?.percentage)||0));
-  const contractPercent=total?Math.min(100,Math.max(0,Math.round(elapsed/total*100))):0;
   const title=course.title||course.name||'My Course';
   const date=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?'Date to be confirmed':d.toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'});};
   return <div className="co-overview co-reference-design">
     <section className="co-metrics" aria-label="Teaching progress">
-      <OverviewProgressCard title="Teaching Contract" icon="file" className="co-contract-card" percent={contractPercent} available={!!contract} details={contract?<><strong>Teaching contract</strong><span>{date(contract.startDate)} – {date(contract.endDate)}</span><span>{total} {contract.dayBasis==='calendar'?'calendar':'teaching'} days · {completed} teaching days completed</span></>:null} rows={[
-        ['green',contract?.dayBasis==='calendar'?'Elapsed days':'Taught days',elapsed],
-        ['amber','Total days',total],
-        ['blue','Remaining days',contract?.remainingContractDays??Math.max(0,total-elapsed)],
+      <OverviewProgressCard title="Teaching Contract" icon="file" className="co-contract-card" available={!!contract} details={contract?<><strong>Teaching contract</strong><span>{date(contract.startDate)} – {date(contract.endDate)}</span><span>{contractDurationLabel(contract)}</span></>:null} rows={[
+        ['green','Teaching days completed',contract?.completedTeachingDays??'—'],
+        ['amber','Upcoming teaching days',contract?.remainingScheduledTeachingDays??'—'],
+        ['blue','Total teaching days',contract?.targetTeachingDays??'—'],
       ]}/>
       <OverviewProgressCard title="Course Progress" icon="calendar" percent={percent} rows={[
         ['green','Completed lessons',lessonsDone],['amber','Total lessons',lessonTotal],['blue','Remaining lessons',Math.max(0,lessonTotal-lessonsDone)],

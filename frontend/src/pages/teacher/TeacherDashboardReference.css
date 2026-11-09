@@ -272,3 +272,27 @@ html:has(.teacher-dashboard-shell)::-webkit-scrollbar,
 .dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teacher-scheduled-panel > header,
 .dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teacher-assessments-panel > header,
 .dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teacher-contract-panel > header { box-shadow:inset 0 2px #D7982F,inset 0 -2px #D7982F; }
+
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.has-classes:not(.is-selected) {
+  background: #d9f2e1;
+  color: #064c2f;
+  box-shadow: inset 0 -3px 0 #208653;
+}
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.has-classes:not(.is-selected):hover {
+  background: #c4e9d1;
+}
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teaching-day-legend i {
+  background: #d9f2e1;
+  border: 1px solid #208653;
+}
+
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.has-classes:not(.is-selected),
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teacher-calendar-grid .teacher-calendar-day.has-classes:not(.is-selected):hover {
+  background: #ffedb1;
+  color: #5a3900;
+  box-shadow: inset 0 -3px 0 #cb8800;
+}
+.dash-shell.teacher-dashboard-shell .dashboard-content .teacher-gold-dashboard .teacher-two-column-layout .teaching-day-legend i {
+  background: #ffedb1;
+  border-color: #cb8800;
+}

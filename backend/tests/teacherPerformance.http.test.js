@@ -124,8 +124,17 @@ const run=async()=>{
   result=await request('/reports/analytics');assert.strictEqual(result.status,403,'Analytics is admin-only');
   const analyticsResponse=await fetch(base+'/reports/analytics?course='+courses[0]._id+'&from=2026-10-25&to=2026-10-27',{headers:{Authorization:'Bearer '+token(overviewAdmin._id)}});assert.strictEqual(analyticsResponse.status,200);const analytics=await analyticsResponse.json();assert.strictEqual(analytics.summary.enrolledStudents,2);assert.strictEqual(analytics.summary.attendanceRate,50);assert.strictEqual(analytics.summary.attendanceRecords,3);assert.strictEqual(analytics.courses.length,1);assert.ok(analytics.options.courses.length);
   result=await request('/dashboard/admin');assert.strictEqual(result.status,403,'Admin dashboard rejects teacher access');
-  const adminDashboardResponse=await fetch(base+'/dashboard/admin',{headers:{Authorization:'Bearer '+token(overviewAdmin._id)}});assert.strictEqual(adminDashboardResponse.status,200);const adminDashboard=(await adminDashboardResponse.json()).data;
-  assert.strictEqual(adminDashboard.totals.students,await Student.countDocuments());assert.strictEqual(adminDashboard.totals.teachers,await Teacher.countDocuments());assert.strictEqual(adminDashboard.totals.courses,await Course.countDocuments());assert.strictEqual(adminDashboard.totals.assessments,await Exam.countDocuments()+await Quiz.countDocuments());assert.ok(adminDashboard.recentStudents.some(s=>String(s._id)===String(batchStudent._id)));assert.ok(adminDashboard.recentStudents.every(s=>s.name&&s.studentId));
+  const disabledUser=await User.create({name:'Disabled Teacher',email:marker+'-disabled@example.test',role:'teacher',password:'SecureTest123!',isActive:false});users.push(disabledUser);
+  try {
+    await Teacher.create({user:disabledUser._id,teacherId:marker+'-disabled'});
+    await Teacher.create({user:freshUser._id,teacherId:marker+'-inactive',status:'inactive'});
+    const adminDashboardResponse=await fetch(base+'/dashboard/admin',{headers:{Authorization:'Bearer '+token(overviewAdmin._id)}});assert.strictEqual(adminDashboardResponse.status,200);const adminDashboard=(await adminDashboardResponse.json()).data;
+    assert.strictEqual(adminDashboard.totals.teachers,1,'Only current teacher profiles with enabled accounts are counted');
+    assert.strictEqual(adminDashboard.history.at(-1).teachers,1,'Teacher history uses the same filter as the card');
+    assert.strictEqual(adminDashboard.totals.students,await Student.countDocuments());assert.strictEqual(adminDashboard.totals.courses,await Course.countDocuments());assert.strictEqual(adminDashboard.totals.assessments,await Exam.countDocuments()+await Quiz.countDocuments());assert.ok(adminDashboard.recentStudents.some(s=>String(s._id)===String(batchStudent._id)));assert.ok(adminDashboard.recentStudents.every(s=>s.name&&s.studentId));
+  } finally {
+    await Teacher.deleteMany({user:{$in:[disabledUser._id,freshUser._id]}});
+  }
   console.log('Performance HTTP integration passed: shared gradebook marks, 77/90 teacher marks plus automatic attendance, update/delete recalculation, course isolation, filters, multiple assignments, batch cohorts, participant rows, popup records and concurrent allocation cap.');
  }finally{
   if(server)await new Promise(resolve=>server.close(resolve));

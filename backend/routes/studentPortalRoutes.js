@@ -5,6 +5,9 @@ const { asyncHandler } = require('../controllers/resourceController');
 const Student = require('../models/Student');
 const Enrollment = require('../models/Enrollment');
 const CourseTeacher = require('../models/CourseTeacher');
+const TeacherContract = require('../models/TeacherContract');
+const { summary: summarizeContract } = require('../services/teacherContractService');
+const { enrollmentBatch } = require('../services/batchService');
 const Exam = require('../models/Exam');
 const ExamResult = require('../models/ExamResult');
 const Quiz = require('../models/Quiz');
@@ -25,7 +28,43 @@ router.get('/courses', asyncHandler(async (req, res) => {
   const enrollments = await Enrollment.find({ student: req.student._id, status: 'enrolled' }).populate('course').lean();
   const assignments = await CourseTeacher.find({ course: { $in: enrollments.map(e => e.course?._id).filter(Boolean) }, status: 'active' }).populate({ path: 'teacher', populate: { path: 'user', select: 'name' } }).lean();
   const courses = enrollments.filter(e => e.course).map(e => ({ ...e.course, code: e.course.courseCode, name: e.course.title || e.course.name, semester: e.semester || e.course.semester, teacher: assignments.filter(a => String(a.course) === String(e.course._id) && a.academicYear === e.academicYear && (!a.semester || !e.semester || a.semester === e.semester)).map(a => a.teacher?.user?.name).filter(Boolean).join(', ') || 'Not assigned', schedule: 'Not scheduled' }));
-  res.json({ courses });
+  const scopes = enrollments.filter(e => e.course).map(e => ({
+    course: e.course._id, academicYear: e.academicYear, batch: enrollmentBatch(e),
+  }));
+  const contracts = scopes.length ? await TeacherContract.find({$or:scopes})
+    .select('course teacher academicYear batch startDate endDate dayBasis totalDays status').lean() : [];
+  const courseById = new Map(courses.map(course => [String(course._id), course]));
+  const activeContracts = contracts.filter(contract => contract.status !== 'cancelled' && assignments.some(assignment =>
+    String(assignment.course) === String(contract.course) &&
+    String(assignment.teacher?._id) === String(contract.teacher) &&
+    assignment.academicYear === contract.academicYear
+  ));
+  const classSchedules = await Promise.all(activeContracts.map(async ({course, teacher, ...contract}) => {
+    const scheduledCourse = courseById.get(String(course));
+    const courseDetails = {
+      _id:course, name:scheduledCourse.name, batch:scheduledCourse.batch,
+      academicYear:scheduledCourse.academicYear, teachingSchedule:scheduledCourse.teachingSchedule,
+    };
+    const balance = await summarizeContract({...contract, course:courseDetails});
+    return {...contract, course:courseDetails, endDate:balance.endDate, dayBasis:balance.dayBasis,
+      totalContractDays:balance.totalContractDays,
+      remainingContractDays:balance.contractStatus === 'Expired' ? 0 : balance.remainingContractDays,
+    };
+  }));
+  for (const enrollment of enrollments) {
+    const course = courseById.get(String(enrollment.course?._id));
+    if (!course?.teachingSchedule?.length) continue;
+    if ((course.batch && enrollment.batch && course.batch !== enrollment.batch) ||
+        (course.academicYear && course.academicYear !== enrollment.academicYear)) continue;
+    const hasContract = contracts.some(contract =>
+      String(contract.course) === String(course._id) &&
+      contract.academicYear === enrollment.academicYear && contract.batch === enrollmentBatch(enrollment)
+    );
+    if (!hasContract) {
+      classSchedules.push({weekly:true, course:{_id:course._id,name:course.name,teachingSchedule:course.teachingSchedule}});
+    }
+  }
+  res.json({ courses, classSchedules });
 }));
 async function enrolledScopes(student) {
   const rows = await Enrollment.find({ student, status: 'enrolled' }).lean();

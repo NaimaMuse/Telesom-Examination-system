@@ -5,4 +5,9 @@ async function validateBatch(batch,academicYear) {
   if(typeof batch!=='string'||typeof academicYear!=='string')fail('Select a batch and academic year.');
   if(!await Batch.exists({name:batch,academicYear,status:'active'}))fail('The selected batch does not belong to this academic year or is archived.');
 }
-module.exports={validateBatch};
+function enrollmentBatch(enrollment) {
+  if (enrollment.batch) return enrollment.batch;
+  const course = enrollment.course;
+  return course?.academicYear === enrollment.academicYear ? course?.batch || '' : '';
+}
+module.exports={validateBatch,enrollmentBatch};

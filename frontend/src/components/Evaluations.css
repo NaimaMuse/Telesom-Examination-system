@@ -159,3 +159,101 @@
 .ev-course-scope legend { padding: 0 5px; font-weight: 700; color: var(--ev-deep); }
 .ev-scope-options { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .ev-scope-options .ev-check { margin: 3px 0; }
+
+.ev-grid-editor { display: grid; gap: 10px; margin-top: 12px; }
+.ev-grid-editor > p { padding: 8px 11px; border-left: 3px solid #e5a500; background: #fff8e0; color: #073b23; }
+.ev-grid-list { min-width: 0; padding: 8px 12px 12px; border: 1px solid #dce6df; border-radius: 10px; }
+.ev-grid-list legend { padding: 0 5px; color: #005b35; font-weight: 700; }
+.ev-grid-list p { color: #52675a; margin-bottom: 6px; }
+.ev-grid-entry { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 7px; margin-bottom: 7px; }
+.evaluations .ev-grid-entry input:not([type=checkbox]):not([type=radio]) { margin: 0; padding: 7px 10px; }
+.ev-grid-entry button { min-width: 34px; padding: 4px 8px; }
+
+.evaluations > .ev-actions:first-child {
+  background: #005b35;
+}
+.evaluations > .ev-actions:first-child h2,
+.evaluations > .ev-actions:first-child > a {
+  color: #fff;
+}
+.evaluations > .ev-actions:first-child > a {
+  background: #ffffff18;
+  border-color: #ffffff55;
+}
+.evaluations > .ev-notice[role="status"] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #e2f5e9;
+  border: 1px solid #8ac5a3;
+  border-left: 4px solid #005b35;
+  color: #073b23;
+  font-size: 14px;
+  font-weight: 700;
+}
+.evaluations > .ev-notice[role="status"]::before {
+  content: "\2713" / "";
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #005b35;
+  color: #fff;
+}
+
+.evaluations.ev-student-list { max-width: 980px; }
+.evaluations.ev-student-list > .ev-actions:first-child {
+  min-height: 0;
+  padding: 4px 0 12px;
+  border-bottom: 1px solid #cfe2d6;
+  border-radius: 0;
+  background: transparent;
+}
+.evaluations.ev-student-list > .ev-actions:first-child h2 { color: #005b35; font-size: 23px; }
+.ev-student-list .ev-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.ev-student-card {
+  overflow: hidden;
+  border: 1px solid #d7e6dd;
+  border-left: 4px solid #e5a500;
+  border-radius: 12px;
+  background: white;
+}
+.ev-student-card-body { padding: 16px 18px; }
+.ev-student-card-meta, .ev-student-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.ev-student-card-meta .ev-eyebrow { font-size: 11px; letter-spacing: .06em; color: #005b35; }
+.ev-student-card .ev-status[data-state="pending"] { color: #684800; background: #fff3ce; border-color: #edcf74; }
+.ev-student-card .ev-status[data-state="closed"] { color: #526258; background: #f2f5f3; border-color: #dce5df; }
+.ev-student-card h3 { margin: 7px 0 4px; font-size: 17px; color: #193c2c; }
+.ev-student-card p { margin: 0; font-size: 13px; color: #526a5c; }
+.ev-student-card-footer { padding: 10px 18px; background: #f5faf6; border-top: 1px solid #e2eee6; font-size: 12px; color: #42604e; }
+.ev-student-card-footer strong { margin-right: 5px; }
+.ev-student-card-footer .btn { min-height: 34px; }
+
+.evaluations { font-size: 12px; line-height: 1.5; }
+.evaluations > .ev-actions:first-child { min-height: 48px; padding: 9px 14px; border-bottom: 2px solid #d7982f; border-radius: 10px; }
+.evaluations > .ev-actions:first-child h2,
+.evaluations.ev-student-list > .ev-actions:first-child h2 { font-size: 21px; line-height: 1.3; }
+.evaluations.ev-student-list > .ev-actions:first-child { padding: 4px 0 10px; border-radius: 0; }
+.evaluations .ev-section-title h3,
+.evaluations .ev-fields-heading h3,
+.evaluations .ev-field-summary h3,
+.evaluations .ev-student-card h3 { font-size: 15px; line-height: 1.35; }
+.evaluations .ev-card > h2 { font-size: 21px; }
+.evaluations label, .evaluations .ev-section-title p,
+.evaluations .ev-student-card p { font-size: 12px; }
+.evaluations .ev-question strong { font-size: 13px; }
+.evaluations button, .evaluations a.btn { font-size: 12px; min-height: 34px; }
+.evaluations .ev-question,
+.evaluations .ev-card { border-radius: 11px; }
+.evaluations .ev-student-card-body { padding: 13px 16px; }
+.evaluations .ev-student-card-footer { padding: 8px 16px; }
+
+.ev-card-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 10px; }

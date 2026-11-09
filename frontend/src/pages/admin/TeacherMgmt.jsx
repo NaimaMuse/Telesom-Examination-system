@@ -1,6 +1,6 @@
 import './TeacherDirectory.css';
 import { WeeklySchedulePreview } from '../../components/WeeklySchedule';
-import { contractEndDate } from '../teacher/teachingSchedule.mjs';
+import { contractEndDate, contractDurationDays, contractDurationLabel } from '../teacher/teachingSchedule.mjs';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -53,8 +53,8 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
     setForm(current => ({...current,contractBatchId:batch?._id||'',contractBatch:batch?.name||'',contractAcademicYear:batch?.academicYear||''}));
   }, [selectedCourse, batches, initial?._id]);
   useEffect(() => {
-    setForm(current => ({...current,contractEnd:contractEndDate(current.contractStart,current.contractDays),...(current.editContractBasis==='calendar'?{editContractEnd:contractEndDate(current.editContractStart,current.editContractDays)}:{})}));
-  }, [form.contractStart, form.contractDays, form.editContractStart, form.editContractDays, form.editContractBasis]);
+    setForm(current => ({...current,contractEnd:contractEndDate(current.contractStart,contractDurationDays(current.contractStart,current.contractDays,current.contractDurationUnit?.toLowerCase())),...(current.editContractBasis==='calendar'?{editContractEnd:contractEndDate(current.editContractStart,current.editContractDays)}:{})}));
+  }, [form.contractStart, form.contractDays, form.contractDurationUnit, form.editContractStart, form.editContractDays, form.editContractBasis]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const handleSubmit = async (e) => {
@@ -146,8 +146,8 @@ function TeacherDetailsModal({ teacher, courseAssignment, loading, error, onClos
             <h3>Teaching contracts</h3>
             {teacher.contracts?.length ? teacher.contracts.map(contract => <article className="teacher-details-contract" key={contract._id}>
               <div className="teacher-details-contract-heading"><strong>{contract.course?.title || contract.course?.name || 'Course'}</strong><span>{contract.contractStatus}</span></div>
-              <WeeklySchedulePreview schedule={contract.course?.teachingSchedule || []} /><div className="teacher-details-contract-metrics">{[['Contract days',contract.totalContractDays],['Taught days',contract.completedTeachingDays],['Remaining',contract.remainingContractDays]].map(([label,value])=><div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
-              <dl className="teacher-details-grid">{[['Batch',contract.batch],['Academic year',contract.academicYear],['Start date',contract.startDate],['End date',contract.endDate || 'Not set'],[contract.dayBasis==='calendar'?'Calendar duration elapsed':'Teaching progress',contract.progress+'%']].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>)}</dl>
+              <WeeklySchedulePreview schedule={contract.course?.teachingSchedule || []} /><div className="teacher-details-contract-metrics">{[['Teaching days completed',contract.completedTeachingDays],['Upcoming teaching days',contract.remainingScheduledTeachingDays??'—'],['Total teaching days',contract.targetTeachingDays??'—']].map(([label,value])=><div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
+              <dl className="teacher-details-grid">{[['Batch',contract.batch],['Academic year',contract.academicYear],['Start date',contract.startDate],['End date',contract.endDate || 'Not set'],['Contract duration',contractDurationLabel(contract)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>)}</dl>
             </article>) : <p className="teacher-details-contract-empty">No teaching contract configured.</p>}
           </section>
           </>}
@@ -254,6 +254,7 @@ export default function TeacherMgmt() {
   const [teacherDetailsLoading, setTeacherDetailsLoading] = useState(false);
   const [teacherDetailsError, setTeacherDetailsError] = useState('');
   const teacherDetailsRequest = useRef(0);
+  const [showInactive, setShowInactive] = useState(false);
   const [showDirectoryDetails, setShowDirectoryDetails] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -311,13 +312,14 @@ export default function TeacherMgmt() {
     await Promise.all([fetchTeachers(!context.initial, context), fetchCourseAssignments(!context.initial, context), fetchCourses(!context.initial, context)]);
   }, { enabled: !showModal && !deleting });
 
-  const filtered = teachers.filter(teacher => matchesPageSearch(search, teacher.name, teacher.email, teacher.phone, teacher.teacherId, teacher.department, teacher.subjects, courseAssignments.filter(a => String(a.teacher?._id || a.teacher) === String(teacher._id)).map(a => [a.course?.title, a.course?.name, a.course?.courseCode])));
+  const currentTeachers = teachers.filter(teacher => teacher.status !== 'inactive' && teacher.user?.isActive !== false);
+  const filtered = (showInactive ? teachers : currentTeachers).filter(teacher => matchesPageSearch(search, teacher.name, teacher.email, teacher.phone, teacher.teacherId, teacher.department, teacher.subjects, courseAssignments.filter(a => String(a.teacher?._id || a.teacher) === String(teacher._id)).map(a => [a.course?.title, a.course?.name, a.course?.courseCode])));
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
-  const activeTeachers = teachers.filter((teacher) => (teacher.status || 'active') === 'active').length;
+  const activeTeachers = currentTeachers.filter((teacher) => (teacher.status || 'active') === 'active').length;
   const assignedTeacherIds = new Set(courseAssignments.map(assignment => String(assignment.teacher?._id || assignment.teacher)));
-  const assignedTeachers = teachers.filter(teacher => assignedTeacherIds.has(String(teacher._id))).length;
-  const unassignedTeachers = teachers.length - assignedTeachers;
+  const assignedTeachers = currentTeachers.filter(teacher => assignedTeacherIds.has(String(teacher._id))).length;
+  const unassignedTeachers = currentTeachers.length - assignedTeachers;
   const getTeacherAssignment = (teacher) => courseAssignments.find((assignment) => String(assignment.teacher?._id || assignment.teacher) === String(teacher._id));
 
   const viewTeacherDetails = async (teacher) => {
@@ -377,7 +379,7 @@ export default function TeacherMgmt() {
     }
 
     const course = courses.find((item) => item._id === form.course);
-    if (!course || !form.contractBatch || !form.contractAcademicYear || !contractEndDate(form.contractStart,form.contractDays)) throw new Error('Select a course, matching batch, start date and valid contract duration.');
+    if (!course || !form.contractBatch || !form.contractAcademicYear || !contractDurationDays(form.contractStart,form.contractDays,form.contractDurationUnit?.toLowerCase())) throw new Error('Select a course, matching batch, start date and valid contract duration.');
     const response = await api.post('/users/teachers', {
       password: form.password,
       name: form.name,
@@ -400,7 +402,7 @@ export default function TeacherMgmt() {
         isPrimary: true,
         status: 'active',
       });
-      await api.post('/teacher-contracts', {teacher:teacher._id, course:course._id, academicYear:form.contractAcademicYear || course.academicYear || String(new Date().getFullYear()), batch:form.contractBatch, startDate:form.contractStart, endDate:form.contractEnd || null, dayBasis:'calendar',totalDays:Number(form.contractDays)});
+      await api.post('/teacher-contracts', {teacher:teacher._id, course:course._id, academicYear:form.contractAcademicYear || course.academicYear || String(new Date().getFullYear()), batch:form.contractBatch, startDate:form.contractStart, endDate:form.contractEnd || null, dayBasis:'calendar',totalDays:contractDurationDays(form.contractStart,form.contractDays,form.contractDurationUnit?.toLowerCase())});
     } catch (assignmentError) {
       assignmentWarning = assignmentError.response?.data?.message || 'The account was created, but the course assignment or contract could not be saved. Complete setup in Teacher Contracts.';
     }
@@ -437,6 +439,9 @@ export default function TeacherMgmt() {
             <h2>Teachers <span>{filtered.length}</span></h2>
           </div>
           <div className="teacher-directory-header-actions">
+          {teachers.length>currentTeachers.length && <button type="button" className="teacher-directory-details-toggle" aria-pressed={showInactive} onClick={()=>{setShowInactive(current=>!current);setPage(1);}}>
+            {showInactive ? 'Hide inactive' : 'Show inactive'}
+          </button>}
           <button type="button" className="teacher-directory-details-toggle" aria-pressed={showDirectoryDetails} onClick={() => setShowDirectoryDetails((current) => !current)}>
             {showDirectoryDetails ? 'Hide details' : 'View details'}
           </button>
@@ -498,7 +503,7 @@ export default function TeacherMgmt() {
         </footer>
       </section>
 
-      {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_EDIT_FIELDS : [...TEACHER_FIELDS, { key: 'password', label: 'Temporary password', type: 'password', required: true }, { key: 'course', label: 'Course', type: 'course', required: true }, { key: 'contractDays', label: 'Contract duration (calendar days)', type: 'number', required: true }, { key: 'contractBatch', label: 'Contract batch', type: 'batch', required: true }, { key: 'contractStart', label: 'Start date', type: 'date', required: true }, { key: 'contractEnd', label: 'End date (calculated)', type: 'date' }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
+      {showModal && <CrudModal title={editTarget?'Edit Teacher':'Add New Teacher'} fields={editTarget ? TEACHER_EDIT_FIELDS : [...TEACHER_FIELDS, { key: 'password', label: 'Temporary password', type: 'password', required: true }, { key: 'course', label: 'Course', type: 'course', required: true }, { key: 'contractDays', label: 'Contract duration', type: 'number', required: true }, { key: 'contractDurationUnit', label: 'Duration unit', type: 'select', options: ['Days', 'Months'] }, { key: 'contractBatch', label: 'Contract batch', type: 'batch', required: true }, { key: 'contractStart', label: 'Start date', type: 'date', required: true }, { key: 'contractEnd', label: 'End date (calculated)', type: 'date' }]} initial={editTarget||{}} courses={courses} coursesLoading={coursesLoading} onSave={handleSave} onClose={()=>{setShowModal(false);setEditTarget(null);}} />}
       {deleteTarget && <ConfirmModal message={`Delete "${deleteTarget.name}"?`} onConfirm={handleDelete} onCancel={()=>setDeleteTarget(null)} loading={deleting} />}
       {createdCredentials && <TeacherCredentialsModal credentials={createdCredentials} onClose={() => setCreatedCredentials(null)} />}
       {selectedTeacher && <TeacherDetailsModal teacher={selectedTeacher} courseAssignment={selectedTeacher.assignedCourse || null} loading={teacherDetailsLoading} error={teacherDetailsError} onClose={() => { teacherDetailsRequest.current += 1; setSelectedTeacher(null); setTeacherDetailsError(''); }} />}

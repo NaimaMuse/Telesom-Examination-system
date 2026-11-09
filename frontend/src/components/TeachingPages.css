@@ -74,9 +74,32 @@
 .ms-status.overdue { background: var(--brand-gold-soft); color: var(--brand-gold-active); }
 .ms-page .ms-cancel-button { color: #b3493f; background: #fff6f3; border: 1px solid #f0dcd5; }
 .ms-admin-page .ms-filter-fields { grid-template-columns: repeat(3,minmax(0,1fr)); }
-.ms-next-class { display: flex; align-items: center; gap: 15px; padding: 17px 20px; border: 1px solid var(--brand-green-border); border-radius: 12px; background: linear-gradient(110deg,var(--brand-green-soft),#fff); }
-.ms-next-icon { display: grid; place-items: center; width: 45px; height: 45px; flex-shrink: 0; background: #fff; border: 1px solid var(--brand-green-border); border-radius: 12px; color: var(--brand-green-active); }
-.ms-next-class > div { flex: 1; }.ms-next-class small { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--brand-green-active); }.ms-next-class h2 { font-size: 16px; margin: 5px 0; color: var(--brand-green-deep); }.ms-next-class p { margin: 0; color: #789181; font-size: 11px; line-height: 1.6; }
+.ms-next-class {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: linear-gradient(105deg,var(--brand-green-deep),var(--brand-green-active));
+  color: white;
+}
+.ms-next-date {
+  flex: 0 0 44px;
+  display: grid;
+  overflow: hidden;
+  border-radius: 7px;
+  background: white;
+  color: var(--brand-green-deep);
+  text-align: center;
+}
+.ms-next-date > span { padding: 2px 4px; background: var(--brand-gold); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.ms-next-date > strong { padding: 1px 4px; font-size: 19px; line-height: 1.3; }
+.ms-next-class > div { flex: 1; min-width: 0; }
+.ms-next-class small { color: var(--brand-gold-soft); font-size: 9px; font-weight: 800; letter-spacing: .06em; }
+.ms-next-class h2 { margin: 1px 0; color: white; font-size: 14px; overflow-wrap: anywhere; }
+.ms-next-class p { margin: 0; color: var(--brand-green-tint); font-size: 11px; }
+.ms-page .ms-next-class .btn { min-height: 30px; padding: 4px 9px; background: var(--brand-gold-tint); border-color: var(--brand-gold); color: var(--brand-green-deep); }
+.ms-page .ms-next-class .btn:hover { background: var(--brand-gold-soft); }
 .ms-dialog-kicker { display: block; font-size: 9px; letter-spacing: 1px; color: var(--brand-green-active); margin-bottom: 7px; }
 .ms-schedule-dialog label { display: grid; gap: 7px; margin: 14px 0; font-size: 12px; font-weight: 600; }.ms-schedule-dialog input,.ms-schedule-dialog select,.ms-schedule-dialog textarea { width: 100%; min-width: 0; border: 1px solid #d9e7de; border-radius: 7px; background: #fff; color: var(--brand-green-deep); padding: 10px; font: inherit; font-weight: 400; }
 .ms-schedule-dialog input:focus,.ms-schedule-dialog select:focus,.ms-schedule-dialog textarea:focus { outline: 2px solid var(--brand-green); outline-offset: 2px; }
@@ -98,7 +121,7 @@
 .ms-schedule-dialog :is(input,select,textarea) { width: 100%; min-width: 0; margin: 0; padding: 8px 10px; min-height: 36px; border: 1px solid #c8dbce; border-radius: 7px; background: #fbfdfb; color: #365441; font: inherit; font-size: 12px; font-weight: 400; }
 .ms-schedule-dialog :is(input,select,textarea):focus { outline: 2px solid #d5a137; outline-offset: 2px; }
 .ms-schedule-dialog :is(input,select):disabled { background: #f2f5f3; color: #7a8b80; }
-.ms-schedule-dialog .ms-dialog-dates { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 14px; border: 1px solid #ead7a6; border-radius: 9px; background: #fff8e7; }
+.ms-schedule-dialog .ms-dialog-dates { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; padding: 14px; border: 1px solid #ead7a6; border-radius: 9px; background: #fff8e7; }
 .ms-schedule-dialog form > :is(p,.ms-selected-lesson,.academy-error) { grid-column: 1 / -1; font-size: 11px; line-height: 1.5; margin: 0; }
 .ms-schedule-dialog form > p[role="status"] { padding: 12px; border: 1px solid #ead7a6; border-radius: 8px; background: #fff8e7; color: #806222; }
 .ms-schedule-dialog form > label:has(textarea) { grid-column: 1 / -1; }

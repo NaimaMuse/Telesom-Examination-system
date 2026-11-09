@@ -73,6 +73,7 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   await connectDB();
+  await require('./models/User').ensureOptionalStudentEmailIndex();
   await Promise.all(Object.values(require('./models/Evaluation')).map(model => model.init()));
   return app.listen(PORT, () => {
     console.log(

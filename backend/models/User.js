@@ -11,8 +11,8 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
-      unique: true,
+      required: [function emailRequired() { return this.role !== 'student'; }, 'Email is required'],
+      set: value => value == null || String(value).trim() === '' ? undefined : value,
       trim: true,
       lowercase: true,
       match: [
@@ -57,6 +57,23 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+const emailIndexOptions = {name:'unique_present_email', unique:true, sparse:true};
+userSchema.index({email:1},emailIndexOptions);
+
+userSchema.statics.ensureOptionalStudentEmailIndex = async function () {
+  await this.collection.createIndex({email:1},emailIndexOptions);
+  const indexes = await this.collection.indexes();
+  for (const index of indexes) {
+    if (index.name === emailIndexOptions.name || !index.unique ||
+        Object.keys(index.key).length !== 1 || index.key.email !== 1) continue;
+    try {
+      await this.collection.dropIndex(index.name);
+    } catch (error) {
+      if (error.code !== 27) throw error;
+    }
+  }
+};
 
 const User = mongoose.model('User', userSchema);
 

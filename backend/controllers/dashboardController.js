@@ -7,7 +7,9 @@ const Quiz = require('../models/Quiz');
 const QuizResult = require('../models/QuizResult');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
+const User = require('../models/User');
 const { asyncHandler } = require('./resourceController');
+const { loadDashboardHistory } = require('../services/adminDashboardHistoryService');
 
 const getDashboardOverview = asyncHandler(async (req, res) => {
   const now = new Date();
@@ -112,13 +114,16 @@ module.exports = {
 };
 
 module.exports.getAdminDashboard = asyncHandler(async (req,res) => {
-  const [students,teachers,courses,exams,quizzes,recent,recentTeachers,recentCourses,recentExams,recentQuizzes] = await Promise.all([
-    Student.countDocuments(),Teacher.countDocuments(),Course.countDocuments(),Exam.countDocuments(),Quiz.countDocuments(),
+  const currentTeacherFilter = User.distinct('_id', {role:'teacher', isActive:{$ne:false}})
+    .then(ids => ({user:{$in:ids}, status:{$ne:'inactive'}}));
+  const [students,teachers,courses,exams,quizzes,recent,recentTeachers,recentCourses,recentExams,recentQuizzes,history] = await Promise.all([
+    Student.countDocuments(),currentTeacherFilter.then(filter => Teacher.countDocuments(filter)),Course.countDocuments(),Exam.countDocuments(),Quiz.countDocuments(),
     Student.find().populate('user','name email isActive').sort({createdAt:-1,_id:-1}).limit(8).lean(),
     Teacher.find().select('user createdAt').populate('user','name').sort({createdAt:-1,_id:-1}).limit(5).lean(),
     Course.find().select('title name createdAt').sort({createdAt:-1,_id:-1}).limit(5).lean(),
     Exam.find().select('title createdAt').sort({createdAt:-1,_id:-1}).limit(5).lean(),
     Quiz.find().select('title createdAt').sort({createdAt:-1,_id:-1}).limit(5).lean(),
+    currentTeacherFilter.then(filter => loadDashboardHistory(new Date(),filter)),
   ]);
   const groups = [
     [recent, 'student', 'Student registered', '/admin/students'],
@@ -131,6 +136,5 @@ module.exports.getAdminDashboard = asyncHandler(async (req,res) => {
     id: type + ':' + record._id, title, to, createdAt: record.createdAt,
     description: record.user?.name || record.title || record.name || record.studentId || 'Account unavailable',
   }))).sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0) || b.id.localeCompare(a.id)).slice(0,5);
-  const history=await require('../services/adminDashboardHistoryService').loadDashboardHistory();
   res.json({success:true,data:{history,recentActivities,totals:{students,teachers,courses,assessments:exams+quizzes},recentStudents:recent.map(student=>({_id:student._id,createdAt:student.createdAt,name:student.user?.name||'Student account unavailable',email:student.user?.email||'',studentId:student.studentId,status:student.user?.isActive===false?'inactive':student.status||'active'}))}});
 });

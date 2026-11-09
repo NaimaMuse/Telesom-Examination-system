@@ -1,0 +1,11 @@
+.student-notes-page { max-width: 1120px; margin-inline: auto; color: #193c2c; font-size: 12px; line-height: 1.5; }
+.student-notes-page .student-notes-heading { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #cfe2d6; }
+.student-notes-page .student-notes-heading h1 { color: #005b35; font-size: 21px; line-height: 1.3; margin: 0 0 4px; }
+.student-notes-page .student-notes-heading p { color: #465e51; margin: 0; font-size: 12px; }
+.student-notes-page .filter-bar .form-control { font-size: 12px; min-height: 35px; max-width: 100%; }
+.student-notes-page .note-card { gap: 12px; padding: 12px; border-left: 3px solid #e5a500; border-radius: 10px; }
+.student-notes-page .note-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; color: #005b35; background: #e9f5ed; }
+.student-notes-page .note-info { min-width: 0; overflow-wrap: anywhere; }
+.student-notes-page .note-info h4, .student-notes-page .empty-state h3 { font-size: 15px; color: #193c2c; }
+.student-notes-page .note-info p, .student-notes-page .note-actions .btn, .student-notes-page .empty-state p { font-size: 12px; }
+@media (max-width: 560px) { .student-notes-page .note-card { flex-wrap: wrap; } }

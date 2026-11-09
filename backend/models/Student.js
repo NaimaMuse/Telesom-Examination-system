@@ -21,7 +21,7 @@ const studentSchema = new mongoose.Schema(
         values: ['male', 'female'],
         message: '{VALUE} is not a valid gender',
       },
-      required: [true, 'Gender is required'],
+      set: value => value === '' ? null : value,
     },
     phone: {
       type: String,

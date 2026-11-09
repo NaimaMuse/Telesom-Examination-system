@@ -51,6 +51,12 @@ fixtures.Quiz.push(base('draft',{course:'course-a',academicYear:'2026',semester:
  upcoming.updatedAt=now;
  const after=await getNotifications({_id:'user-a',role:'student'},now);
  assert.notStrictEqual(after.find(n=>n.title==='This week: upcoming exam').id,before);
+ exam.marksPublished=true;
+ exam.totalMarks=25;
+ fixtures.ExamResult[0].marksObtained=20;
+ const published=await getNotifications({_id:'user-a',role:'student'},now);
+ assert.deepStrictEqual(published.filter(n=>n.type==='result').map(n=>[n.title,n.href]),
+   [['New result: Assigned exam','/student/exams']]);
  const teacher=await getNotifications({_id:'teacher-user',role:'teacher'},now);
  assert(teacher.some(n=>n.type==='assessment'));
  assert(!teacher.some(n=>n.title.includes('Private other')));
@@ -60,5 +66,5 @@ fixtures.Quiz.push(base('draft',{course:'course-a',academicYear:'2026',semester:
  assert(admin.every(n=>['exam','quiz','assessment'].includes(n.type)));
  models.Teacher.findOne=()=>({lean:async()=>null});
  await assert.rejects(getNotifications({_id:'teacher-user',role:'teacher'},now),error=>error.statusCode===404);
- console.log('Notifications tests passed: upcoming exams, both quiz stores, assessments, no results or routine updates, seven-day window and role privacy.');
+ console.log('Notifications tests passed: upcoming exams, both quiz stores, assessments, published results only, seven-day window and role privacy.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

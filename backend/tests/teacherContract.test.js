@@ -34,3 +34,16 @@ assert(new Course({teachingSchedule:[{day:7,startTime:'08:00',endTime:'10:00'}]}
 assert(new Course({teachingSchedule:[{day:1,startTime:'10:00',endTime:'08:00'}]}).validateSync());
 assert(new Course({teachingSchedule:[{day:1,startTime:'08:00',endTime:'10:00'},{day:1,startTime:'11:00',endTime:'12:00'}]}).validateSync());
 assert.equal(new Course({teachingSchedule:[{day:1,startTime:'08:00',endTime:'10:00'}]}).validateSync(),undefined);
+
+const fourMonthContract = {
+  ...calendar, startDate:'2026-11-05', totalDays:120,
+  course:{teachingSchedule:[{day:1},{day:2},{day:3},{day:3}]}
+};
+const fourMonthBalance = calculateBalance(fourMonthContract,['2026-11-09','2026-11-09'],at('2026-11-10'));
+assert.strictEqual(fourMonthBalance.endDate,'2027-03-04');
+assert.strictEqual(fourMonthBalance.scheduledTeachingDays,51);
+assert.strictEqual(fourMonthBalance.completedTeachingDays,1);
+assert.strictEqual(fourMonthBalance.remainingScheduledTeachingDays,50);
+assert.strictEqual(calculateBalance(fourMonthContract,[],at('2027-03-05')).remainingScheduledTeachingDays,0);
+assert.strictEqual(fourMonthBalance.targetTeachingDays,48);
+assert.strictEqual(calculateBalance({...fourMonthContract,startDate:'2026-06-01',totalDays:122},[],at('2026-06-01')).targetTeachingDays,48);

@@ -1,3 +1,5 @@
+import TeacherAttendance from '../pages/admin/TeacherAttendance';
+import TeacherStudents from '../pages/teacher/TeacherStudents';
 import Evaluations from './Evaluations';
 import AcademyHeader from './AcademyHeader';
 import api from '../services/api';
@@ -77,6 +79,7 @@ const NAV = {
         { to: '/admin/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
         { to: '/admin/marks',      label: 'Marks & Results',   icon: 'chart' },
         { to: '/admin/attendance', label: 'Attendance',         icon: 'calendar' },
+        { to: '/admin/teacher-attendance', label: 'Teacher Attendance', icon: 'calendar' },
         { to: '/admin/reports', label: 'Reports Center', icon: 'file' },
         { to: '/admin/outlines', label: 'Teaching & Outlines', icon: 'book' },
         { to: '/admin/makeup', label: 'Makeup Classes', icon: 'reschedule' },
@@ -90,6 +93,7 @@ const NAV = {
       items: [
         { to: '/teacher', label: 'Dashboard', icon: 'grid', end: true },
         { to: '/teacher/my-course', label: 'My Course', icon: 'book' },
+        { to: '/teacher/students', label: 'Students', icon: 'users' },
         { to: '/teacher/exams', label: 'Exams & Quizzes', icon: 'clipboard' },
         { to: '/teacher/results', label: 'Results & Marks', icon: 'clipboard' },
         { to: '/teacher/performance', label: 'Student Performance', icon: 'chart' },
@@ -149,6 +153,7 @@ const ROLE_ROUTES = {
       <Route path="exams"     element={<ExamMgmt />} />
       <Route path="marks"     element={<MarksMgmt />} />
       <Route path="attendance"element={<AttendanceMgmt />} />
+      <Route path="teacher-attendance" element={<TeacherAttendance />} />
       <Route path="analytics" element={<AnalyticsPage />} />
       <Route path="*"         element={<Navigate to="/admin" replace />} />
     </Routes>
@@ -157,6 +162,7 @@ const ROLE_ROUTES = {
     <Routes>
       <Route index              element={<TeacherDashboard />} />
       <Route path="my-course"  element={<MyCourse />} />
+      <Route path="students" element={<TeacherStudents />} />
       <Route path="my-course/outline" element={<MyCourse outlinePage />} />
       <Route path="exams"     element={<TeacherExams />} />
       <Route path="results"  element={<TeacherResults />} />
@@ -204,9 +210,11 @@ const PAGE_META = {
   '/admin/courses': { title: 'Course Management', hint: 'Create and organize academic courses.' },
   '/admin/exams': { title: 'Exam & Quiz Management', hint: 'Schedule and configure assessments.' },
   '/admin/marks': { title: 'Marks & Results', hint: 'Review student marks and course results.' },
+  '/admin/teacher-attendance': { title: 'Teacher Attendance', hint: 'Mark attendance and schedule makeup classes.' },
   '/admin/attendance': { title: 'Attendance', hint: 'Track and review class attendance.' },
   '/admin/analytics': { title: 'Analytics & Reports', hint: 'Insights and performance summaries.' },
   '/teacher': { title: 'Teacher Dashboard', hint: 'Your courses, exams, and class at a glance.' },
+  '/teacher/students': { title: 'Students', hint: 'Students enrolled in your assigned courses.' },
   '/teacher/my-course': { title: 'My Course', hint: 'Course information, outlines, materials, students and assessments.' },
   '/teacher/exams': { title: 'Exams & Quizzes', hint: 'Create and manage assessments.' },
   '/teacher/results': { title: 'Result', hint: 'Enter and review results for your enrolled students.' },
@@ -214,6 +222,7 @@ const PAGE_META = {
   '/teacher/profile': { title: 'My Profile', hint: 'Your account and contact details.' },
   '/student': { title: 'Student Dashboard', hint: 'Courses, marks, and upcoming exams.' },
   '/student/courses': { title: 'My Courses', hint: 'Enrolled courses and materials.' },
+  '/student/makeup': { title: 'Makeup Classes', hint: 'Your scheduled replacement classes.' },
   '/student/exams': { title: 'Exams & Results', hint: 'Your marks, grades, and academic results.' },
   '/student/quizzes': { title: 'Quizzes', hint: 'Quiz scores and practice.' },
   '/student/notes': { title: 'Study Notes', hint: 'Notes shared by your teachers.' },
@@ -356,7 +365,7 @@ export default function DashboardLayout({ role }) {
           {<button type="button" className="sidebar-link sidebar-link-button academy-sidebar-signout" onClick={handleLogout}><span className="sidebar-link-icon"><TeachingIcon name="arrow" size={21}/></span>Sign Out</button>}
         </nav>
 
-        {<><div className="teacher-sidebar-motto"><TeachingIcon name="graduate" size={48}/><p>Learn <span>•</span> Excel <span>•</span> Achieve</p></div><svg className="teacher-sidebar-wave" viewBox="0 0 250 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 18C65 72 125 66 250 108V120H0Z" fill="#E5A500"/><path d="M0 38C72 95 160 78 250 112V120H0Z" fill="#087A43"/><path d="M0 52C78 105 170 88 250 116V120H0Z" fill="#003d24"/></svg></>}
+        {<><div className="teacher-sidebar-motto"><TeachingIcon name="graduate" size={48}/><p>Learn Today, Lead Tomorrow</p></div><svg className="teacher-sidebar-wave" viewBox="0 0 250 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 18C65 72 125 66 250 108V120H0Z" fill="#E5A500"/><path d="M0 38C72 95 160 78 250 112V120H0Z" fill="#087A43"/><path d="M0 52C78 105 170 88 250 116V120H0Z" fill="#003d24"/></svg></>}
       </aside>
 
       {/* ── Main ── */}

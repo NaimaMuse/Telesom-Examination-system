@@ -37,6 +37,7 @@ export default function StudentProfile() {
 
   const handleSave = async(e) => {
     e.preventDefault();
+    if (saving) return;
     setError('');
     setSaving(true);
     try {
@@ -60,7 +61,7 @@ export default function StudentProfile() {
         {!editing && <button className="btn btn-primary" onClick={()=>setEditing(true)}>✏️ Edit Profile</button>}
       </div>
 
-      {saved && <div style={{ background:'#d1fae5',color:'#065f46',padding:'0.75rem 1.25rem',borderRadius:'var(--radius-sm)',marginBottom:'1rem',fontWeight:600,fontSize:'0.875rem' }}>✅ Profile updated.</div>}
+      {saved && <div role="status" style={{ background:'#d1fae5',color:'#065f46',padding:'0.75rem 1.25rem',borderRadius:'var(--radius-sm)',marginBottom:'1rem',fontWeight:600,fontSize:'0.875rem' }}>✅ Profile updated.</div>}
 
       <div className="profile-header" style={{marginBottom:'1.5rem'}}>
         <div className="profile-avatar-lg">{initials}</div>
@@ -79,7 +80,7 @@ export default function StudentProfile() {
             <form onSubmit={handleSave}>
               <div className="grid-2">
                 <div className="form-group"><label className="form-label">Full Name *</label><input className="form-control" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} required/></div>
-                <div className="form-group"><label className="form-label">Email *</label><input className="form-control" type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} required/></div>
+                <div className="form-group"><label className="form-label" htmlFor="student-profile-email">Email (optional)</label><input id="student-profile-email" className="form-control" type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))}/></div>
                 <div className="form-group"><label className="form-label">Phone</label><input className="form-control" type="tel" value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))}/></div>
                 <div className="form-group"><label className="form-label">Student ID</label><input className="form-control" value={form.studentId} readOnly disabled style={{opacity:0.6}} /></div>
                 <div className="form-group"><label className="form-label">Address</label><input className="form-control" value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))}/></div>
@@ -94,7 +95,7 @@ export default function StudentProfile() {
             <div className="grid-2">
               {[
                 ['Full Name',   form.name],
-                ['Email',       form.email],
+                ['Email',       form.email||'Not provided'],
                 ['Phone',       form.phone||'—'],
                 ['Student ID',  form.studentId||'—'],
                 ['Address',     form.address||'—'],

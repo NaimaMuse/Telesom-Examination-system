@@ -134,30 +134,20 @@ const createStudent = async (req, res, next) => {
       status,
     } = req.body;
 
-    if (!name || !email || !gender) {
+    if (!name || !String(name).trim()) {
       res.status(400);
-      return next(
-        new Error('Name, email, and gender are required')
-      );
+      return next(new Error('Name is required'));
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = String(email ?? '').trim().toLowerCase();
     const normalizedGender = normalizeGender(gender);
 
-    if (!normalizedEmail) {
-      res.status(400);
-      return next(
-        new Error('Name, email, and gender are required')
-      );
-    }
-
-    if (!VALID_GENDERS.includes(normalizedGender)) {
+    if (normalizedGender && !VALID_GENDERS.includes(normalizedGender)) {
       res.status(400);
       return next(new Error('Gender must be male or female'));
     }
 
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
+    if (normalizedEmail && await User.findOne({ email: normalizedEmail })) {
       res.status(409);
       return next(new Error('Email is already registered'));
     }

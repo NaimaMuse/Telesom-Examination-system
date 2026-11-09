@@ -67,7 +67,23 @@ export default function CourseOutlineView({rows, role, busy, loading, error, has
           </div>
         </section>;
       })}
-      {!rows.length && <div className="outline-start"><span aria-hidden="true">▤</span><h3>{searching ? 'No matching chapters' : 'Build your course plan'}</h3><p>{searching ? 'Try a different search to find your chapters.' : 'Create Chapter 1, give it a title, then add Lesson 1, Lesson 2 and the rest of your teaching plan.'}</p>{teacher && !searching && <button type="button" className="btn btn-primary" disabled={busy || !hasContracts} onClick={onCreate}>＋ Create your first chapter</button>}{teacher && !hasContracts && <p>A teaching contract must be assigned before you can create a chapter.</p>}<ol><li><b>1</b> Create a chapter</li><li><b>2</b> Add lessons</li><li><b>3</b> Mark lessons completed</li></ol></div>}
+      {!rows.length && <section className="planner-empty-card">
+        <div className="planner-empty-main">
+          <span className="planner-empty-icon"><TeachingIcon name="book" size={24}/></span>
+          <div>
+            <h3>{searching ? 'No matching chapters' : teacher ? 'Build your course plan' : 'No published chapters yet'}</h3>
+            <p>{searching ? 'Try a different chapter title.' : teacher ? 'Organize your course into chapters and track progress as you teach.' : 'Your chapters and lessons will appear here when your instructor publishes them.'}</p>
+            {teacher && !searching && (hasContracts
+              ? <button type="button" className="btn btn-primary" disabled={busy} onClick={onCreate}>Create first chapter</button>
+              : <p className="planner-empty-note">You’ll need an assigned teaching contract to create a chapter.</p>)}
+          </div>
+        </div>
+        {teacher && !searching && <ol className="planner-empty-steps" aria-label="Course planning steps">
+          <li><span>01</span> Create a chapter</li>
+          <li><span>02</span> Add lessons</li>
+          <li><span>03</span> Track lesson progress</li>
+        </ol>}
+      </section>}
     </>}
   </div>;
 }

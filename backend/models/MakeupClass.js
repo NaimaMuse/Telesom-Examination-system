@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const schema = new mongoose.Schema({
   lesson:{type:mongoose.Schema.Types.ObjectId,ref:'TeachingLesson',required:true,index:true},
+  attendance:{type:mongoose.Schema.Types.ObjectId,ref:'TeacherAttendance'},
   contract:{type:mongoose.Schema.Types.ObjectId,ref:'TeacherContract',required:true},
   teacher:{type:mongoose.Schema.Types.ObjectId,ref:'Teacher',required:true},
   course:{type:mongoose.Schema.Types.ObjectId,ref:'Course',required:true},

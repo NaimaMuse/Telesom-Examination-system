@@ -16,6 +16,7 @@ export default function TeachingIcon({name, size=20}) {
     clock: <><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/></>,
     check: <><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></>,
     grid: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
+    list: <path d="M4 6h1m-1 6h1m-1 6h1M9 6h11M9 12h11M9 18h11"/>,
     layers: <><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></>,
     star: <path d="m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/>,
     folder: <path d="M3 7V4h7l3 3h8v13H3V7Zm0 3h18"/>,

@@ -18,6 +18,40 @@ const validateContract = data => {
   if (!String(data.batch||'').trim() || !String(data.academicYear||'').trim()) fail('Batch and academic year are required.');
 };
 const completedDays = async contractId => Lesson.distinct('completedDay',{contract:contractId,status:'completed',completedDay:{$ne:null}});
+function teachingDayTarget(contract, endDate, weekdays) {
+  if (contract.dayBasis !== 'calendar') return contract.totalDays;
+  if (!weekdays || !validDate(contract.startDate) || !validDate(endDate)) return null;
+  const start = new Date(contract.startDate + 'T12:00:00Z');
+  const exclusiveEnd = new Date(endDate + 'T12:00:00Z');
+  exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
+  const months = (exclusiveEnd.getUTCFullYear() - start.getUTCFullYear()) * 12 +
+    exclusiveEnd.getUTCMonth() - start.getUTCMonth();
+  const monthBoundary = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, 1, 12));
+  const lastDay = new Date(Date.UTC(monthBoundary.getUTCFullYear(), monthBoundary.getUTCMonth() + 1, 0)).getUTCDate();
+  monthBoundary.setUTCDate(Math.min(start.getUTCDate(), lastDay));
+  // A contract month budgets four teaching weeks. A day-based term uses 30 days per budget month.
+  const budgetMonths = months > 0 && +monthBoundary === +exclusiveEnd ? months : contract.totalDays / 30;
+  return Math.floor(budgetMonths * 4 * weekdays);
+}
+
+function scheduledTeachingDays(contract, endDate, completedDates, today) {
+  const schedule = contract.course?.teachingSchedule;
+  const weekdays = new Set((schedule || []).map(slot => slot.day).filter(day => Number.isInteger(day) && day >= 0 && day <= 6));
+  const targetTeachingDays = teachingDayTarget(contract, endDate, weekdays.size);
+  if (!validDate(contract.startDate) || !validDate(endDate) || !weekdays.size) {
+    return {targetTeachingDays, scheduledTeachingDays:null, remainingScheduledTeachingDays:null};
+  }
+  const completed = new Set(completedDates);
+  let scheduled = 0;
+  let remaining = 0;
+  for (const date = new Date(contract.startDate + 'T12:00:00Z'); date.toISOString().slice(0,10) <= endDate; date.setUTCDate(date.getUTCDate()+1)) {
+    if (!weekdays.has(date.getUTCDay())) continue;
+    scheduled++;
+    const key = date.toISOString().slice(0,10);
+    if (key >= today && !completed.has(key) && contract.status !== 'cancelled') remaining++;
+  }
+  return {targetTeachingDays, scheduledTeachingDays:scheduled, remainingScheduledTeachingDays:remaining};
+}
 function calculateBalance(contract, days, now=new Date()) {
   const dates=[...new Set(days.filter(Boolean))].sort();
   const completedTeachingDays=dates.length;
@@ -28,12 +62,17 @@ function calculateBalance(contract, days, now=new Date()) {
   const elapsed=calendar?elapsedCalendarDays:completedTeachingDays;
   const remainingContractDays=Math.max(0,contract.totalDays-elapsed);
   const contractStatus=contract.status==='cancelled'?'Cancelled':day<contract.startDate?'Scheduled':endDate&&day>endDate?'Expired':!calendar&&remainingContractDays===0?'Completed':'Active';
-  return {endDate:endDate||null,dayBasis:contract.dayBasis||'teaching',elapsedCalendarDays,totalContractDays:contract.totalDays,completedTeachingDays,remainingContractDays,progress:Math.min(100,Math.round(elapsed/contract.totalDays*100)),contractStatus,completedDates:dates};
+  return {...scheduledTeachingDays(contract,endDate,dates,day),endDate:endDate||null,dayBasis:contract.dayBasis||'teaching',elapsedCalendarDays,totalContractDays:contract.totalDays,completedTeachingDays,remainingContractDays,progress:Math.min(100,Math.round(elapsed/contract.totalDays*100)),contractStatus,completedDates:dates};
 }
 const summary = async contract => {
   const plain=contract.toObject?contract.toObject():contract;
   const {writeLock,...safe}=plain;
-  return {...safe,...calculateBalance(plain,await completedDays(plain._id))};
+  const [days, course] = await Promise.all([
+    completedDays(plain._id),
+    plain.course?.teachingSchedule !== undefined || !plain.course ? plain.course :
+      Course.findById(plain.course._id || plain.course).select('teachingSchedule').lean(),
+  ]);
+  return {...safe,...calculateBalance({...plain,course},days)};
 };
 const authorize = async (user,contract,write=false) => {
   if(user.role==='admin'&&!write)return;

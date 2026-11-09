@@ -22,6 +22,13 @@ const controller = createResourceController(Student, {
   beforeUpdate: async req => {
     const original=await Student.findById(req.params.id);
     if((req.body.batch!==undefined&&req.body.batch!==(original?.batch||''))||(req.body.academicYear!==undefined&&req.body.academicYear!==original?.academicYear))await require('../services/batchService').validateBatch(req.body.batch??original?.batch,req.body.academicYear??original?.academicYear);
+    if (req.body.email !== undefined && original?.user) {
+      const account = await User.findOne({_id:original.user,role:'student'});
+      if (account) {
+        account.email = req.body.email;
+        await account.save();
+      }
+    }
     if(req.body.status==='dropped'&&original?.status!=='dropped'){
       const droppedAt=new Date();await require('../models/Enrollment').updateMany({student:req.params.id,status:'enrolled'},{$set:{status:'dropped',droppedAt}});return {droppedAt};
     }

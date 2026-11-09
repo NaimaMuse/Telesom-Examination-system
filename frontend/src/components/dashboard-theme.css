@@ -341,36 +341,41 @@
 .teacher-edit-contract > select { margin-bottom: 16px; }
 
 /* Makeup classes: compact green and gold surfaces. */
-.dash-main:has(.ms-page) .dash-content { background: #f5f6f8; }
-.ms-page .ms-heading.ms-heading-compact { display: flex; justify-content: flex-end; margin-bottom: 14px; padding: 0; min-height: 0; border: 0; background: transparent; }
-.ms-page .ms-heading-compact .btn { padding: 8px 14px; font-size: 0.72rem; border-radius: 7px; }
-.ms-page .ms-summary { gap: 14px; margin-bottom: 16px; }
-.ms-page .ms-summary > button { min-height: 0; padding: 16px; border: 1px solid #b8d8c2; border-left: 3px solid #22743b; border-radius: 10px; background: #d9ecdf; box-shadow: none; gap: 12px; }
-.ms-page .ms-summary > button:nth-child(even) { background: #fff2cc; border-color: #e8cd83; border-left-color: #d5a137; }
-.ms-page .ms-summary .tp-icon { width: 40px; height: 40px; border-radius: 10px; background: #f2f8f4; color: #22743b; }
-.ms-page .ms-summary > button:nth-child(even) .tp-icon { background: #fff9e9; color: #9c7423; }
-.ms-page .ms-summary strong { color: #244e32; font-size: 1.7rem; }
-.ms-page .ms-summary small { color: #355e42; }
-.ms-page .ms-summary > button > span > span { font-size: 0.65rem; color: #6b7d70; line-height: 1.5; }
-.ms-page .ms-filter-panel { background: #fff; border: 1px solid #cbdcd0; border-radius: 12px; padding: 16px 18px; box-shadow: none; }
-.ms-page .ms-filter-panel h2 { color: #244e32; font-size: 0.88rem; }
-.ms-page .ms-filter-fields { gap: 12px 14px; }
-.ms-page .ms-filter-fields label { font-size: 0.68rem; color: #435e4d; }
-.ms-page .ms-filter-fields :is(select,input) { height: 36px; border-radius: 7px; border-color: #cbd9d0; background: #f9fbfa; font-size: 0.7rem; }
-.ms-page .ms-table-panel { border: 1px solid #cbdcd0; border-radius: 12px; background: #fff; }
-.ms-page .ms-status-tabs button { border: 1px solid #d8e3dc; border-radius: 7px; background: #fff; color: #4e6958; }
-.ms-page .ms-status-tabs button.active { border-color: #22743b; background: #22743b; color: #fff; }
-
-.dash-main:has(.ms-page) .dash-content { padding-top: 14px; }
-.ms-page { gap: 12px; }
-.ms-page .ms-heading.ms-heading-compact { margin-bottom: 0; }
-.ms-page .ms-summary { gap: 12px; margin-bottom: 0; }
-.ms-page .ms-summary > button { align-items: center; padding: 12px 14px; gap: 12px; min-height: 82px; }
-.ms-page .ms-summary .tp-icon { width: 34px; height: 34px; flex-shrink: 0; border-radius: 8px; }
-.ms-page .ms-summary .tp-icon svg { width: 22px; height: 22px; }
-.ms-page .ms-summary small { font-size: 0.65rem; }
-.ms-page .ms-summary strong { font-size: 1.4rem; margin: 5px 0 0; }
-@media(max-width:560px) { .ms-page .ms-summary > button { flex-direction: row; padding: 10px; gap: 8px; } }
+.dash-main:has(.ms-page) .dash-content { background: var(--brand-green-tint); padding-top: 12px; }
+.ms-page { gap: 9px; }
+.ms-page .ms-heading.ms-heading-compact { display: flex; justify-content: flex-end; }
+.ms-page .ms-summary { gap: 8px; }
+.ms-page .ms-summary > button { flex-direction: row; align-items: center; padding: 7px 9px; gap: 8px; min-height: 52px; border-left: 3px solid var(--brand-green-active); border-radius: 9px; }
+.ms-page .ms-summary > button.amber { border-left-color: var(--brand-gold); }
+.ms-page .ms-summary .tp-icon { width: 29px; height: 29px; flex-shrink: 0; border-radius: 7px; }
+.ms-page .ms-summary small { font-size: 11px; line-height: 1.25; }
+.ms-page .ms-summary strong { margin: 2px 0 0; font-size: 1.16rem; color: var(--brand-green-deep); }
+.ms-page .ms-filter-panel { padding: 8px 10px; border-color: var(--brand-green-border); border-left: 3px solid var(--brand-gold); }
+.ms-page .ms-filter-panel header { margin-bottom: 6px; }
+.ms-page .ms-filter-panel h2 { color: var(--brand-green-deep); font-size: 13px; }
+.ms-page .ms-filter-fields { gap: 8px; }
+.ms-page .ms-filter-fields label { gap: 4px; color: var(--brand-green-deep); }
+.ms-page .ms-filter-fields :is(select,input) { min-height: 31px; height: 31px; padding: 4px 7px; border-color: var(--brand-green-border); }
+.ms-page .ms-tabs { gap: 5px; }
+.ms-page .ms-tabs button { padding: 5px 8px; border-radius: 7px; }
+.ms-page .ms-tabs button[aria-pressed="true"] { background: var(--brand-green-deep); }
+.ms-page .ms-tabs button[aria-pressed="true"] span { background: var(--brand-green-tint); color: var(--brand-green-deep); }
+.ms-page .ms-table-panel { padding: 0; border-color: var(--brand-green-border); }
+.dash-shell .dash-content .ms-table-panel table { border: 0; outline: 0; }
+.dash-shell .dash-content .ms-table-panel th { padding: 7px 8px; background: var(--brand-green-deep); color: white; }
+.dash-shell .dash-content .ms-table-panel td { padding: 7px 8px; }
+.ms-page .ms-topic { gap: 7px; min-width: 140px; }
+.ms-page .ms-topic .tp-icon { width: 27px; height: 27px; flex-shrink: 0; border-radius: 6px; }
+.ms-page .ms-topic strong { color: var(--brand-green-deep); }
+.ms-page .ms-table-panel .ms-course-code { background: var(--brand-green-tint); border-color: var(--brand-green-border); color: var(--brand-green-deep); }
+.ms-page .ms-row-actions { gap: 5px; }
+.ms-page .ms-row-actions .btn { min-height: 28px; padding: 3px 7px; }
+.ms-page .ms-status.today { background: var(--brand-green-soft); color: var(--brand-green-deep); }
+.ms-page .ms-empty { padding: 18px 12px; }
+.ms-page .ms-empty h3, .ms-page .ms-empty p { margin: 4px 0; }
+@media(min-width:1150px) { .ms-admin-page .ms-filter-fields { grid-template-columns: repeat(6,minmax(0,1fr)); } }
+@media(max-width:650px) { .ms-page .ms-filter-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:420px) { .ms-page .ms-filter-fields { grid-template-columns: 1fr; } }
 
 /* Focused academic analytics. */
 .dash-main:has(.analytics-page) .dash-content { background: #f5f6f8; }
@@ -707,27 +712,7 @@
 .teacher-shell .performance-filters .performance-assigned-course { display: block; width: 100%; height: 36px; margin-top: 6px; padding: 0 10px; border: 1px solid #c6d9cd; border-radius: 7px; background: #edf6f0; color: #365441; font-size: 0.72rem; text-overflow: ellipsis; }
 
 /* Refined teacher makeup schedule filters and empty state. */
-.ms-teacher-page .ms-filter-panel { padding: 15px 17px; border: 1px solid #cbded1; border-left: 3px solid #d5a137; border-radius: 11px; background: linear-gradient(110deg,#fff,#f6faf7); }
-.ms-teacher-page .ms-filter-panel header { margin-bottom: 13px; }
-.ms-teacher-page .ms-filter-panel h2 { color: #294f36; font-size: 0.88rem; gap: 9px; }
-.ms-teacher-page .ms-filter-fields { gap: 12px; }
-.ms-teacher-page .ms-filter-fields label { color: #56715f; font-size: 0.65rem; }
-.ms-teacher-page .ms-filter-fields :is(select,input) { height: 35px; min-height: 35px; padding: 0 10px; border: 1px solid #c8dbce; border-radius: 7px; background: #fff; color: #365441; font-size: 0.69rem; font-weight: 400; }
-.ms-teacher-page .ms-filter-fields input[type="date"] { background: #fffaf0; border-color: #e7d5a5; }
-.ms-teacher-page .ms-tabs { display: flex; flex-wrap: wrap; gap: 7px; padding: 7px; border: 1px solid #d4e2d9; border-radius: 10px; background: #fff; }
-.ms-teacher-page .ms-tabs button { padding: 8px 12px; border: 0; border-radius: 7px; background: #f2f7f4; color: #5a7563; font-size: 0.68rem; }
-.ms-teacher-page .ms-tabs button[aria-pressed="true"] { background: #22743b; color: #fff; }
-.ms-teacher-page .ms-tabs button:hover:not([aria-pressed="true"]) { background: #fff3d1; color: #85621e; }
-.ms-teacher-page .ms-tabs button span { padding: 2px 6px; border-radius: 5px; background: #e3eee7; font-size: 0.6rem; }
-.ms-teacher-page .ms-tabs button[aria-pressed="true"] span { color: #fff; background: #ffffff28; }
-.ms-teacher-page .ms-table-panel { border: 1px solid #cbded1; border-radius: 12px; padding: 0; background: #fff; }
-.ms-teacher-page .ms-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 185px; padding: 26px 18px; background: linear-gradient(135deg,#fff,#f8fbf9); }
-.ms-teacher-page .ms-empty > svg { width: 45px; height: 45px; padding: 10px; box-sizing: content-box; border: 1px solid #ead7a6; border-radius: 13px; color: #a17b23; background: #fff5da; margin-bottom: 12px; }
-.ms-teacher-page .ms-empty h3 { color: #294f36; font-size: 0.98rem; margin: 0 0 7px; }
-.ms-teacher-page .ms-empty p { max-width: 430px; color: #7a8b7f; font-size: 0.72rem; line-height: 1.5; }
-.ms-teacher-page .ms-help { color: #7c8c81; font-size: 0.62rem; line-height: 1.5; }
-@media(max-width:650px) { .ms-teacher-page .ms-filter-fields { grid-template-columns: repeat(2,minmax(0,1fr)); } .ms-teacher-page .ms-tabs button { flex: 1 0 auto; } }
-@media(max-width:420px) { .ms-teacher-page .ms-filter-fields { grid-template-columns: 1fr; } }
+
 
 /* A subtle finish for dashboard contract cards. */
 .teacher-home-contract-grid article { padding: 15px; background: #fff; border-color: #c6ddce; box-shadow: 0 3px 10px #244e3207; }

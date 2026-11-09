@@ -195,7 +195,7 @@
 @media(prefers-reduced-motion:reduce) { .teacher-dashboard-shell * { transition:none!important; } }
 
 /* Sidebar is independent of the admin sidebar; match the reference silhouette. */
-.teacher-dashboard-shell .teacher-reference-dashboard .teacher-contract-totals { display:none; }
+.teacher-dashboard-shell .teacher-reference-dashboard .teacher-contract-totals { display:flex; }
 @media(min-width:1000px) {
   .dash-shell.teacher-dashboard-shell .dash-topbar { height:var(--topbar-h); min-height:var(--topbar-h); flex:0 0 var(--topbar-h); padding:0 24px; }
   .dash-shell.teacher-dashboard-shell .teacher-home-content { flex:1; }
@@ -244,3 +244,8 @@
 }
 
 /* Sidebar crest placement and subtle gold divider. */
+.teacher-calendar-classes { padding: 12px 16px; border-top: 1px solid #e0eae3; }
+.teacher-calendar-classes h3 { margin: 0 0 5px; color: #005035; font-size: 13px; }
+.teacher-calendar-classes p, .teacher-calendar-classes ul { margin: 0; font-size: 12px; }
+.teacher-calendar-classes ul { list-style: none; padding: 0; }
+.teacher-calendar-classes li { display: flex; flex-wrap: wrap; gap: 4px 12px; padding-block: 3px; }

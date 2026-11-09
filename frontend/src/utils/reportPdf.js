@@ -22,6 +22,43 @@ export function buildReportPdf(rows, name, filters = {}, cards = {}, options = {
   y+=8;ensure(30);text('REPORT RECORDS',34,y,10,true,'green');text(rows.length+' records',470,y,9,false,'muted');y+=24;
   if(!rows.length){text('No records match the selected filters.',34,y,11);y+=30;}
   rows.forEach((row,index)=>{
+    if(options.evaluationCards){
+      const heading=wrap(row.statement||row.question||row.courseName,495,12);
+      const group=row.statement?wrap(row.question,495,9):[];
+      const choices=Object.entries(row).filter(([key])=>key.endsWith(' responses'));
+      const metrics=choices.length?choices:[['Responses',row.responses??row.answered??0],...(row.skipped==null?[]:[['Skipped',row.skipped]])];
+      const blocks=[];
+      for(let offset=0;offset<metrics.length;offset+=5)blocks.push(metrics.slice(offset,offset+5));
+      const metricLines=blocks.map(block=>block.map(([key])=>wrap(key.replace(/ responses$/,''),93,8)));
+      const blockHeights=metricLines.map(lines=>Math.max(...lines.map(item=>item.length))*10+21);
+      const headerHeight=48+heading.length*15+group.length*11;
+      let offset=0;
+      while(offset<blocks.length){
+        ensure(headerHeight+blockHeights[offset]+16);
+        let end=offset;
+        let height=headerHeight+16;
+        while(end<blocks.length&&y+height+blockHeights[end]<=790)height+=blockHeights[end++];
+        rect(34,y,527,height,'line');rect(35,y+1,525,height-2,'white');
+        rect(46,y+9,87,18,'green');
+        text((row.courseName?'COURSE ':'QUESTION ')+String(row.number??index+1).padStart(2,'0'),53,y+13,8,true,'white');
+        let lineY=y+35;
+        group.forEach(line=>{text(line,46,lineY,9,false,'muted');lineY+=11;});
+        heading.forEach(line=>{text(line,46,lineY,12,true);lineY+=15;});
+        rect(46,lineY+3,503,0.7,'line');
+        text('RESPONSE DISTRIBUTION',46,lineY+9,8,true,'muted');
+        lineY+=23;
+        for(;offset<end;offset++){
+          blocks[offset].forEach(([,count],col)=>{
+            const x=46+col*101;
+            metricLines[offset][col].forEach((line,j)=>text(line,x,lineY+j*10,8,false,'muted'));
+            text(count,x,lineY+blockHeights[offset]-18,12,true,'green');
+          });
+          lineY+=blockHeights[offset];
+        }
+        y+=height+14;
+      }
+      return;
+    }
     const fields=Object.entries(row).filter(([key])=>!['courseKey','teacherKey','studentKey','_id'].includes(key));
     let recordHeight=43;
     for(let i=0;i<fields.length;i+=2)recordHeight+=25+Math.max(...fields.slice(i,i+2).map(([,value])=>wrap(value,236,10).length))*13;

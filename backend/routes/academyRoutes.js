@@ -6,7 +6,10 @@ const {asyncHandler,pick}=require('../controllers/resourceController');
 const Batch=require('../models/Batch'),Outline=require('../models/CourseOutline'),Makeup=require('../models/MakeupClass');
 const Lesson=require('../models/TeachingLesson'),Teacher=require('../models/Teacher'),Student=require('../models/Student');
 const Contract=require('../models/TeacherContract'),Enrollment=require('../models/Enrollment');
+const TeacherAttendance=require('../models/TeacherAttendance');
+const Course=require('../models/Course');
 const contractService=require('../services/teacherContractService');
+const {enrollmentBatch}=require('../services/batchService');
 const {getStudentProgress}=require('../services/academicProgressService');
 const {withCourseLock}=require('../services/gradebookIntegrityService');
 const router=express.Router();router.use(protect);
@@ -168,34 +171,103 @@ router.get('/outlines/:id/document',asyncHandler(async(req,res)=>{
   if(!outline.document?.data)fail('No document uploaded.',404);
   res.set('Content-Type',outline.document.mime).set('Content-Disposition',`attachment; filename="${encodeURIComponent(outline.document.name)}"`).set('X-Content-Type-Options','nosniff').send(outline.document.data);
 }));
-router.get('/missed-lessons',authorizeRoles('admin'),asyncHandler(async(req,res)=>res.json({lessons:await Lesson.find({status:'planned',$or:[{plannedDate:{$lt:contractService.teachingDay()}},{plannedDate:null}]}).populate({path:'teacher',populate:{path:'user',select:'name'}}).populate('course','title name').populate('contract','academicYear').sort('plannedDate').lean()})));
+router.get('/missed-lessons',authorizeRoles('admin'),asyncHandler(async(req,res)=>res.json({lessons:await Lesson.find({status:'planned',attendance:{$exists:false},$or:[{plannedDate:{$lt:contractService.teachingDay()}},{plannedDate:null}]}).populate({path:'teacher',populate:{path:'user',select:'name'}}).populate('course','title name').populate('contract','academicYear').sort('plannedDate').lean()})));
 router.get('/makeup-classes',authorizeRoles('admin','teacher','student'),asyncHandler(async(req,res)=>{
   let filter=req.user.role==='teacher'?{teacher:(await teacherFor(req.user))._id}:{};
-  if(req.user.role==='student'){const student=await Student.findOne({user:req.user._id});const enrollments=student?await Enrollment.find({student:student._id,status:'enrolled'}).lean():[];if(!enrollments.length)return res.json({classes:[]});filter={$or:enrollments.map(e=>({course:e.course,batch:e.batch||'',academicYear:e.academicYear}))};}
+  if(req.user.role==='student'){
+    const student=await Student.findOne({user:req.user._id});
+    const enrollments=student?await Enrollment.find({student:student._id,status:'enrolled'}).populate('course','batch academicYear').lean():[];
+    const scopes=enrollments.filter(e=>e.course).map(e=>({course:e.course._id,batch:enrollmentBatch(e),academicYear:e.academicYear}));
+    if(!scopes.length)return res.json({classes:[]});
+    filter={$or:scopes};
+  }
 
   const rows=await Makeup.find(filter).populate('lesson','title description status completedDay').populate({path:'teacher',populate:{path:'user',select:'name'}}).populate('course','title name courseCode').sort({start:1}).lean();
-  res.json({classes:rows.map(r=>({...r,...(req.user.role==='student'?{reason:undefined,createdBy:undefined,teacher:undefined}:{}),displayStatus:r.status==='cancelled'?'Cancelled':r.lesson?.status==='completed'?'Completed':'Scheduled'}))});
+  res.json({classes:rows.map(r=>({...r,date:contractService.teachingDay(r.start),...(req.user.role==='student'?{reason:undefined,createdBy:undefined,teacher:undefined}:{}),displayStatus:r.status==='cancelled'?'Cancelled':r.lesson?.status==='completed'?'Completed':'Scheduled'}))});
 }));
+async function withMakeupLock(work) {
+  const course = await Course.findOne().sort({_id:1}).select('_id');
+  if (!course) fail('No course is available.',409);
+  return withCourseLock(course._id,work);
+}
+
+router.get('/teacher-attendance',authorizeRoles('admin'),asyncHandler(async(req,res)=>{
+  const {date}=req.query;
+  if(!contractService.validDate(date))fail('Select a valid attendance date.');
+  const contracts=await Contract.find({
+    status:'active',startDate:{$lte:date},$or:[{endDate:null},{endDate:{$gte:date}}]
+  }).populate({path:'teacher',populate:{path:'user',select:'name isActive'}})
+    .populate('course','title name teachingSchedule').lean();
+  const active=contracts.filter(contract=>contract.course&&contract.teacher?.user?.isActive&&contract.teacher.status!=='inactive');
+  const entries=await TeacherAttendance.find({date,contract:{$in:active.map(contract=>contract._id)}}).lean();
+  const scheduled=await Makeup.find({lesson:{$in:entries.map(entry=>entry._id)},status:'scheduled'}).select('lesson').lean();
+  const byContract=new Map(entries.map(entry=>[String(entry.contract),entry]));
+  const scheduledIds=new Set(scheduled.map(record=>String(record.lesson)));
+  res.json({records:active.map(contract=>{
+    const entry=byContract.get(String(contract._id));
+    return {
+      contract:contract._id,teacher:contract.teacher.user.name,course:contract.course.title||contract.course.name,
+      batch:contract.batch,academicYear:contract.academicYear,
+      scheduled:contract.course.teachingSchedule?.some(slot=>slot.day===new Date(date+'T12:00:00Z').getUTCDay())||false,
+      attendance:entry?{_id:entry._id,status:entry.status,hasMakeup:scheduledIds.has(String(entry._id))}:null
+    };
+  })});
+}));
+
+router.put('/teacher-attendance',authorizeRoles('admin'),asyncHandler(async(req,res)=>{
+  const {date,status}=req.body;
+  if(!contractService.validDate(date)||date>contractService.teachingDay())fail('Choose today or a past date.');
+  if(!['present','absent'].includes(status))fail('Choose Present or Absent.');
+  await withMakeupLock(async()=>{
+    const contract=await contractService.loadContract(id(req.body.contract));
+    if(contract.status!=='active'||date<contract.startDate||(contract.endDate&&date>contract.endDate))fail('Attendance must fall within an active contract.');
+    const teacher=await Teacher.findById(contract.teacher).populate('user','isActive');
+    if(!teacher?.user?.isActive||teacher.status==='inactive'||!await Course.exists({_id:contract.course}))fail('An active teacher and course are required.');
+    const filter={contract:contract._id,date};
+    const previous=await TeacherAttendance.findOne(filter);
+    if(status==='present'&&previous&&await Makeup.exists({lesson:previous._id,status:'scheduled'}))fail('Cancel the linked makeup class before marking this date present.',409);
+    const attendance=await TeacherAttendance.findOneAndUpdate(filter,
+      {$set:{status,markedBy:req.user._id}},{upsert:true,new:true,runValidators:true});
+    res.json({attendance});
+  });
+}));
+
 async function saveMakeup(req,res) {
-  const existing=req.params.id?await Makeup.findById(id(req.params.id)):null;
-  if(req.params.id&&!existing)fail('Makeup class not found.',404);
-  const lesson=await Lesson.findById(id(existing?.lesson||req.body.lesson));if(!lesson)fail('Lesson not found.',404);
-  if(existing&&lesson.status==='completed')fail('A completed class cannot be rescheduled or cancelled.');
-  const start=new Date(req.body.start||existing?.start),end=new Date(req.body.end||existing?.end),status=req.body.status||existing?.status||'scheduled';
-  if(!['scheduled','cancelled'].includes(status)||!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start)fail('Enter a valid schedule.');
-  const originalDate=lesson.plannedDate||existing?.originalDate||req.body.originalDate;
-  if(status==='scheduled'&&(lesson.status==='completed'||!contractService.validDate(originalDate)||originalDate>=contractService.teachingDay()))fail('Select an incomplete lesson and an original missed date before today.');
-  const contract=await contractService.loadContract(lesson.contract);
-  if(status==='scheduled'&&(contractService.teachingDay(start)<contract.startDate||(contract.endDate&&contractService.teachingDay(end)>contract.endDate)))fail('Makeup dates must be within the contract.');
-  if(status==='scheduled'&&contractService.teachingDay(start)<contractService.teachingDay())fail('Choose today or a future date for the replacement class.');
-  // Serialize all scheduling on one existing course document, including cross-course teacher conflicts.
-  const Course=require('../models/Course');const lockCourse=await Course.findOne().sort({_id:1}).select('_id');
-  await withCourseLock(lockCourse._id,async()=>{
-    if(!await Lesson.exists({_id:lesson._id}))fail('Lesson not found.',404);
+  await withMakeupLock(async()=>{
+    const existing=req.params.id?await Makeup.findById(id(req.params.id)):null;
+    if(req.params.id&&!existing)fail('Makeup class not found.',404);
+    const absenceId=existing?.attendance||(!existing&&req.body.attendance);
+    const absence=absenceId?await TeacherAttendance.findById(id(absenceId)):null;
+    if(absenceId&&absence?.status!=='absent')fail('Mark the teacher absent before scheduling a makeup class.');
+    const lessonId=existing?.lesson||absence?._id||id(req.body.lesson);
+    let lesson=await Lesson.findById(lessonId);
+    if(!lesson&&!absence)fail('Lesson not found.',404);
+    if(existing&&lesson?.status==='completed')fail('A completed class cannot be rescheduled or cancelled.');
+    const date=req.body.date;
+    if(date!==undefined&&!contractService.validDate(date))fail('Choose a valid makeup date.');
+    const start=new Date(date===undefined?req.body.start||existing?.start:date+'T00:00:00+03:00');
+    // Date-only bookings use the full Nairobi day for overlap checks with existing bookings.
+    const end=date===undefined?new Date(req.body.end||existing?.end):new Date(start.getTime()+86400000);
+    const status=req.body.status||existing?.status||'scheduled';
+    if(!['scheduled','cancelled'].includes(status)||!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start)fail('Enter a valid schedule.');
+    const originalDate=absence?.date||lesson?.plannedDate||existing?.originalDate||req.body.originalDate;
+    const today=contractService.teachingDay();
+    const futureMissedDate=absence?originalDate>today:originalDate>=today;
+    if(status==='scheduled'&&(lesson?.status==='completed'||!contractService.validDate(originalDate)||futureMissedDate))fail('Select an incomplete lesson and a valid missed date.');
+    const contract=await contractService.loadContract(absence?.contract||lesson.contract);
+    const makeupDate=contractService.teachingDay(start);
+    const lastDay=contractService.teachingDay(new Date(end.getTime()-1));
+    if(status==='scheduled'&&(makeupDate<contract.startDate||(contract.endDate&&lastDay>contract.endDate)))fail('Makeup dates must be within the contract.');
+    if(status==='scheduled'&&makeupDate<today)fail('Choose today or a future date for the replacement class.');
     const other={...(existing?{_id:{$ne:existing._id}}:{}),status:'scheduled'};
-    if(status==='scheduled'&&await Makeup.exists({...other,$or:[{lesson:lesson._id},{start:{$lt:end},end:{$gt:start},$or:[{teacher:lesson.teacher},{course:lesson.course,batch:lesson.batch}]}]}))fail('This lesson already has a makeup class or the teacher/batch schedule conflicts.');
-    const fields={lesson:lesson._id,contract:lesson.contract,teacher:lesson.teacher,course:lesson.course,batch:lesson.batch,academicYear:contract.academicYear,originalDate,start,end,status,reason:req.body.reason||existing?.reason,createdBy:existing?.createdBy||req.user._id};
-    const record=existing?Object.assign(existing,fields):new Makeup(fields);await record.save();res.status(existing?200:201).json({class:record});
+    const teacher=lesson?.teacher||contract.teacher,course=lesson?.course||contract.course,batch=lesson?.batch||contract.batch;
+    if(status==='scheduled'&&await Makeup.exists({...other,$or:[{lesson:lessonId},{start:{$lt:end},end:{$gt:start},$or:[{teacher},{course,batch}]}]}))fail('This lesson already has a makeup class or the teacher/batch schedule conflicts.');
+    const record=existing||new Makeup();
+    record.set({lesson:lessonId,attendance:absence?._id,contract:contract._id,teacher,course,batch,academicYear:contract.academicYear,originalDate,start,end,status,reason:req.body.reason||existing?.reason,createdBy:existing?.createdBy||req.user._id});
+    await record.validate();
+    if(!lesson)lesson=await Lesson.create({_id:lessonId,attendance:absence._id,contract:contract._id,teacher,course,batch,title:'Makeup class for '+originalDate,plannedDate:originalDate});
+    await record.save();
+    res.status(existing?200:201).json({class:{...record.toObject(),date:makeupDate}});
   });
 }
 router.post('/makeup-classes',authorizeRoles('admin'),asyncHandler(saveMakeup));

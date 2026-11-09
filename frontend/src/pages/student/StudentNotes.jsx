@@ -1,3 +1,5 @@
+import TeachingIcon from '../../components/TeachingIcon';
+import './StudentNotes.css';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState } from 'react';
@@ -28,7 +30,7 @@ export default function StudentNotes() {
     <>
       {error && <div className="card card-body" role="alert">{error}</div>}
       <div className="filter-bar">
-        <select className="form-control" style={{width:'auto'}} value={selCourse} onChange={e=>setSelCourse(e.target.value)}>
+        <select aria-label="Filter study notes by course" className="form-control" style={{width:'auto'}} value={selCourse} onChange={e=>setSelCourse(e.target.value)}>
           {['All', ...new Set(notes.map(n=>n.course))].map(c=><option key={c} value={c}>{c==='All'?'All Courses':c}</option>)}
         </select>
       </div>
@@ -40,14 +42,14 @@ export default function StudentNotes() {
           <div className="card-body" style={{padding:'1rem 1.4rem'}}>
             {filtered.map(n=>(
               <div key={n._id} className="note-card">
-                <div className="note-icon">📄</div>
+                <div className="note-icon"><TeachingIcon name="file" size={19}/></div>
                 <div className="note-info">
                   <h4>{n.title}</h4><p style={{whiteSpace: 'pre-wrap'}}>{n.content}</p>
                   <p>{n.course} • By {n.teacher} • {n.uploadedAt}</p>
                 </div>
                 <div className="note-actions">
                   <button className="btn btn-sm btn-primary" onClick={async()=>{ if(n.hasAttachment){try{const response=await api.get('/student/materials/'+n._id+'/file',{responseType:'blob'});const url=URL.createObjectURL(response.data),link=document.createElement('a');link.href=url;link.download=n.filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}catch{setError('Study document could not be downloaded.');}return;} const url=URL.createObjectURL(new Blob([n.content], {type:'text/plain;charset=utf-8'})); const link=document.createElement('a'); link.href=url; link.download=`${n.title.replace(/[^a-z0-9 -]/gi, '_')}.txt`; link.click(); URL.revokeObjectURL(url); }}>
-                    ⬇️ Download
+                    Download
                   </button>
                 </div>
               </div>

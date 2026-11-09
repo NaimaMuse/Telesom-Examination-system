@@ -95,16 +95,13 @@ const runTests = async () => {
   console.log('--- Running User Controller Tests ---\n');
 
   {
-    const { req, res, next, getResult } = createMock({
-      name: 'Amina Student',
-      email: 'amina@student.telesom.com',
-    });
+    const { req, res, next, getResult } = createMock({});
     await createStudent(req, res, next);
     const result = getResult();
     assert(
       result.statusCode === 400 &&
         result.nextCalled &&
-        /gender/i.test(result.nextError.message),
+        /name/i.test(result.nextError.message),
       'Student creation rejects missing required fields'
     );
   }
