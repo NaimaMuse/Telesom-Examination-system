@@ -304,3 +304,21 @@
 .ev-admin-card > p { margin: 0 0 8px; color: #526a5c; overflow-wrap: anywhere; }
 .ev-admin-card-counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; box-sizing: border-box; width: 100%; margin: 5px 0 10px; padding: 9px 12px; border-radius: 8px; background: #f3f8f4; color: #3b634d; }
 .ev-admin-card-counts dd { margin: 0; color: #174c35; font-size: 15px; font-weight: 700; }
+
+.evaluations .ev-recent-defenses { margin: 12px 0 0; padding: 0; overflow: hidden; border-top: 2px solid #d9a42c; box-shadow: 0 5px 16px #163d2c12; }
+.ev-recent-heading { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: linear-gradient(105deg,#f6fbf7,#eaf5ed); }
+.ev-recent-heading h3 { margin: 0; color: #163f2d; font-size: 16px; }
+.ev-recent-heading p { margin: 1px 0 0; color: #496355; }
+.ev-recent-defenses .ev-recent-empty,.ev-recent-defenses .ev-error { margin: 0; padding: 14px; color: #496355; }
+.ev-recent-table-wrap { overflow-x: auto; }
+.ev-recent-table { width: 100%; min-width: 515px; border-collapse: collapse; text-align: left; }
+.ev-recent-table :is(th,td) { padding: 7px 12px; border-top: 1px solid #e5eee8; }
+.ev-recent-table thead { background: #fafcfb; color: #4d6658; }
+.ev-recent-table tbody tr:hover { background: #f6faf7; }
+.ev-recent-table tbody th { color: #173f2d; font-weight: 650; overflow-wrap: anywhere; }
+.ev-recent-table :is(th,td):first-child { width: 38%; }
+.ev-recent-table :is(th,td):last-child { text-align: right; }
+.ev-recent-table .ev-status[data-state="draft"] { background: #fff5d9; border-color: #ead49a; color: #6b490b; }
+.ev-recent-table .ev-status[data-state="finalized"] { background: #e5f5ea; border-color: #cce7d4; color: #175a38; }
+.evaluations .ev-recent-table a.btn { min-height: 27px; padding: 3px 8px; background: #f3faf5; color: #165c38; white-space: nowrap; }
+.evaluations .ev-recent-table a.btn:hover { background: #e3f3e8; }

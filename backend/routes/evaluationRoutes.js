@@ -11,7 +11,18 @@ async function transaction(fn){const s=await mongoose.startSession();try{const h
 async function student(req){const s=await Student.findOne({user:req.user._id});if(!s)fail('Student profile not found',404);return s;}
 async function notices(f,event,title,session){if(!f.students.length)return;await Notice.bulkWrite(f.students.map(s=>({updateOne:{filter:{student:s,form:f._id,event},update:{$setOnInsert:{title,message:`${f.title} is available. ${f.deadline?'Deadline: '+new Date(f.deadline).toLocaleString('en-GB',{timeZone:'Africa/Nairobi'})+' (Africa/Nairobi)':''}`}},upsert:true}})),{session});}
 router.get('/courses',admin,asyncHandler(async(req,res)=>res.json({courses:await Course.find({}).select('name title courseCode').sort('name').lean()})));
-router.get('/eligible/:course',admin,asyncHandler(async(req,res)=>{const ids=await Enrollment.distinct('student',{...(req.params.course==='all'?{}:{course:req.params.course}),status:'enrolled'});const filter={_id:{$in:ids}};res.json({total:await Student.countDocuments(filter),students:await Student.find(filter).populate('user','name email').sort('studentId').skip(page(req).skip).limit(50)});}));
+router.get('/eligible/:course',admin,asyncHandler(async(req,res)=>{
+  const {cohortName,cohortYear}=req.query;
+  const enrollment={...(req.params.course==='all'?{}:{course:req.params.course}),status:'enrolled'};
+  if(cohortName!==undefined||cohortYear!==undefined){
+    if(req.params.course==='all'||typeof cohortName!=='string'||!cohortName.trim()||
+        typeof cohortYear!=='string'||!cohortYear.trim())fail('Choose a valid course and cohort.');
+    Object.assign(enrollment,{batch:cohortName,academicYear:cohortYear});
+  }
+  const ids=await Enrollment.distinct('student',enrollment);
+  const filter={_id:{$in:ids}};
+  res.json({total:await Student.countDocuments(filter),students:await Student.find(filter).populate('user','name email').sort('studentId').skip(page(req).skip).limit(50)});
+}));
 router.get('/',asyncHandler(async(req,res)=>{const filter=req.user.role==='admin'?{}:{students:(await student(req))._id,status:{$ne:'draft'}};const forms=await Form.find(filter).select('-questions -students').populate('course','name title').sort('-createdAt').skip(page(req).skip).limit(50).lean();for(const f of forms){f.effectiveStatus=state(f);const original=await Form.findById(f._id).select('students');f.assignedCount=original.students.length;if(req.user.role==='admin')f.eligibleCount=(await Enrollment.distinct('student',{...(f.allCourses?{}:{course:f.course?._id}),status:'enrolled'})).length;if(req.user.role==='student')f.response=await Response.findOne({form:f._id,student:(await student(req))._id}).select('submittedAt editedAt');}res.json({forms,total:await Form.countDocuments(filter)});}));
 router.post('/',admin,asyncHandler(async(req,res)=>{const allCourses=req.body.allCourses===true;const c=allCourses?null:await Course.findById(req.body.course);if(!allCourses&&!c)fail('Select an existing course');if(req.body.questions)validateQuestions(req.body.questions);const f=await Form.create({questions:req.body.questions||[],description:req.body.description||'',title:req.body.title||'Untitled evaluation',allCourses,course:c?._id||null,createdBy:req.user._id});res.status(201).json({form:f});}));
 router.get('/:id',asyncHandler(async(req,res)=>{const f=await Form.findById(req.params.id).populate('course','name title').lean();if(!f)fail('Evaluation not found',404);let response=null;if(req.user.role==='student'){const s=await student(req);if(f.status==='draft'||!f.students.some(id=>String(id)===String(s._id)))fail('Evaluation not assigned',403);response=await Response.findOne({form:f._id,student:s._id});await Notice.updateMany({form:f._id,student:s._id,readAt:null},{$set:{readAt:new Date()}});delete f.students;}f.effectiveStatus=state(f);res.json({form:f,response});}));

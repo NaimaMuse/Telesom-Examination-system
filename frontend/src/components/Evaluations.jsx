@@ -26,6 +26,50 @@ function CourseOptions({courses}){
    {courses.map(course=><option key={course._id} value={course._id}>{courseName(course)}</option>)}
  </>;
 }
+const defenseDateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+function RecentDefenses({course}){
+ const [records,setRecords]=useState(null);
+ const [error,setError]=useState('');
+ const [attempt,setAttempt]=useState(0);
+ useEffect(()=>{
+   if(!course)return;
+   const controller=new AbortController();
+   api.get('/evaluations/defenses/recent',{params:{course:course._id},signal:controller.signal})
+     .then(({data})=>{if(!controller.signal.aborted)setRecords(data.records);})
+     .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
+   return ()=>controller.abort();
+ },[course,attempt]);
+
+ return <section className="ev-card ev-recent-defenses" aria-labelledby="ev-recent-title">
+   <header className="ev-recent-heading">
+     <span className="ev-create-icon"><TeachingIcon name="clock" size={19}/></span>
+     <div><h3 id="ev-recent-title">Recent Defenses</h3>{course&&<p>{courseName(course)}</p>}</div>
+   </header>
+   {!course?<p className="ev-recent-empty">Select a course to see its recent defenses.</p>
+    :error?<div className="ev-error" role="alert">{error} <button type="button" onClick={()=>{setError('');setAttempt(value=>value+1);}}>Retry</button></div>
+    :!records?<p className="ev-recent-empty" role="status">Loading defenses…</p>
+    :!records.length?<p className="ev-recent-empty">No saved defenses for this course yet.</p>
+    :<div className="ev-recent-table-wrap">
+      <table className="ev-recent-table" aria-labelledby="ev-recent-title">
+       <thead><tr><th scope="col">Project</th><th scope="col">Group</th><th scope="col">Defense date</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
+       <tbody>{records.map(record=>{
+         const finalized=record.status==='finalized';
+         const project=record.projectTitle||'Untitled project';
+         const defenseDate=Date.parse(record.defenseDate);
+         return <tr key={record._id}>
+           <th scope="row">{project}</th>
+           <td>{record.groupName||'—'}</td>
+           <td>{Number.isFinite(defenseDate)?defenseDateFormat.format(defenseDate):'—'}</td>
+           <td><span className="ev-status" data-state={record.status}>{finalized?'Finalized':'Draft'}</span></td>
+           <td><Link className="btn" to={'/admin/project-defenses/'+record._id} aria-label={(finalized?'View ':'Continue ')+project}>
+             {finalized?'View':'Continue'}<TeachingIcon name="arrow" size={15}/>
+           </Link></td>
+         </tr>;
+       })}</tbody>
+      </table>
+    </div>}
+ </section>;
+}
 export function NewEvaluation(){
  const navigate=useNavigate();
  const [params]=useSearchParams();
@@ -55,7 +99,7 @@ export function NewEvaluation(){
    <section className="ev-card ev-defense-generator">
      <span className="ev-create-icon ev-create-icon-defense"><TeachingIcon name="layers" size={21}/></span>
      <div className="ev-defense-generator-content">
-       <h3>Full-Stack Project Defense</h3>
+       <h3>Course Project Defense</h3>
        <form className="ev-defense-generator-form" onSubmit={event=>{
          event.preventDefault();
          if(selectedDefenseCourse){
@@ -76,6 +120,7 @@ export function NewEvaluation(){
    </section>
    {error&&<div className="ev-error" role="alert">{error} {!courses&&<button type="button" onClick={()=>{setError('');setAttempt(value=>value+1);}}>Retry</button>}</div>}
    {!courses&&!error&&<p role="status">Loading courses…</p>}
+   {courses&&<RecentDefenses key={selectedDefenseCourse?._id||'none'} course={selectedDefenseCourse}/>}
  </div>;
 }
 function AdminEvaluationCard({form,base}){

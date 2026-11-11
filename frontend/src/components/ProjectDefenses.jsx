@@ -1,6 +1,5 @@
 import {useEffect,useState} from 'react';
 import {Link,useParams,useSearchParams} from 'react-router-dom';
-import {useAuth} from '../context/AuthContext';
 import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
 import './ProjectDefenses.css';
@@ -8,8 +7,8 @@ import './ProjectDefenses.css';
 const route='/admin/project-defenses';
 const defenseHome='/admin/evaluations/new';
 const endpoint='/evaluations/defenses';
-const scores=[1,2,3,4,5];
-const defenseTitle='Full-Stack Project Presentation & Defense';
+const defaultRatingOptions=[1,2,3,4,5];
+const defenseTitle='Project Presentation & Defense';
 const candidateTitle='Candidate & Process Details';
 const placementTitle='Final Placement & Selection Matrix';
 const rubric=[
@@ -47,10 +46,8 @@ const outcomes=[
 const details=[
   ['groupName','Group name','users','Enter group name',120],
   ['projectTitle','Project title','file','Enter project title',200],
-  ['cohort','Training cohort','layers','Enter training cohort',120],
-  ['defenseDate','Defense date','calendar'],
 ];
-const empty={course:'',students:[],ratings:{},notes:{},groupName:'',projectTitle:'',cohort:'',
+const empty={course:'',students:[],ratings:{},notes:{},groupName:'',projectTitle:'',cohort:'',cohortYear:'',evaluatorName:'',
   defenseDate:'',outcome:'',summary:'',signature:'',signatureDate:'',status:'draft'};
 const message=error=>error.response?.data?.message||'Unable to complete the request.';
 
@@ -61,8 +58,10 @@ function DefenseSectionTitle({icon,children}){
   </h3>;
 }
 
-function DefenseWordingEditor({wording,onApply,onCancel}){
+function DefenseWordingEditor({wording,ratingOptions,ratings,onApply,onCancel}){
   const [draft,setDraft]=useState(()=>({...wording}));
+  const [optionText,setOptionText]=useState(()=>ratingOptions.join(', '));
+  const [optionError,setOptionError]=useState('');
   function field(key,label,fallback,required=true){
     return <label>{label}
       <input value={draft[key]??fallback} required={required} maxLength={500}
@@ -71,10 +70,28 @@ function DefenseWordingEditor({wording,onApply,onCancel}){
   }
   return <form className="defense-section defense-wording-editor defense-screen" onSubmit={event=>{
     event.preventDefault();
-    onApply(draft);
+    const parts=optionText.split(',').map(value=>value.trim());
+    const options=parts.map(Number);
+    if(parts.some(value=>!/^\d+$/.test(value))||options.some(value=>!Number.isSafeInteger(value)||value<1)||
+        new Set(options).size!==options.length){
+      setOptionError('Enter distinct positive whole numbers separated by commas.');
+      return;
+    }
+    const inUse=[...new Set(Object.values(ratings))].filter(value=>!options.includes(value));
+    if(inUse.length){
+      setOptionError('Change the marks using '+inUse.join(', ')+' before removing those options.');
+      return;
+    }
+    onApply(draft,options.sort((a,b)=>a-b));
   }}>
     <DefenseSectionTitle icon="file">Edit Form</DefenseSectionTitle>
     {field('title','Form title',defenseTitle)}
+    <label>Rating options
+      <input value={optionText} required aria-describedby="defense-rating-options-help"
+        aria-invalid={!!optionError} onChange={event=>{setOptionText(event.target.value);setOptionError('');}}/>
+    </label>
+    <p id="defense-rating-options-help">Separate options with commas, for example 1, 2, 3, 4, 5, 6. The highest number is the maximum score.</p>
+    {optionError&&<p className="ev-error" role="alert">{optionError}</p>}
     {field('A','Section A title',candidateTitle)}
     {rubric.map(([section,title,criteria])=><fieldset key={section}>
       <legend>Section {section} · {title}</legend>
@@ -92,14 +109,87 @@ function DefenseWordingEditor({wording,onApply,onCancel}){
   </form>;
 }
 
-function Rating({criterion,value,onChange}){
-  return scores.map(score=><label className="defense-rating" key={score}>
+function Rating({criterion,value,options,onChange}){
+  return options.map(score=><label className="defense-rating" key={score}>
     <input type="radio" name={criterion} value={score} checked={value===score} onChange={()=>onChange(score)}/>
     <span>{score}</span>
   </label>);
 }
 
-function StudentPicker({course,selected,onChange}){
+function defenseScores(ratings,maxRating){
+  const averages=rubric.map(([, ,criteria])=>{
+    const rated=criteria.map(([key])=>ratings[key]).filter(Boolean);
+    return rated.length?rated.reduce((sum,value)=>sum+value,0)/rated.length:0;
+  });
+  return {averages,percentage:averages.reduce((sum,average)=>sum+average,0)/(rubric.length*maxRating)*100};
+}
+
+function DefenseMarksEditor({ratings,ratingOptions,maxRating,wording,busy,error,onSave,onCancel}){
+  const [draft,setDraft]=useState(()=>({...ratings}));
+  const {percentage}=defenseScores(draft,maxRating);
+  return <form className="defense-section defense-marks-editor defense-screen" onSubmit={event=>{
+    event.preventDefault();
+    if(!busy)onSave(draft);
+  }}>
+    <DefenseSectionTitle icon="chart">Edit Marks · {percentage.toFixed(1)}%</DefenseSectionTitle>
+    <fieldset disabled={busy}>
+      {rubric.map(([section,title,criteria])=><section className="defense-mark-section" key={section}>
+        <h4>{wording(section,title)}</h4>
+        {criteria.map(([key,label])=><fieldset className="defense-criterion" key={key}>
+          <legend>{wording(key,label)}</legend>
+          <div className="defense-scores"><Rating criterion={key} value={draft[key]} options={ratingOptions}
+            onChange={value=>setDraft(previous=>({...previous,[key]:value}))}/></div>
+        </fieldset>)}
+      </section>)}
+    </fieldset>
+    {error&&<p className="ev-error" role="alert">{error}</p>}
+    <div className="ev-actions">
+      <button className="btn-primary" type="submit" disabled={busy}>{busy?'Saving…':'Save Marks'}</button>
+      <button type="button" disabled={busy} onClick={onCancel}>Cancel</button>
+    </div>
+  </form>;
+}
+
+function CohortPicker({course,cohort,cohortYear,autoSelect,onChange}){
+  const [options,setOptions]=useState(null);
+  const [error,setError]=useState('');
+  const [retry,setRetry]=useState(0);
+  useEffect(()=>{
+    if(!course)return;
+    const controller=new AbortController();
+    api.get(endpoint+'/courses/'+course+'/cohorts',{signal:controller.signal})
+      .then(({data})=>{if(!controller.signal.aborted)setOptions(data.cohorts);})
+      .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
+    return ()=>controller.abort();
+  },[course,retry]);
+  useEffect(()=>{
+    if(autoSelect&&!cohort&&options?.length===1)onChange(options[0]);
+  },[autoSelect,cohort,options,onChange]);
+  const value=cohort?JSON.stringify([cohort,cohortYear||'']):'';
+  const label=[cohort,cohortYear].filter(Boolean).join(' · ');
+  const missing=cohort&&!options?.some(option=>option.name===cohort&&option.academicYear===cohortYear);
+  return <div>
+    <label>
+      <span className="defense-field-label"><span className="defense-screen"><TeachingIcon name="layers" size={15}/></span>Training cohort</span>
+      <select className="defense-screen" value={value} disabled={!options?.length}
+        onChange={event=>{
+          const [name,academicYear]=JSON.parse(event.target.value);
+          onChange({name,academicYear});
+        }}>
+        <option value="" disabled>{!course?'Choose a course first':error?'Unable to load cohorts':!options?'Loading cohorts…':options.length?'Select a cohort':'No cohorts found'}</option>
+        {missing&&<option value={value}>{label}</option>}
+        {options?.map(option=>{
+          const key=JSON.stringify([option.name,option.academicYear]);
+          return <option key={key} value={key}>{option.name} · {option.academicYear}</option>;
+        })}
+      </select>
+      <span className="defense-print">{label||'—'}</span>
+    </label>
+    {error&&<p className="defense-screen" role="alert">{error} <button type="button" onClick={()=>{setError('');setRetry(value=>value+1);}}>Retry</button></p>}
+  </div>;
+}
+
+function StudentPicker({course,cohort,cohortYear,selected,onChange}){
   const [page,setPage]=useState(1);
   const [result,setResult]=useState(null);
   const [error,setError]=useState('');
@@ -107,11 +197,12 @@ function StudentPicker({course,selected,onChange}){
   useEffect(()=>{
     if(!course)return;
     const controller=new AbortController();
-    api.get('/evaluations/eligible/'+course,{params:{page},signal:controller.signal})
+    const params={page,...(cohortYear?{cohortName:cohort,cohortYear}:{})};
+    api.get('/evaluations/eligible/'+course,{params,signal:controller.signal})
       .then(({data})=>{if(!controller.signal.aborted)setResult(data);})
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
-  },[course,page,retry]);
+  },[course,cohort,cohortYear,page,retry]);
   function changePage(next){
     setResult(null);
     setError('');
@@ -120,7 +211,7 @@ function StudentPicker({course,selected,onChange}){
   return <fieldset className="defense-student-picker">
     <legend><TeachingIcon name="users" size={16}/> Enrolled students · {selected.length} selected</legend>
     {!course?<p>Choose a course to load students.</p>:error?<p role="alert">{error} <button type="button" onClick={()=>{setError('');setRetry(value=>value+1);}}>Retry</button></p>:!result?<p role="status">Loading students…</p>:<>
-      {result.total===0&&<p>No enrolled students for this course.</p>}
+      {result.total===0&&<p>{cohortYear?'No enrolled students for this cohort.':'No enrolled students for this course.'}</p>}
       <div className="defense-students">{result.students.map(student=><label key={student._id}>
         <input type="checkbox" checked={selected.includes(student._id)} onChange={event=>onChange(event.target.checked
           ? [...selected,student._id] : selected.filter(id=>id!==student._id))}/>
@@ -179,7 +270,6 @@ export function ProjectDefenseEditor(){
 }
 
 function DefenseForm({id,initialCourse}){
-  const {user}=useAuth();
   const [groups,setGroups]=useState(()=>[{...empty,groupName:'Group 1'}]);
   const [activeGroup,setActiveGroup]=useState(0);
   const [courses,setCourses]=useState(null);
@@ -187,6 +277,7 @@ function DefenseForm({id,initialCourse}){
   const [notice,setNotice]=useState('');
   const [busy,setBusy]=useState(false);
   const [editingWording,setEditingWording]=useState(false);
+  const [editingMarks,setEditingMarks]=useState(false);
   useEffect(()=>{
     const controller=new AbortController();
     const options={signal:controller.signal};
@@ -204,7 +295,10 @@ function DefenseForm({id,initialCourse}){
   },[id,initialCourse]);
 
   const form=groups[activeGroup];
+  const ratingOptions=form.ratingOptions||defaultRatingOptions;
+  const maxRating=ratingOptions.reduce((highest,option)=>Math.max(highest,option),0);
   const finalized=form.status==='finalized';
+  const editing=editingWording||editingMarks;
   const wording=(key,fallback)=>form.wording?.[key]?.trim()||fallback;
   function setForm(update){
     setGroups(previous=>previous.map((group,index)=>index===activeGroup
@@ -217,22 +311,19 @@ function DefenseForm({id,initialCourse}){
     setError('');
   }
   function addGroup(){
-    setGroups(previous=>[...previous,{...empty,course:form.course,groupName:'Group '+(previous.length+1)}]);
+    setGroups(previous=>[...previous,{...empty,course:form.course,cohort:form.cohort,cohortYear:form.cohortYear,
+      groupName:'Group '+(previous.length+1)}]);
     selectGroup(groups.length);
   }
   function resetGroup(){
     if(!window.confirm('Clear the active group’s students, project details, ratings, and notes?'))return;
-    setForm({...form,...empty,course:form.course,groupName:form.groupName});
+    setForm({...form,...empty,course:form.course,cohort:form.cohort,cohortYear:form.cohortYear,groupName:form.groupName});
     setError('');
     setNotice(form._id?'Group cleared. Save the draft to keep these changes.':'Group cleared.');
   }
   const patch=(key,value)=>{setNotice('');setForm(previous=>({...previous,[key]:value}));};
   const rate=(key,value)=>patch('ratings',{...form.ratings,[key]:value});
-  const averages=rubric.map(([, ,criteria])=>{
-    const rated=criteria.map(([key])=>form.ratings[key]).filter(Boolean);
-    return rated.length?rated.reduce((total,value)=>total+value,0)/rated.length:0;
-  });
-  const percentage=averages.reduce((sum,average)=>sum+average,0)/(rubric.length*5)*100;
+  const {averages,percentage}=defenseScores(form.ratings,maxRating);
   const course=courses?.find(course=>course._id===form.course);
   const courseLabel=course?.name||course?.title||'';
   const backTo=form.course?defenseHome+'?'+new URLSearchParams({course:form.course}):defenseHome;
@@ -254,6 +345,26 @@ function DefenseForm({id,initialCourse}){
       setBusy(false);
     }
   }
+  async function saveMarks(ratings){
+    setError('');
+    if(!finalized){
+      patch('ratings',ratings);
+      setEditingMarks(false);
+      setNotice('Marks updated. Save the draft to keep these changes.');
+      return;
+    }
+    setBusy(true);
+    try{
+      const {data}=await api.patch(endpoint+'/'+form._id+'/marks',{ratings,__v:form.__v});
+      setForm(data.record);
+      setEditingMarks(false);
+      setNotice('Marks saved.');
+    }catch(error){
+      setError(message(error));
+    }finally{
+      setBusy(false);
+    }
+  }
   return <div className="evaluations defense-page">
     <nav className="ev-create-breadcrumb defense-screen" aria-label="Breadcrumb">
       <Link to="/admin">Dashboard</Link><span aria-hidden="true">/</span>
@@ -264,30 +375,34 @@ function DefenseForm({id,initialCourse}){
       <Link className="btn" to={backTo}><span aria-hidden="true">←</span> Back to Project Defense</Link>
       <div className="defense-toolbar-actions">
         {courses&&<><span className="ev-status">{finalized?'Finalized':'Draft'}</span>
-          {!finalized&&<button type="button" disabled={busy||editingWording} onClick={()=>setEditingWording(true)}>Edit Form</button>}
-          <button type="button" disabled={editingWording} onClick={()=>window.print()}><TeachingIcon name="file" size={15}/> Print / Save PDF</button></>}
+          {!finalized&&<button type="button" disabled={busy||editing} onClick={()=>setEditingWording(true)}>Edit Form</button>}
+          <button type="button" disabled={busy||editing} onClick={()=>{setError('');setNotice('');setEditingMarks(true);}}>Edit Marks</button>
+          <button type="button" disabled={editing} onClick={()=>window.print()}><TeachingIcon name="file" size={15}/> Print / Save PDF</button></>}
         <Link className="btn btn-primary" to={route}><TeachingIcon name="folder" size={15}/> Saved Defenses</Link>
       </div>
     </nav>
     {!courses?(error?<p className="ev-error" role="alert">{error}</p>:<p role="status">Loading evaluation…</p>):<>
       <section className="defense-group-panel defense-screen" aria-label="Defense groups">
         <div className="defense-group-tabs" role="group" aria-label="Choose a group">
-          {groups.map((group,index)=><button type="button" key={index} disabled={busy||editingWording}
+          {groups.map((group,index)=><button type="button" key={index} disabled={busy||editing}
             aria-pressed={index===activeGroup} onClick={()=>selectGroup(index)}>
             {group.groupName||'Group '+(index+1)}
           </button>)}
-          <button type="button" disabled={busy||editingWording} onClick={addGroup}>+ Add Group</button>
+          <button type="button" disabled={busy||editing} onClick={addGroup}>+ Add Group</button>
         </div>
         <div className="defense-group-controls">
           <strong>Active group · {form.groupName||'Group '+(activeGroup+1)}</strong>
-          <button className="defense-group-reset" type="button" disabled={busy||finalized||editingWording} onClick={resetGroup}>Reset Active Group</button>
+          <button className="defense-group-reset" type="button" disabled={busy||finalized||editing} onClick={resetGroup}>Reset Active Group</button>
         </div>
       </section>
-      {editingWording?<DefenseWordingEditor wording={form.wording} onCancel={()=>setEditingWording(false)} onApply={value=>{
-        patch('wording',value);
+      {editingWording?<DefenseWordingEditor wording={form.wording} ratingOptions={ratingOptions} ratings={form.ratings}
+        onCancel={()=>setEditingWording(false)} onApply={(wording,options)=>{
+        setForm(previous=>({...previous,wording,ratingOptions:options}));
         setEditingWording(false);
         setNotice('Form updated. Save the draft to keep these changes.');
-      }}/>:<form onSubmit={event=>{event.preventDefault();save(false);}}>
+      }}/>:editingMarks?<DefenseMarksEditor ratings={form.ratings} ratingOptions={ratingOptions} maxRating={maxRating} wording={wording} busy={busy} error={error}
+        onSave={saveMarks} onCancel={()=>{setError('');setEditingMarks(false);}}/>
+      :<form onSubmit={event=>{event.preventDefault();save(false);}}>
         <header className="defense-title">
           <img src="/telesom-academy-logo.png" alt="Telesom Academy"/>
           <div>
@@ -305,7 +420,7 @@ function DefenseForm({id,initialCourse}){
             <div className="defense-details">
               <label className="defense-screen"><span className="defense-field-label"><TeachingIcon name="graduate" size={15}/> Course</span><select value={form.course} required onChange={event=>{
                 setNotice('');
-                setForm(previous=>({...previous,course:event.target.value,students:[]}));
+                setForm(previous=>({...previous,course:event.target.value,cohort:'',cohortYear:'',students:[]}));
               }}>
                 <option value="">Select a course</option>
                 {courses.map(course=><option key={course._id} value={course._id}>{course.name||course.title}</option>)}
@@ -313,31 +428,43 @@ function DefenseForm({id,initialCourse}){
               <p className="defense-print">Course · {courseLabel}</p>
               {details.map(([field,label,icon,placeholder,maxLength])=><label key={field}>
                 <span className="defense-field-label"><span className="defense-screen"><TeachingIcon name={icon} size={15}/></span>{label}</span>
-                <input className="defense-screen" type={maxLength?'text':'date'} placeholder={placeholder} maxLength={maxLength} value={form[field]}
+                <input className="defense-screen" placeholder={placeholder} maxLength={maxLength} value={form[field]}
                   onChange={event=>patch(field,event.target.value)}/>
                 <span className="defense-print">{form[field]||'—'}</span>
               </label>)}
-              <div className="defense-evaluator"><span className="defense-icon defense-screen"><TeachingIcon name="profile" size={17}/></span>
-                <div><strong>Evaluator</strong><div>{form.evaluatorName||user?.name}</div></div>
-              </div>
+              <CohortPicker key={activeGroup+':'+form.course} course={form.course} cohort={form.cohort}
+                cohortYear={form.cohortYear} autoSelect={!finalized&&(!form._id||!form.students.length)} onChange={({name,academicYear})=>{
+                  setNotice('');
+                  setForm(previous=>({...previous,cohort:name,cohortYear:academicYear,students:[]}));
+                }}/>
+              <label><span className="defense-field-label"><span className="defense-screen"><TeachingIcon name="calendar" size={15}/></span>Defense date</span>
+                <input className="defense-screen" type="date" value={form.defenseDate} onChange={event=>patch('defenseDate',event.target.value)}/>
+                <span className="defense-print">{form.defenseDate||'—'}</span>
+              </label>
+              <label><span className="defense-field-label"><span className="defense-screen"><TeachingIcon name="profile" size={15}/></span>Evaluator name</span>
+                <input className="defense-screen" placeholder="Enter evaluator name" maxLength={200} value={form.evaluatorName||''}
+                  onChange={event=>patch('evaluatorName',event.target.value)}/>
+                <span className="defense-print">{form.evaluatorName||'—'}</span>
+              </label>
             </div>
-            <div className="defense-screen"><StudentPicker key={activeGroup+':'+form.course} course={form.course}
+            <div className="defense-screen"><StudentPicker key={JSON.stringify([activeGroup,form.course,form.cohort,form.cohortYear])}
+              course={form.course} cohort={form.cohort} cohortYear={form.cohortYear}
               selected={form.students} onChange={value=>patch('students',value)}/></div>
           </section>
           {rubric.map(([section,title,criteria])=><section className="defense-section" key={section}>
             <DefenseSectionTitle icon={section==='G'?'users':'clipboard'}>Section {section} · {wording(section,title)}</DefenseSectionTitle>
-            {section==='G'?<table className="defense-matrix defense-professional">
-              <thead><tr><th scope="col">Key attribute</th>{scores.map(score=><th scope="col" key={score}>{score}</th>)}</tr></thead>
-              <tbody>{criteria.map(([key,label])=><tr key={key}><th scope="row">{wording(key,label)}</th>{scores.map(score=><td key={score}>
+            {section==='G'?<div className="defense-matrix-scroll"><table className="defense-matrix defense-professional">
+              <thead><tr><th scope="col">Key attribute</th>{ratingOptions.map(score=><th scope="col" key={score}>{score}</th>)}</tr></thead>
+              <tbody>{criteria.map(([key,label])=><tr key={key}><th scope="row">{wording(key,label)}</th>{ratingOptions.map(score=><td key={score}>
                 <input className="defense-screen" type="radio" name={key} aria-label={wording(key,label)+' · '+score}
                   checked={form.ratings[key]===score} onChange={()=>rate(key,score)}/>
                 <span className="defense-print">{form.ratings[key]===score?'✓':''}</span>
               </td>)}</tr>)}</tbody>
-            </table>:criteria.map(([key,label,guidance])=><fieldset className="defense-criterion" key={key}>
+            </table></div>:criteria.map(([key,label,guidance])=><fieldset className="defense-criterion" key={key}>
               <legend>{wording(key,label)}</legend>
               {(form.wording?.[key+'Hint']??guidance)?.trim()&&<p className="defense-guidance">Look for · {form.wording?.[key+'Hint']??guidance}</p>}
-              <div className="defense-scores defense-screen"><span>Rating</span><Rating criterion={key} value={form.ratings[key]} onChange={value=>rate(key,value)}/></div>
-              <p className="defense-print">Rating · {form.ratings[key]??'—'} / 5</p>
+              <div className="defense-scores defense-screen"><span>Rating</span><Rating criterion={key} value={form.ratings[key]} options={ratingOptions} onChange={value=>rate(key,value)}/></div>
+              <p className="defense-print">Rating · {form.ratings[key]??'—'} / {maxRating}</p>
               {guidance&&<label>Evaluation notes<textarea className="defense-screen" maxLength={4000} value={form.notes[key]||''}
                 onChange={event=>patch('notes',{...form.notes,[key]:event.target.value})}/>
                 <span className="defense-print">{form.notes[key]||'—'}</span>
@@ -347,7 +474,7 @@ function DefenseForm({id,initialCourse}){
           <section className="defense-section">
             <DefenseSectionTitle icon="chart">Section I · {wording('I',placementTitle)}</DefenseSectionTitle>
             <table className="defense-matrix"><thead><tr><th scope="col">Assessment category</th><th scope="col">Score</th></tr></thead>
-              <tbody>{rubric.map(([section,title],index)=><tr key={section}><th scope="row">{wording(section,title)}</th><td>{averages[index].toFixed(1)} / 5</td></tr>)}</tbody>
+              <tbody>{rubric.map(([section,title],index)=><tr key={section}><th scope="row">{wording(section,title)}</th><td>{averages[index].toFixed(1)} / {maxRating}</td></tr>)}</tbody>
               <tfoot><tr><th scope="row">Aggregate total score</th><td>{percentage.toFixed(1)}%</td></tr></tfoot>
             </table>
             <fieldset className="defense-outcomes">
