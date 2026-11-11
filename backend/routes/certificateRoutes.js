@@ -24,6 +24,18 @@ const minutesOfDay = time => {
   return hours * 60 + minutes;
 };
 
+function parseAwardDate(value) {
+  if (value === undefined) return new Date();
+  if (typeof value !== 'string' || !/^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)) {
+    fail(400, 'Choose a valid award date.');
+  }
+  const calendarDate = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(calendarDate.getTime()) || calendarDate.toISOString().slice(0, 10) !== value) {
+    fail(400, 'Choose a valid award date.');
+  }
+  return new Date(`${value}T12:00:00+03:00`);
+}
+
 function totalCreditHours(course) {
   const { durationWeeks, teachingSchedule } = course;
   if (!Number.isSafeInteger(durationWeeks) || durationWeeks < 1 || !teachingSchedule?.length) return null;
@@ -86,11 +98,12 @@ router.get('/', asyncHandler(async (req, res) => {
   const filter = await readFilter(req);
   const page = Math.max(1, Math.min(100000, parseInt(req.query.page, 10) || 1));
   const limit = 25;
+  const sort = req.user.role === 'admin' ? { _id: -1 } : { awardedAt: -1, _id: -1 };
   const [data, count] = await Promise.all([
-    Certificate.find(filter).sort({ awardedAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    Certificate.find(filter).sort(sort).skip((page - 1) * limit).limit(limit).lean(),
     Certificate.countDocuments(filter),
   ]);
-  res.json({ success: true, data, page, pages: Math.max(1, Math.ceil(count / limit)) });
+  res.json({ success: true, data, page, total: count, pages: Math.max(1, Math.ceil(count / limit)) });
 }));
 
 router.post('/', adminOnly, asyncHandler(async (req, res) => {
@@ -112,8 +125,8 @@ router.post('/', adminOnly, asyncHandler(async (req, res) => {
   }
   const creditHours = totalCreditHours(enrollment.course);
   if (!creditHours) fail(409, 'Set the course duration and weekly teaching schedule before issuing.');
-  const awardedAt = new Date();
-  const certificateNo = `TA: ${certificateYear(awardedAt)}-${suffix}`;
+  const awardedAt = parseAwardDate(req.body.awardDate);
+  const certificateNo = `TA: ${certificateYear(awardedAt).padStart(4, '0')}-${suffix}`;
   try {
     const certificate = await Certificate.create({
       enrollment: enrollment._id, student: enrollment.student._id, issuedBy: req.user._id,
@@ -135,8 +148,9 @@ router.get('/:id/pdf', asyncHandler(async (req, res) => {
   if (!certificate) fail(404, 'Certificate not found.');
   const pdf = await renderCertificatePdf(certificate);
   const filename = certificate.certificateNo.replace(/^TA: /, 'TA-');
+  const disposition = req.query.download === '1' ? 'attachment' : 'inline';
   res.set({
-    'Content-Disposition': `inline; filename="${filename}.pdf"`,
+    'Content-Disposition': `${disposition}; filename="${filename}.pdf"`,
     'Cache-Control': 'private, no-store',
   }).type('application/pdf').send(pdf);
 }));

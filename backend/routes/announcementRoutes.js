@@ -17,25 +17,61 @@ const activeTeacherAccount = {path:'user', match:{role:'teacher', isActive:true}
 
 router.use(protect, authorizeRoles('admin', 'teacher', 'student'));
 
+function recipientScopes({_id, role}) {
+  const scopes = [{audience:role, targetTeacher:null, ...(role === 'student' ? {senderRole:'admin'} : {})}];
+  if (role === 'teacher') scopes.push({audience:'teacher', targetTeacher:_id});
+  if (role === 'student') scopes.push({audience:'student', studentRecipients:_id});
+  return scopes;
+}
+
+function countUnread(user) {
+  return Announcement.countDocuments({
+    $or:recipientScopes(user), sender:{$ne:user._id}, readBy:{$ne:user._id}, dismissedBy:{$ne:user._id},
+  });
+}
+
+router.get('/unread-count', asyncHandler(async (req, res) => {
+  res.json({unreadCount:await countUnread(req.user)});
+}));
+
 router.get('/', asyncHandler(async (req, res) => {
   const page = Number(req.query.page ?? 1);
   if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(page * pageSize)) {
     fail(400, 'Invalid announcement page.');
   }
-  const {_id, role} = req.user;
-  const visible = [
-    {audience:role, targetTeacher:null, ...(role === 'student' ? {senderRole:'admin'} : {})},
-    {sender:_id},
-  ];
-  if (role === 'teacher') visible.push({audience:'teacher', targetTeacher:_id});
-  if (role === 'student') visible.push({audience:'student', studentRecipients:_id});
-  const rows = await Announcement.find({$or:visible})
-    .select('sender senderName senderRole audience targetTeacher title message createdAt')
-    .sort({createdAt:-1, _id:-1}).skip((page - 1) * pageSize).limit(pageSize + 1).lean();
-  const announcements = rows.slice(0, pageSize).map(({sender, targetTeacher, ...item}) => ({
+  const {_id} = req.user;
+  const visible = [...recipientScopes(req.user), {sender:_id}];
+  const [rows, unreadCount] = await Promise.all([
+    Announcement.find({$or:visible, dismissedBy:{$ne:_id}})
+      .select('sender senderName senderRole audience targetTeacher title message createdAt readBy')
+      .sort({createdAt:-1, _id:-1}).skip((page - 1) * pageSize).limit(pageSize + 1).lean(),
+    countUnread(req.user),
+  ]);
+  const announcements = rows.slice(0, pageSize).map(({sender, targetTeacher, readBy, ...item}) => ({
     ...item, targeted:Boolean(targetTeacher), sentByMe:String(sender) === String(_id),
+    read:Boolean(readBy?.some(id => String(id) === String(_id))),
   }));
-  res.json({announcements, hasMore:rows.length > pageSize});
+  res.json({announcements, hasMore:rows.length > pageSize, unreadCount});
+}));
+
+function recipientAnnouncement(req) {
+  if (!isObjectIdOrHexString(req.params.id)) fail(400, 'Invalid announcement ID.');
+  return {_id:req.params.id, sender:{$ne:req.user._id}, $or:recipientScopes(req.user)};
+}
+
+router.patch('/:id/read', asyncHandler(async (req, res) => {
+  const result = await Announcement.updateOne(
+    {...recipientAnnouncement(req), dismissedBy:{$ne:req.user._id}},
+    {$addToSet:{readBy:req.user._id}},
+  );
+  if (!result.matchedCount) fail(404, 'Announcement not found.');
+  res.json({success:true});
+}));
+
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const result = await Announcement.updateOne(recipientAnnouncement(req), {$addToSet:{dismissedBy:req.user._id}});
+  if (!result.matchedCount) fail(404, 'Announcement not found.');
+  res.json({success:true});
 }));
 
 async function assignedStudents(teacherId) {

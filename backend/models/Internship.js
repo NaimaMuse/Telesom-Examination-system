@@ -8,6 +8,7 @@ const schema = new mongoose.Schema({
   courseName: { type: String, trim: true },
   studentName: { type: String, required: true, trim: true, maxlength: 120 },
   totalDays: { type: Number, min: 1, max: 36500, validate: Number.isInteger },
+  monthlyStipendCents: { type: Number, min: 0, validate: Number.isSafeInteger },
   attendanceSchedule: { ...weeklySchedule, default: undefined },
   startDate: { type: String, required: true, validate: [validDate, 'Enter a valid start date.'] },
   endDate: {

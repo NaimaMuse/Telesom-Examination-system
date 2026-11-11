@@ -7,6 +7,8 @@ const announcementSchema = new mongoose.Schema({
   audience: [{type:String, enum:['admin', 'teacher', 'student']}],
   targetTeacher: {type:mongoose.Schema.Types.ObjectId, ref:'User'},
   studentRecipients: [{type:mongoose.Schema.Types.ObjectId, ref:'User'}],
+  readBy: [{type:mongoose.Schema.Types.ObjectId, ref:'User'}],
+  dismissedBy: [{type:mongoose.Schema.Types.ObjectId, ref:'User'}],
   title: {type:String, required:true, trim:true, maxlength:120},
   message: {type:String, required:true, trim:true, maxlength:4000},
 }, {timestamps:true});

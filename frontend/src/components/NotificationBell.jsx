@@ -48,12 +48,12 @@ export default function NotificationBell({ userId, onNavigate }) {
       <TeachingIcon name="bell" size={20}/>{unread.length > 0 && <span className="notification-count">{unread.length > 99 ? '99+' : unread.length}</span>}
     </button>
     {open && <section className="notification-panel" id="notification-panel" aria-label="Notifications">
-      <header><div><strong>Important notices</strong><p>Evaluations and upcoming assessments</p></div><button type="button" aria-label="Close notifications" onClick={() => {setOpen(false);trigger.current?.focus();}}>×</button></header>
-      <div className="notification-tools"><span aria-live="polite">{unread.length} unread</span><button type="button" disabled={!unread.length} onClick={() => markRead(items.map(item=>item.id))}>Mark all read</button></div>
+      <header><strong>Important notices</strong><button type="button" aria-label="Close notifications" onClick={() => {setOpen(false);trigger.current?.focus();}}>×</button></header>
+      <div className="notification-tools"><span aria-live="polite">{unread.length} unread</span><button type="button" disabled={!unread.length} onClick={() => markRead(unread.map(item=>item.id))}>Mark all read</button></div>
       {error && <div className="notification-error" role="alert">{error} <button type="button" onClick={() => setRefresh(value=>value+1)}>Retry</button></div>}
       <div className="notification-list">
-        {loading ? <p className="notification-empty">Loading updates…</p> : !items.length && !error ? <p className="notification-empty">No important notices right now.</p> : items.map(item => <Link className={`notification-item ${(item.persisted ? item.readAt : read.includes(item.id)) ? '' : 'unread'}`} key={item.id} to={item.href} onClick={() => {markRead([item.id]);setOpen(false);onNavigate?.();}}>
-          <span className="notification-indicator" aria-label={(item.persisted ? item.readAt : read.includes(item.id)) ? 'Read' : 'Unread'}/><div><strong>{item.title}</strong><time dateTime={item.scheduledAt}>{new Date(item.scheduledAt).toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'})}</time></div>
+        {loading ? <p className="notification-empty">Loading updates…</p> : !unread.length && !error ? <p className="notification-empty">No unread notices.</p> : unread.map(item => <Link className="notification-item unread" key={item.id} to={item.href} onClick={() => {markRead([item.id]);setOpen(false);onNavigate?.();}}>
+          <span className="notification-indicator" aria-label="Unread"/><div><strong>{item.title}</strong><time dateTime={item.scheduledAt}>{new Date(item.scheduledAt).toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Africa/Nairobi'})}</time></div>
         </Link>)}
       </div>
     </section>}

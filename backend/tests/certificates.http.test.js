@@ -77,19 +77,30 @@ let server;
   const list = async user => (await (await request('GET', '', user)).json()).data;
   assert.deepEqual((await list(owner)).map(row => [row._id, row.creditHours]), [[data._id, 64]]);
   assert.deepEqual(await list(other), []);
+  assert.equal((await (await request('GET', '', owner)).json()).total, 1);
   const pdf = `/${data._id}/pdf`;
   assert.equal((await request('GET', pdf, other)).status, 404);
+  assert.equal((await request('GET', `${pdf}?download=1`, other)).status, 404);
+  const download = await request('GET', `${pdf}?download=1`, owner);
+  assert.equal(download.status, 200);
+  assert.equal(download.headers.get('content-disposition'), `attachment; filename="TA-${year}-0001.pdf"`);
+  assert.equal(Buffer.from(await download.arrayBuffer()).subarray(0, 4).toString(), '%PDF');
   const response = await request('GET', pdf, owner);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('content-type'), 'application/pdf');
   assert.equal(Buffer.from(await response.arrayBuffer()).subarray(0, 8).toString(), '%PDF-1.4');
-  const second = await request('POST', '', admin, {
+  const secondDetails = {
     enrollmentId: String(otherEnrollment._id), suffix: '0002', courseTitle: 'Digital Marketing',
-  });
+  };
+  assert.equal((await request('POST', '', admin, { ...secondDetails, awardDate: '2024-02-30' })).status, 400);
+  const second = await request('POST', '', admin, { ...secondDetails, awardDate: '2024-02-29' });
   assert.equal(second.status, 201);
   const secondCertificate = (await second.json()).data;
   assert.equal(secondCertificate.creditHours, 72);
   assert.equal(secondCertificate.courseTitle, 'Digital Marketing');
+  assert.equal(secondCertificate.awardedAt, '2024-02-29T09:00:00.000Z');
+  assert.equal(secondCertificate.certificateNo, 'TA: 2024-0002');
+  assert.equal((await list(admin))[0]._id, secondCertificate._id);
   assert.equal((await request('GET', `/${secondCertificate._id}/pdf`, owner)).status, 404);
   console.log('Certificate integration passed: completion, role permissions, credit snapshot, unique numbers and PDF ownership.');
 })().catch(error => {

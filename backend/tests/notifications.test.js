@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { getNotifications } = require('../services/notificationService');
-const models = Object.fromEntries(['Student','Teacher','CourseTeacher','Enrollment','Course','Exam','Quiz','ExamResult','QuizResult','Attendance','Note'].map(name=>[name,require(`../models/${name}`)]));
+const models = Object.fromEntries(['Student','Teacher','CourseTeacher','Enrollment','Course','Exam','Quiz','ExamResult','QuizResult','Attendance','Note','TeacherContract','TeachingLesson','Internship'].map(name=>[name,require(`../models/${name}`)]));
 const now = new Date('2026-10-26T12:00:00Z');
 const recent = new Date('2026-10-25T12:00:00Z');
 const old = new Date('2026-08-01T12:00:00Z');
@@ -15,6 +15,7 @@ const fixtures = {
  Course:[], Exam:[upcoming,base('future',{...upcoming,title:'Far future',examDate:new Date('2026-11-20')}),base('past',{...upcoming,title:'Past exam',examDate:new Date('2026-10-24')}),exam,other,base('old',{title:'Old update',status:'completed',course:'course-a',academicYear:'2026',semester:'S1',updatedAt:old}),base('cancelled',{title:'Cancelled exam',status:'cancelled',course:'course-a',academicYear:'2026',semester:'S1'})], Quiz:[],
  ExamResult:[base('result-a',{student:'student-a',exam}),base('result-b',{student:'student-b',exam:other}),base('deleted-exam',{student:'student-a',exam:null})],
  QuizResult:[], Attendance:[], Note:[base('note-a',{student:'student-a',title:'Personal study note'}),base('note-b',{student:'student-b',title:'Other student note'})],
+ TeacherContract:[], TeachingLesson:[], Internship:[],
 };
 const id = value => value?._id || value;
 const matches = (row, filter) => Object.entries(filter).every(([key,value]) => {
@@ -23,7 +24,7 @@ const matches = (row, filter) => Object.entries(filter).every(([key,value]) => {
  if(value && typeof value==='object' && !(value instanceof Date)) {
   if('$in' in value) return value.$in.includes(actual);
   if('$ne' in value) return actual!==value.$ne;
-  if('$gte' in value || '$lt' in value) return (!('$gte' in value) || new Date(actual)>=value.$gte) && (!('$lt' in value) || new Date(actual)<value.$lt);
+  if('$gte' in value || '$lt' in value) return (!('$gte' in value) || (value.$gte instanceof Date ? new Date(actual) : actual)>=value.$gte) && (!('$lt' in value) || (value.$lt instanceof Date ? new Date(actual) : actual)<value.$lt);
  }
  return actual===value;
 });
@@ -64,6 +65,41 @@ fixtures.Quiz.push(base('draft',{course:'course-a',academicYear:'2026',semester:
  const admin=await getNotifications({_id:'admin-user',role:'admin'},now);
  assert(admin.some(n=>n.title.includes('Private other upcoming')));
  assert(admin.every(n=>['exam','quiz','assessment'].includes(n.type)));
+
+ const assignedTeacher = {_id:'teacher-a',user:{name:'Teacher One'}};
+ fixtures.TeacherContract.push(
+   base('calendar-ended',{teacher:assignedTeacher,course:{name:'Networks'},status:'active',dayBasis:'calendar',startDate:'2026-09-30',totalDays:25}),
+   base('last-day',{teacher:assignedTeacher,status:'active',dayBasis:'calendar',startDate:'2026-10-26',totalDays:1}),
+   base('other-contract',{teacher:{_id:'teacher-b'},status:'active',dayBasis:'calendar',startDate:'2026-09-01',totalDays:3}),
+   base('cancelled-contract',{teacher:assignedTeacher,status:'cancelled',dayBasis:'calendar',startDate:'2026-09-01',totalDays:3}),
+   base('teaching-ended',{teacher:assignedTeacher,status:'active',dayBasis:'teaching',startDate:'2026-10-01',totalDays:2})
+ );
+ fixtures.TeachingLesson.push(
+   base('lesson-1',{contract:'teaching-ended',status:'completed',completedDay:'2026-10-24'}),
+   base('lesson-2',{contract:'teaching-ended',status:'completed',completedDay:'2026-10-24'}),
+   base('lesson-3',{contract:'teaching-ended',status:'completed',completedDay:'2026-10-26'})
+ );
+ fixtures.Internship.push(
+   base('placement',{studentName:'Amina',startDate:'2026-08-31',endDate:'2026-10-30',monthlyStipendCents:6550}),
+   base('short-placement',{studentName:'Omar',startDate:'2026-10-01',endDate:'2026-10-08',monthlyStipendCents:5000}),
+   base('unpaid-placement',{studentName:'Ali',startDate:'2026-08-01',endDate:'2026-10-08'})
+ );
+ const staff = await getNotifications({_id:'teacher-user',role:'teacher'},now);
+ assert.deepStrictEqual(staff.filter(n=>n.type==='contract-ended').map(n=>n.id),[
+   'contract-ended:teaching-ended:2026-10-26','contract-ended:calendar-ended:2026-10-25'
+ ]);
+ assert(!staff.some(n=>n.type.startsWith('internship')));
+ const milestones = await getNotifications({_id:'admin-user',role:'admin'},now);
+ assert(milestones.some(n=>n.id.startsWith('contract-ended:other-contract:')));
+ assert(milestones.some(n=>n.id==='internship-ended:short-placement:2026-10-09'));
+ const payment = milestones.filter(n=>n.type==='internship-stipend-due');
+ assert.deepStrictEqual(payment.map(n=>n.id),['internship-stipend-due:placement:2026-09-30']);
+ assert.strictEqual(payment[0].title,'Pay $65.50 to Amina for internship month 1.');
+ const boundary = await getNotifications({_id:'admin-user',role:'admin'},new Date('2026-10-30T21:00:00Z'));
+ assert(boundary.some(n=>n.id==='internship-ended:placement:2026-10-31'));
+ assert(boundary.some(n=>n.id==='internship-stipend-due:placement:2026-10-31'));
+ const studentMilestones = await getNotifications({_id:'user-a',role:'student'},now);
+ assert(!studentMilestones.some(n=>n.type.startsWith('internship') || n.type==='contract-ended'));
  models.Teacher.findOne=()=>({lean:async()=>null});
  await assert.rejects(getNotifications({_id:'teacher-user',role:'teacher'},now),error=>error.statusCode===404);
  console.log('Notifications tests passed: upcoming exams, both quiz stores, assessments, published results only, seven-day window and role privacy.');

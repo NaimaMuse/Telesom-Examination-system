@@ -6,6 +6,7 @@ const Exam = require('../models/Exam');
 const Quiz = require('../models/Quiz');
 const ExamResult = require('../models/ExamResult');
 const QuizResult = require('../models/QuizResult');
+const { getMilestoneNotices } = require('./milestoneNotifications');
 
 async function getResultNotices(studentId) {
   const notices = await Promise.all([['exam', ExamResult], ['quiz', QuizResult]].map(async ([kind, Model]) => {
@@ -36,6 +37,7 @@ async function getNotifications(user, now = new Date()) {
   const upcomingEnd = new Date(upcomingStart.getTime() + 7 * 86400000);
   let scopes = [];
   let results = [];
+  let teacherId;
   if (user.role === 'student') {
     const student = await Student.findOne({ user: user._id }).lean();
     if (!student) throw Object.assign(new Error('Student profile not found'), { statusCode: 404 });
@@ -45,11 +47,13 @@ async function getNotifications(user, now = new Date()) {
   } else if (user.role === 'teacher') {
     const teacher = await Teacher.findOne({ user: user._id }).lean();
     if (!teacher) throw Object.assign(new Error('Teacher profile not found'), { statusCode: 404 });
+    teacherId = teacher._id;
     const assignments = await CourseTeacher.find({ teacher: teacher._id, status: 'active' }).lean();
     scopes = assignments.map(a => ({ course: a.course, academicYear: a.academicYear, ...(a.semester ? { semester: a.semester } : {}) }));
   }
   const filter = user.role === 'admin' ? {} : scopes.length ? { $or: scopes } : null;
-  if (!filter) return results;
+  const milestones = await getMilestoneNotices(user, teacherId, today.toISOString().slice(0, 10), now);
+  if (!filter) return [...milestones, ...results];
   const dates = { $gte: upcomingStart, $lt: upcomingEnd };
   const [exams, quizzes] = await Promise.all([
     Exam.find({ ...filter, ...(user.role==='student'?{visibleToStudents:true}:{}), status: { $in: ['scheduled', 'upcoming', 'ongoing'] }, examDate: dates }).sort({ examDate: 1 }).limit(30).lean(),
@@ -70,6 +74,6 @@ async function getNotifications(user, now = new Date()) {
   };
   const upcoming = [...exams.map(row => toNotice(row, 'exam')), ...quizzes.map(row => toNotice(row, 'quiz'))]
     .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)).slice(0, 60);
-  return [...results, ...upcoming];
+  return [...milestones, ...results, ...upcoming];
 }
 module.exports = { getNotifications };

@@ -8,6 +8,7 @@ export function WeeklySchedulePreview({schedule = [], title = 'Weekly teaching s
 export default function WeeklySchedule({
   value = [], onChange, title = 'Weekly teaching schedule',
   description = 'Choose teaching days and class times.', daysLabel = 'Teaching days', emptyMessage,
+  compact = false,
 }) {
   const [sameTime, setSameTime] = useState(() => value.every(row => row.startTime === value[0]?.startTime && row.endTime === value[0]?.endTime));
   const [sharedTime, setSharedTime] = useState(() => ({startTime:value[0]?.startTime || '08:00', endTime:value[0]?.endTime || '10:00'}));
@@ -19,7 +20,7 @@ export default function WeeklySchedule({
   return (
     <section className="weekly-schedule" aria-label={title}>
       <div className="weekly-schedule-heading">
-        <div><h3>{title}</h3><p>{description}</p></div>
+        <div><h3>{title}</h3>{!compact && <p>{description}</p>}</div>
         <span className="weekly-timezone">Nairobi · UTC+3</span>
       </div>
       <div className="weekly-day-picker" role="group" aria-label={daysLabel}>
@@ -38,7 +39,7 @@ export default function WeeklySchedule({
         }
       }} /> Same time for all days</label>
       <div className="weekly-schedule-rows">
-        {sameTime && <div className="weekly-schedule-row is-enabled"><span className="weekly-selected-day">All selected days</span><div className="weekly-time-range">
+        {sameTime && <div className="weekly-schedule-row is-enabled">{!compact && <span className="weekly-selected-day">All selected days</span>}<div className="weekly-time-range">
           <label><span>From</span><input type="time" required aria-label="All days start time" value={sharedTime.startTime} onChange={event => updateSharedTime('startTime',event.target.value)}/></label>
           <span className="weekly-time-divider">–</span>
           <label><span>To</span><input type="time" required aria-label="All days end time" value={sharedTime.endTime} onChange={event => updateSharedTime('endTime',event.target.value)}/></label>
@@ -56,7 +57,7 @@ export default function WeeklySchedule({
           </div>;
         })}
       </div>
-      <WeeklySchedulePreview schedule={value} title="Schedule summary" emptyMessage={emptyMessage}/>
+      {!compact && <WeeklySchedulePreview schedule={value} title="Schedule summary" emptyMessage={emptyMessage}/>}
     </section>
   );
 }

@@ -1,4 +1,4 @@
-.announcement-trigger { flex-shrink: 0; }
+.announcement-trigger { position: relative; flex-shrink: 0; }
 
 .announcement-dialog {
   position: fixed;
@@ -89,7 +89,26 @@
 }
 
 .announcement-item h3 { margin: 3px 0; color: var(--brand-green-deep); font-size: 13px; }
-.announcement-item p { margin: 0; font-size: 12px; line-height: 1.4; white-space: pre-wrap; }
+.announcement-item p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+.announcement-item.announcement-unread { border-color: var(--brand-gold-border); background: var(--brand-gold-tint); }
+.announcement-item-heading, .announcement-item-actions { display: flex; align-items: center; gap: 6px; }
+.announcement-item-heading { justify-content: space-between; margin-block: 3px; }
+.announcement-item-actions { flex-shrink: 0; }
+.announcement-item-actions .btn { display: grid; place-items: center; width: 30px; padding: 0; }
+.announcement-item-actions .announcement-delete { color: #922f24; }
+.announcement-message-dialog { width: min(560px, calc(100% - 24px)); }
+.announcement-message-dialog h2, .announcement-full-message { overflow-wrap: anywhere; }
+.announcement-message-dialog .announcement-close { flex-shrink: 0; }
+.announcement-full-message { white-space: pre-wrap; font-size: 14px; line-height: 1.6; }
 .announcement-form > label, .announcement-teacher-select { display: grid; gap: 4px; font-size: 12px; font-weight: 650; }
 .announcement-dialog .announcement-form .form-control { min-height: 32px; padding: 5px 8px; font-size: 12px; }
 .announcement-form textarea { resize: vertical; }
