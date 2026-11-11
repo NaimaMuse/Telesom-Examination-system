@@ -1,6 +1,7 @@
 import TeacherAttendance from '../pages/admin/TeacherAttendance';
 import TeacherStudents from '../pages/teacher/TeacherStudents';
-import Evaluations from './Evaluations';
+import Evaluations, { NewEvaluation } from './Evaluations';
+import {ProjectDefenseEditor,ProjectDefenseList} from './ProjectDefenses';
 import AcademyHeader from './AcademyHeader';
 import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
@@ -77,7 +78,8 @@ const NAV = {
       section: 'Academic',
       items: [
         { to: '/admin/exams',      label: 'Exam & Quiz Mgmt',  icon: 'clipboard' },
-        { to: '/admin/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
+        { to: '/admin/evaluations', label: 'Evaluation Forms', icon: 'clipboard', end: true },
+        { to: '/admin/evaluations/new', label: 'Project Defense', icon: 'file' },
         { to: '/admin/marks',      label: 'Marks & Results',   icon: 'chart' },
         { to: '/admin/attendance', label: 'Attendance',         icon: 'calendar' },
         { to: '/admin/outlines', label: 'Teaching & Outlines', icon: 'book' },
@@ -148,7 +150,11 @@ const ROLE_ROUTES = {
     <Routes>
       <Route index            element={<AdminDashboard />} />
       <Route path="evaluations" element={<Evaluations admin />} />
+      <Route path="evaluations/new" element={<NewEvaluation />} />
       <Route path="evaluations/:id" element={<Evaluations admin />} />
+      <Route path="project-defenses" element={<ProjectDefenseList />} />
+      <Route path="project-defenses/new" element={<ProjectDefenseEditor />} />
+      <Route path="project-defenses/:id" element={<ProjectDefenseEditor />} />
       <Route path="students"  element={<StudentMgmt />} />
       <Route path="internships" element={<Internships />} />
       <Route path="teachers"  element={<TeacherMgmt />} />
@@ -204,7 +210,9 @@ const ROLE_ROUTES = {
 };
 
 const PAGE_META = {
-  '/admin/evaluations': {title:'Evaluation Forms',hint:'Create course evaluations and review student feedback.'},
+  '/admin/evaluations': {title:'Evaluation Forms',hint:'Manage evaluations and review student feedback.'},
+  '/admin/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
+  '/admin/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
   '/student/evaluations': {title:'Evaluation Forms',hint:'Complete your assigned course evaluations.'},
   '/teacher/my-course/outline': {title:'Course Planner',hint:'Plan lessons, organize topics and track teaching progress.'},
   '/admin/reports': {title:'Reports Center',hint:'Filtered academy reports and exports.'},
@@ -366,7 +374,7 @@ export default function DashboardLayout({ role }) {
                     to={item.to}
                     end={item.end}
                     className={({ isActive }) =>
-                      `sidebar-link ${isActive ? 'active' : ''}`
+                      `sidebar-link ${isActive || (item.to === '/admin/evaluations/new' && /^\/admin\/project-defenses(?:\/|$)/.test(location.pathname)) ? 'active' : ''}`
                     }
                     onClick={() => setSidebarOpen(false)}
                   >

@@ -290,6 +290,21 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   ]);
   assert(resumed.every(result=>result.status===201));
   assert.deepStrictEqual(resumed.map(result=>Number(result.body.data.courseCode.split('-').at(-1))).sort(),[105,106]);
+  const cohortId=createdCohort.body.cohort._id;
+  const edited=await request('PATCH','/academy/cohorts/'+cohortId,{name:' Cohort 4 ',academicYear:'2027'});
+  assert.strictEqual(edited.status,200,JSON.stringify(edited.body));
+  assert.strictEqual(edited.body.cohort.name,'Cohort 4');
+  assert.strictEqual(edited.body.cohort.academicYear,'2027');
+  assert.strictEqual(edited.body.cohort.status,'archived');
+  assert.strictEqual((await request('PATCH','/academy/cohorts/'+cohortId,{name:'Batch 1',academicYear:'2026'})).status,409);
+  assert.strictEqual((await request('PATCH','/academy/cohorts/'+cohortId,{name:'Unauthorized'},tu)).status,403);
+  const linkedCohort=await m.Batch.findOne({name:'Batch 1',academicYear:'2026'});
+  const linkedPath='/academy/cohorts/'+linkedCohort._id;
+  assert.strictEqual((await request('PATCH',linkedPath,{academicYear:'2027'})).status,409);
+  const renamed=await request('PATCH',linkedPath,{name:'Batch One'});
+  assert.strictEqual(renamed.status,200,JSON.stringify(renamed.body));
+  assert.strictEqual((await m.Student.findById(student._id)).batch,'Batch One');
+  assert(await m.Enrollment.exists({student:student._id,batch:'Batch One',academicYear:'2026'}));
   console.log('Academy integration passed: all report categories, role isolation, 90+10 marks, batch uniqueness, hidden quizzes, documents, profile images, missed lessons, makeup completion/reversal and historical dropped students.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
   if(server)await new Promise(resolve=>server.close(resolve));
