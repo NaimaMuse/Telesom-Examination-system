@@ -1,6 +1,6 @@
 require('dotenv').config({path:require('path').join(__dirname,'../.env')});
 const assert=require('assert'),crypto=require('crypto'),mongoose=require('mongoose'),bcrypt=require('bcryptjs');
-const names=['User','Teacher','Student','Course','CourseTeacher','Enrollment','Batch','TeacherContract','TeacherAttendance','TeachingLesson','CourseOutline','MakeupClass','Exam','Quiz','ExamResult','QuizResult','Attendance','Internship'];
+const names=['User','Teacher','Student','Course','CourseTeacher','Enrollment','Batch','TeacherContract','TeacherAttendance','TeachingLesson','CourseOutline','MakeupClass','Exam','Quiz','ExamResult','QuizResult','Attendance','Internship','Sequence','Announcement'];
 const m=Object.fromEntries(names.map(n=>[n,require('../models/'+n)]));
 const {app}=require('../server'),token=require('../utils/generateToken'),cs=require('../services/teacherContractService');
 const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let server;
@@ -18,6 +18,46 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   await m.Enrollment.create({student:student._id,course:course._id,academicYear:'2026',semester:'S1',batch:'Batch 1',enrollmentDate:'2026-01-01'});
   server=app.listen(0);await new Promise(resolve=>server.on('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/api`;
   async function request(method,path,body,user=admin){const response=await fetch(base+path,{method,headers:{Authorization:'Bearer '+token(user._id),...(body instanceof FormData?{}:{'Content-Type':'application/json'})},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});const content=response.headers.get('content-type')||'';return {status:response.status,body:content.includes('json')?await response.json():await response.arrayBuffer()};}
+  const outsideUser=await m.User.create({name:'Other student',email:'outside@academy.test',role:'student'});
+  const outsideStudent=await m.Student.create({user:outsideUser._id,studentId:'TA27001'});
+  await m.Enrollment.create({student:outsideStudent._id,course:course._id,academicYear:'2027'});
+  const announce = (user, title, audience) =>
+    request('POST','/announcements',{title,message:'Test announcement',audience},user);
+  assert.strictEqual((await announce(admin,'School update',['teacher','student'])).status,201);
+  assert.strictEqual((await announce(admin,'Teachers only',['teacher'])).status,201);
+  assert.strictEqual((await announce(tu,'Course update',['admin','student'])).status,201);
+  assert.strictEqual((await announce(tu,'Admins only',['admin'])).status,201);
+  assert.strictEqual((await announce(tu,'Invalid recipient',['teacher'])).status,400);
+  assert.strictEqual((await announce(su,'Student cannot post',['admin'])).status,403);
+  const announcementTitles = async user => {
+    const response = await request('GET','/announcements',null,user);
+    assert.strictEqual(response.status,200);
+    return response.body.announcements.map(item=>item.title).sort();
+  };
+  assert.deepStrictEqual(await announcementTitles(admin),['Admins only','Course update','School update','Teachers only']);
+  assert.deepStrictEqual(await announcementTitles(other),['School update','Teachers only']);
+  assert.deepStrictEqual(await announcementTitles(su),['Course update','School update']);
+  assert.deepStrictEqual(await announcementTitles(outsideUser),['School update']);
+  const teacherChoices=await request('GET','/announcements/recipients/teachers');
+  assert.strictEqual(teacherChoices.status,200);
+  assert(teacherChoices.body.teachers.some(item=>item.id===String(teacher._id)));
+  const rosterPath='/announcements/recipients/teachers/'+teacher._id+'/students';
+  assert.strictEqual((await request('GET',rosterPath,null,tu)).status,403);
+  assert.deepStrictEqual((await request('GET',rosterPath)).body.students.map(item=>item.id),[String(student._id)]);
+  const targeted={title:'Selected recipients',message:'Targeted announcement',audience:['teacher','student'],teacherId:String(teacher._id)};
+  assert.strictEqual((await request('POST','/announcements',{...targeted,studentIds:[String(outsideStudent._id)]})).status,400);
+  await m.Enrollment.updateOne({student:outsideStudent._id},{$set:{academicYear:'2026'}});
+  assert.strictEqual((await request('POST','/announcements',{...targeted,studentIds:[String(student._id)]})).status,201);
+  assert.strictEqual((await request('POST','/announcements',{
+    ...targeted,title:'Selected student only',audience:['student'],studentIds:[String(student._id)],
+  })).status,201);
+  assert.deepStrictEqual(await announcementTitles(su),['Course update','School update','Selected recipients','Selected student only']);
+  assert.deepStrictEqual(await announcementTitles(outsideUser),['School update']);
+  assert.deepStrictEqual(await announcementTitles(other),['School update','Teachers only']);
+  assert.deepStrictEqual(await announcementTitles(tu),['Admins only','Course update','School update','Selected recipients','Teachers only']);
+  await m.Enrollment.deleteOne({student:outsideStudent._id});
+  await m.Student.deleteOne({_id:outsideStudent._id});
+  await m.User.deleteOne({_id:outsideUser._id});
   const attendanceSchedule=[{day:1,startTime:'08:00',endTime:'10:00'}];
   const internship={courseId:String(course._id),studentId:String(student._id),startDate:'2026-11-09',totalDays:30,attendanceSchedule};
   const internshipRoster='/internships/courses/'+course._id+'/students';
@@ -46,6 +86,17 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   assert(loadedBatches.body.batches.some(batch=>batch.name==='Batch 1'));
   assert.strictEqual((await request('GET','/academy/batches?courseId='+course._id,null,other)).status,403);
   assert.strictEqual((await request('GET','/academy/batches?courseId=invalid',null,tu)).status,400);
+  const cohorts=await request('GET','/academy/cohorts?courseId='+course._id,null,tu);
+  assert.deepStrictEqual(cohorts.body,{cohorts:loadedBatches.body.batches});
+  const createdCohort=await request('POST','/academy/cohorts',{name:'Cohort 3',academicYear:'2026'});
+  assert.strictEqual(createdCohort.status,201);
+  assert.strictEqual(createdCohort.body.cohort.name,'Cohort 3');
+  const archivedCohort=await request('PATCH','/academy/cohorts/'+createdCohort.body.cohort._id,{status:'archived'});
+  assert.strictEqual(archivedCohort.body.cohort.status,'archived');
+  const cohortReport=await request('GET','/academy/reports/cohorts?cohort=Batch%201');
+  assert.deepStrictEqual(cohortReport.body.rows.map(row=>row.cohort),['Batch 1']);
+  assert.strictEqual(cohortReport.body.rows[0].batch,undefined);
+  assert(cohortReport.body.options.yearCohorts.some(row=>row.cohort==='Batch 1'));
   assert.strictEqual((await request('POST','/enrollments',{student:student._id,course:course._id,academicYear:'2027',batch:'Batch 1'})).status,400);
   await request('POST','/academy/batches',{name:'Batch 2',academicYear:'2026'});
   const batchOnlyCourse=await m.Course.create({name:'Batch dropdown course',courseCode:'BATCH-DROP',academicYear:'2026',batch:'Batch 2'});
@@ -61,7 +112,8 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   assert.deepStrictEqual(catalog.body.batches.map(batch=>batch._id).sort(),adminBatches.map(batch=>batch._id).sort(),'Assessment dropdown loads the saved Admin batch catalog without enrollment filtering');
   assert.strictEqual((await request('GET','/academy/batches?purpose=assessment&courseId='+batchOnlyCourse._id,null,other)).status,403);
   assert.strictEqual((await request('GET','/academy/batches?purpose=assessment',null,tu)).status,400);
-  let response=await request('POST','/enrollments',{student:student._id,course:course._id,academicYear:'2026',batch:'Batch 2'});assert.strictEqual(response.status,201,JSON.stringify(response.body));
+  let response=await request('POST','/enrollments',{student:student._id,course:course._id,academicYear:'2026',cohort:'Batch 2'});assert.strictEqual(response.status,201,JSON.stringify(response.body));
+  assert.strictEqual(response.body.data.cohort,'Batch 2');
   assert.strictEqual((await request('POST','/enrollments',{student:student._id,course:course._id,academicYear:'2026',batch:'Batch 2'})).status,409);
   await m.Enrollment.deleteOne({_id:response.body.data._id});
   const exam=await m.Exam.create({title:'Hidden exam quiz',course:course._id,academicYear:'2026',semester:'S1',batch:'Batch 1',type:'quiz',totalMarks:60,examDate:new Date(Date.now()+86400000),status:'upcoming',createdBy:tu._id});
@@ -221,6 +273,23 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   response=await request('GET','/academy/reports/dropped');assert.strictEqual(response.body.cards['Total dropped students'],1);assert(response.body.rows[0].date);
   assert.deepStrictEqual((await request('GET',internshipRoster)).body.students,[]);
   assert.strictEqual((await request('POST','/internships',internship)).status,400,'A dropped student cannot be selected');
+  const firstCourse=await request('POST','/courses',{name:'Web Development'});
+  assert.strictEqual(firstCourse.status,201);
+  assert.strictEqual(firstCourse.body.data.courseCode,'TA-WD-101');
+  const secondCourse=await request('POST','/courses',{name:'CCNA'});
+  assert.strictEqual(secondCourse.status,201);
+  assert.strictEqual(secondCourse.body.data.courseCode,'TA-CCNA-102');
+  const thirdCourse=await request('POST','/courses',{name:'Graphic Design'});
+  assert.strictEqual(thirdCourse.status,201);
+  assert.strictEqual(thirdCourse.body.data.courseCode,'TA-GD-103');
+  await m.Sequence.deleteOne({_id:'course-code:TA'});
+  await m.Sequence.create({_id:'course-code:TA-WD-',value:104});
+  const resumed=await Promise.all([
+    request('POST','/courses',{name:'CCNA'}),
+    request('POST','/courses',{name:'Web Development'}),
+  ]);
+  assert(resumed.every(result=>result.status===201));
+  assert.deepStrictEqual(resumed.map(result=>Number(result.body.data.courseCode.split('-').at(-1))).sort(),[105,106]);
   console.log('Academy integration passed: all report categories, role isolation, 90+10 marks, batch uniqueness, hidden quizzes, documents, profile images, missed lessons, makeup completion/reversal and historical dropped students.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
   if(server)await new Promise(resolve=>server.close(resolve));

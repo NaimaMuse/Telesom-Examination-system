@@ -256,8 +256,8 @@ export default function TeacherResults({scope,onEditingChange}) {
             {error && <button type="button" className="btn btn-secondary" onClick={() => setRosterRetry(value => value + 1)}>Retry</button>}
           </div>
         ) : students.length === 0 ? (
-          <div className="results-state"><span className="results-state-icon">♙</span><strong>No enrolled students</strong><span>{assessment.batch
-            ? 'This assessment is assigned to '+assessment.batch+'. No enrolled students match that batch.'
+          <div className="results-state"><span className="results-state-icon">♙</span><strong>No enrolled students</strong><span>{assessment.cohort
+            ? 'This assessment is assigned to '+assessment.cohort+'. No enrolled students match that cohort.'
             : 'No active enrollments match this assessment.'}</span>
             <Link to="/teacher/exams" className="btn btn-secondary">Review assessment settings</Link></div>
         ) : (

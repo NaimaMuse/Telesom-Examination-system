@@ -3,7 +3,7 @@ const fs = require('fs/promises');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const {verifyPassword} = require('../utils/passwords');
+const {hashPassword,verifyPassword} = require('../utils/passwords');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
@@ -47,8 +47,8 @@ const createdIds = {
 };
 let databaseConnected = false;
 
-const requestJson = async (method, urlPath, { token, body } = {}) => {
-  const headers = { 'Content-Type': 'application/json' };
+const requestJson = async (method, urlPath, { token, body, headers: extraHeaders } = {}) => {
+  const headers = { 'Content-Type': 'application/json', ...extraHeaders };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -197,6 +197,8 @@ const run = async () => {
       email: studentEmail,
       studentId,
       gender: 'female',
+      phone: '0631234567',
+      address: 'Hargeisa',
       academicYear: '2026',
     },
   });
@@ -206,7 +208,7 @@ const run = async () => {
   assert(
     createdStudent.status === 201 &&
       createdStudent.json?.data?.user?.role === 'student' &&
-      /^TL-\d{4}-\d{2,}$/.test(studentId) &&
+      /^TA\d{5,}$/.test(studentId) &&
       createdStudent.json?.data?.user?.password === undefined,
     'Admin can create a student account'
   );
@@ -278,13 +280,23 @@ const run = async () => {
     'Created teacher can log in with email and password'
   );
 
-  const studentLogin = await requestJson('POST', '/api/auth/login', {
+  const studentIdLogin = await requestJson('POST', '/api/auth/login', {
     body: { studentId },
   });
+  assert(studentIdLogin.status === 401, 'Student ID alone cannot authenticate a student');
+  const studentPassword = 'Integration-student-password!';
+  await User.updateOne({_id:createdIds.studentUser}, {$set:{
+    studentPasswordSet:true,
+    password:await hashPassword(studentPassword),
+  }});
+  const studentLogin = await requestJson('POST', '/api/auth/login', {
+    body: { email:studentEmail, password:studentPassword },
+  });
   assert(
-    studentLogin.status === 200 && studentLogin.json?.user?.role === 'student',
-    'Created student can log in with Student ID only'
+    studentLogin.status === 401,
+    'Student portal password cannot authenticate a student'
   );
+  const enrolledStudentToken = generateToken(createdIds.studentUser);
 
   const attendanceDate = new Date().toISOString().slice(0, 10);
   const createdCourse = await requestJson('POST', '/api/courses', {
@@ -292,6 +304,7 @@ const run = async () => {
     body: {
       courseCode: `INT-${stamp}`,
       title: 'Integration Test Course',
+      batch: 'Cohort 6',
       credits: 3,
       teachingSchedule: [{day:new Date(attendanceDate).getUTCDay(),startTime:'08:00',endTime:'10:00'}],
       academicYear: '2026',
@@ -317,6 +330,28 @@ const run = async () => {
   assert(
     enrollment.status === 201 && createdIds.enrollment,
     'Admin can enroll a student in a course'
+  );
+
+  const detailOptions = {token:adminToken, headers:{'X-Academic-Terminology':'cohort'}};
+  const [detailResponse, enrollmentResponse] = await Promise.all([
+    requestJson('GET', `/api/students/${createdIds.studentProfile}`, detailOptions),
+    requestJson('GET', `/api/enrollments?student=${createdIds.studentProfile}`, detailOptions),
+  ]);
+  const detail = detailResponse.json?.data;
+  const detailEnrollments = enrollmentResponse.json?.data;
+  assert(
+    detailResponse.status === 200 && detail?.studentId === studentId &&
+    detail.user?.name === 'Test Student' && detail.user?.email === studentEmail &&
+    detail.phone === '0631234567' && detail.address === 'Hargeisa' && detail.gender === 'female' &&
+    detail.status === 'active' && detail.academicYear === '2026',
+    'Student details include the saved registration fields'
+  );
+  assert(
+    enrollmentResponse.status === 200 && detailEnrollments?.length === 1 &&
+    detailEnrollments[0].course?.title === 'Integration Test Course' &&
+    detailEnrollments[0].course?.cohort === 'Cohort 6' &&
+    detailEnrollments[0].course?.academicYear === '2026',
+    'Student enrollment details include the course and its configured cohort'
   );
 
   const assignment=await requestJson('POST','/api/course-teachers',{token:adminToken,body:{teacher:createdIds.teacherProfile,course:createdIds.course,academicYear:'2026'}});
@@ -414,7 +449,7 @@ const run = async () => {
   );
 
   const studentDashboard = await requestJson('GET', '/api/dashboard', {
-    token: studentLogin.json?.token,
+    token: enrolledStudentToken,
   });
   assert(
     studentDashboard.status === 200 &&
@@ -422,7 +457,7 @@ const run = async () => {
     'Student dashboard contains only their enrolled course data'
   );
   const studentProfile = await requestJson('GET', '/api/profile', {
-    token: studentLogin.json?.token,
+    token: enrolledStudentToken,
   });
   assert(
     studentProfile.status === 200 &&

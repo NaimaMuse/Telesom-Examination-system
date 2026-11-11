@@ -15,7 +15,7 @@ function calendarEnd(startDate,totalDays) {
 const validateContract = data => {
   if (!Number.isInteger(data.totalDays) || data.totalDays<1) fail('Contract duration must be a positive whole number.');
   if (!validDate(data.startDate) || (data.endDate && (!validDate(data.endDate)||data.endDate<data.startDate))) fail('Enter valid contract dates. End date cannot precede start date.');
-  if (!String(data.batch||'').trim() || !String(data.academicYear||'').trim()) fail('Batch and academic year are required.');
+  if (!String(data.batch||'').trim() || !String(data.academicYear||'').trim()) fail('Cohort and academic year are required.');
 };
 const completedDays = async contractId => Lesson.distinct('completedDay',{contract:contractId,status:'completed',completedDay:{$ne:null}});
 function teachingDayTarget(contract, endDate, weekdays) {
@@ -108,7 +108,7 @@ async function createContract(user,data) {
   if(!mongoose.isValidObjectId(fields.teacher)||!mongoose.isValidObjectId(fields.course))fail('Select a valid teacher and course.');
   if(!await Teacher.exists({_id:fields.teacher})||!await Course.exists({_id:fields.course}))fail('Teacher or course not found.',404);
   const course=await Course.findById(fields.course).select('batch academicYear').lean();
-  if(course.batch && (course.batch!==fields.batch || course.academicYear!==fields.academicYear))fail('Select the year and batch configured for this course.');
+  if(course.batch && (course.batch!==fields.batch || course.academicYear!==fields.academicYear))fail('Select the year and cohort configured for this course.');
   if(!await Assignment.exists({teacher:fields.teacher,course:fields.course,academicYear:fields.academicYear,status:'active'}))fail('Assign this course and academic year to the teacher first.');
   const contract=await Contract.create({...fields,createdBy:user._id});
   return summary(contract);

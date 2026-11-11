@@ -32,7 +32,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     res.status(401);
     throw new Error('Authentication is required');
   }
-  const userUpdates = pick(req.body, ['name', 'email']);
+  const userUpdates = pick(req.body, req.user.role === 'student' ? ['name'] : ['name', 'email']);
   if (userUpdates.email) {
     userUpdates.email = String(userUpdates.email).trim().toLowerCase();
   }

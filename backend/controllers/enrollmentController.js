@@ -17,10 +17,10 @@ const controller = createResourceController(Enrollment, {
   filterFields: ['student', 'course', 'academicYear', 'semester', 'batch', 'status'],
   populate: [
     { path: 'student', populate: { path: 'user', select: 'name email' } },
-    { path: 'course', select: 'courseCode title credits' },
+    { path: 'course', select: 'courseCode title name credits batch academicYear' },
   ],
   sortFields: ['createdAt', 'updatedAt', 'enrollmentDate'],
-  beforeCreate: async req=>{await require('../services/batchService').validateBatch(req.body.batch,req.body.academicYear);if(!req.body.batch&&await Enrollment.exists({student:req.body.student,course:req.body.course,academicYear:req.body.academicYear,$or:[{batch:''},{batch:{$exists:false}}]}))throw Object.assign(new Error('Student is already enrolled in this course, year and batch.'),{statusCode:409});return {};},
+  beforeCreate: async req=>{await require('../services/batchService').validateBatch(req.body.batch,req.body.academicYear);if(!req.body.batch&&await Enrollment.exists({student:req.body.student,course:req.body.course,academicYear:req.body.academicYear,$or:[{batch:''},{batch:{$exists:false}}]}))throw Object.assign(new Error('Student is already enrolled in this course, year and cohort.'),{statusCode:409});return {};},
   beforeUpdate: async req=>{const original=await Enrollment.findById(req.params.id);if((req.body.batch!==undefined&&req.body.batch!==(original?.batch||''))||(req.body.academicYear!==undefined&&req.body.academicYear!==original?.academicYear))await require('../services/batchService').validateBatch(req.body.batch??original?.batch,req.body.academicYear??original?.academicYear);return req.body.status==='dropped'&&!original?.droppedAt?{droppedAt:new Date()}:{};},
 });
 

@@ -47,7 +47,7 @@
 
 .course-students-heading-icon > svg { width:21px; height:21px; }
 
-/* Align the batch selector with the right edge of the student list. */
+/* Align the cohort selector with the right edge of the student list. */
 .course-students-toolbar .course-students-status-filter { margin-left:auto; }
 
 /* Gold table heading with the academy dark green lettering. */

@@ -13,6 +13,7 @@ installSecurity(app);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit:'1mb', parameterLimit:1000 }));
 app.use(validateInput);
+app.use('/api', require('./middleware/cohortTerminology').cohortTerminology);
 
 app.get('/api/health', (req, res) => {
   const isDatabaseReady = mongoose.connection.readyState === 1;
@@ -47,6 +48,7 @@ app.use('/api/academy', require('./routes/academyRoutes'));
 app.use('/api/auth', authRoutes);
 app.use('/api/evaluations', require('./routes/evaluationRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/users', userRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/internships', require('./routes/internshipRoutes'));
@@ -56,6 +58,7 @@ app.use('/api/teacher', teacherDashboardRoutes);
 app.use('/api/teacher-contracts', require('./routes/teacherContractRoutes'));
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/certificates', require('./routes/certificateRoutes'));
 app.use('/api/course-teachers', courseTeacherRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/exam-results', examResultRoutes);
@@ -82,6 +85,7 @@ const startServer = async () => {
   await require('./models/User').ensureOptionalStudentEmailIndex();
   await Promise.all(Object.values(require('./models/Evaluation')).map(model => model.init()));
   await require('./models/Session').init();
+  await require('./models/Certificate').init();
   const server = app.listen(PORT, () => {
     console.log(
       `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`

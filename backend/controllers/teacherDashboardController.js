@@ -337,7 +337,7 @@ const assignmentForAssessment = async (req, assignments) => {
 };
 
 const assessmentEnrollmentFilter=async(req,assessment,assignment)=>{
-  if(req.query.courseId){const service=require('../services/teacherCourseWorkspaceService');const context=await service.resolveScope(req.user,req.query);if(!context.selected||!require('../services/academicProgressService').assessmentApplies(assessment,context.selected))throw Object.assign(new Error('Assessment does not belong to this course and batch.'),{statusCode:403});return service.enrollmentFilter(context.selected);}
+  if(req.query.courseId){const service=require('../services/teacherCourseWorkspaceService');const context=await service.resolveScope(req.user,req.query);if(!context.selected||!require('../services/academicProgressService').assessmentApplies(assessment,context.selected))throw Object.assign(new Error('Assessment does not belong to this course and cohort.'),{statusCode:403});return service.enrollmentFilter(context.selected);}
   // Standalone gradebook follows current course enrollments; legacy exam years may use a different label.
   return {course:assessment.course,status:'enrolled',...(assessment.batch?{batch:assessment.batch}:{})};
 };

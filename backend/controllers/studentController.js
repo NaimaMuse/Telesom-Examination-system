@@ -24,9 +24,15 @@ const controller = createResourceController(Student, {
     if((req.body.batch!==undefined&&req.body.batch!==(original?.batch||''))||(req.body.academicYear!==undefined&&req.body.academicYear!==original?.academicYear))await require('../services/batchService').validateBatch(req.body.batch??original?.batch,req.body.academicYear??original?.academicYear);
     if (req.body.email !== undefined && original?.user) {
       const account = await User.findOne({_id:original.user,role:'student'});
-      if (account) {
-        account.email = req.body.email;
-        await account.save();
+      const email = String(req.body.email ?? '').trim().toLowerCase();
+      if (account && (account.email || '') !== email) {
+        account.email = email;
+        await account.validate(['email']);
+        await User.updateOne({_id:account._id}, {
+          $set:{...(email ? {email} : {}),studentPasswordSet:false},
+          $unset:{password:1,...(!email ? {email:1} : {})},
+          $inc:{authVersion:1},
+        });
       }
     }
     if(req.body.status==='dropped'&&original?.status!=='dropped'){

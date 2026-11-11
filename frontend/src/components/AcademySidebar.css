@@ -4,13 +4,26 @@
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand { display:flex; flex:0 0 auto; height:auto; min-height:0; align-items:center; justify-content:center; flex-direction:column; gap:6px; padding:6px 12px 10px; border:0; text-align:center; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand .telesom-logo { position:relative; justify-content:center; padding-bottom:0; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand .telesom-logo img { width:104px; height:96px; }
-.dash-shell .dash-sidebar.academy-sidebar .sidebar-brand:after { content:''; display:block; flex:0 0 1px; width:120px; height:1px; margin-top:6px; background:linear-gradient(90deg,transparent,#E5A50099,transparent); }
+.dash-shell .dash-sidebar.academy-sidebar .sidebar-brand:after { content:''; display:block; flex:0 0 2px; width:96px; height:2px; margin-top:6px; border-radius:2px; background:linear-gradient(90deg,transparent,var(--brand-gold),transparent); }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand-text { display:flex; flex-direction:column; align-items:center; gap:3px; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand-text strong { color:#fff; font-size:17px; font-weight:800; letter-spacing:.6px; line-height:1.1; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand-text span { color:#fff; font-size:13px; letter-spacing:2px; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-role-badge { align-self:center; flex:0 0 auto; margin:0 0 8px; padding:3px 9px; border:1px solid #ffffff28; border-radius:20px; color:#e9c76d; background:#ffffff08; font-size:8px; letter-spacing:1.5px; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-nav { flex:1 1 auto; min-height:0; padding:5px 12px; overflow-y:auto; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-section-label { font-size:8px; letter-spacing:1.3px; color:#c3ddcc; padding:8px 11px 3px; }
+.dash-shell.admin-shell .academy-sidebar .sidebar-section-label {
+  margin: 10px 0 3px;
+  padding: 8px 11px 3px;
+  border-top: 1px solid #ffffff18;
+  color: #edce88;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.dash-shell.admin-shell .academy-sidebar .sidebar-nav > div:first-child .sidebar-section-label {
+  margin-top: 0;
+  border-top: 0;
+}
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-link { display:flex; align-items:center; gap:10px; width:100%; min-height:42px; margin:4px 0; padding:10px 11px; border:0; border-radius:11px; color:#fff; background:transparent; font-size:12px; font-weight:500; white-space:nowrap; text-decoration:none; box-shadow:none; transition:background .18s,color .18s; cursor:pointer; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-link.active { background:linear-gradient(105deg,#E5A500,#efbb2e); color:#073b23; font-weight:700; box-shadow:inset 0 0 0 1px #f4c33f; }
 .dash-shell .dash-sidebar.academy-sidebar .sidebar-link:not(.active):hover { background:#ffffff12; }
@@ -24,7 +37,7 @@
 @media(min-width:1000px) and (max-height:760px) {
   .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand { padding-top:4px; padding-bottom:8px; gap:5px; }
   .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand .telesom-logo img { width:86px; height:78px; }
-  .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand:after { width:100px; }
+  .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand:after { width:80px; }
   .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand-text strong { font-size:16px; }
   .dash-shell .dash-sidebar.academy-sidebar .sidebar-brand-text span { font-size:11px; }
   .dash-shell .dash-sidebar.academy-sidebar .sidebar-link { min-height:36px; padding:8px 10px; margin:3px 0; }

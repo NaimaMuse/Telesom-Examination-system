@@ -6,9 +6,11 @@ export default defineConfig(({mode}) => {
   const apiOrigin = new URL(apiUrl, 'https://same-origin.invalid').origin;
   const connect = apiOrigin === 'https://same-origin.invalid' ? "'self'" : "'self' " + apiOrigin;
   const csp = [
-    "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "default-src 'self'", "script-src 'self' https://accounts.google.com/gsi/client",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style",
     "font-src 'self' https://fonts.gstatic.com", "img-src 'self' data: blob:", "worker-src 'self' blob:",
-    'connect-src ' + connect, "object-src 'none'", "base-uri 'none'", "form-action 'self'",
+    'connect-src ' + connect + ' https://accounts.google.com/gsi/', 'frame-src https://accounts.google.com/gsi/',
+    "object-src 'none'", "base-uri 'none'", "form-action 'self'",
   ].join('; ');
   return {
   plugins: [react(), {
@@ -18,6 +20,7 @@ export default defineConfig(({mode}) => {
   }],
   server: {
     port: 3000,
+    open: '/staff/login',
     proxy: {
       // Proxy /api requests to the backend during development
       '/api': {

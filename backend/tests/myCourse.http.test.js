@@ -26,8 +26,8 @@ const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let 
   const today=cs.teachingDay(),start=cs.teachingDay(new Date(Date.now()-7*86400000));
   const contract=await cs.createContract(admin,{teacher:teacher._id,course:course._id,academicYear:'2026',batch:'Batch A',startDate:start,totalDays:30,dayBasis:'teaching'});
   server=process.env.WORKSPACE_UI_PREVIEW==='1'?app.listen(0,'localhost'):app.listen(0);await new Promise(resolve=>server.on('listening',resolve));const base=`http://127.0.0.1:${server.address().port}/api`;
-  const request=async(method,path,body,user=teacherUser)=>{
-    const response=await fetch(base+path,{method,headers:{Authorization:'Bearer '+token(user._id),...(body instanceof FormData?{}:{'Content-Type':'application/json'})},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
+  const request=async(method,path,body,user=teacherUser,headers={})=>{
+    const response=await fetch(base+path,{method,headers:{Authorization:'Bearer '+token(user._id),...(body instanceof FormData?{}:{'Content-Type':'application/json'}),...headers},body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
     return {status:response.status,body:(response.headers.get('content-type')||'').includes('json')?await response.json():Buffer.from(await response.arrayBuffer())};
   };
   await models.Batch.create([{name:'Batch C',academicYear:'2026'},{name:'Unassigned year',academicYear:'2025'}]);
@@ -60,8 +60,10 @@ const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let 
   assert.strictEqual((await request('PATCH','/academy/outlines/'+outline._id+'/lessons/'+lessons[0]._id,{plannedDate:start})).status,200);
   result=await request('GET','/academy/outlines/'+outline._id+'/document');assert.strictEqual(result.status,200);assert(result.body.equals(pdf),'Uploaded outline must be preserved');
   const privateNote=await models.Note.create({title:'Private note',content:'Not a learning material',course:course._id,createdBy:teacherUser._id});
-  body=new FormData();for(const [key,value]of Object.entries(scope))body.append(key,value);body.append('title','Network learning material');body.append('description','Real learning document');body.append('file',new Blob([pdf],{type:'application/pdf'}),'learning.pdf');
-  result=await request('POST','/teacher/materials',body);assert.strictEqual(result.status,201,JSON.stringify(result.body));const note=result.body.note;
+  body=new FormData();for(const [key,value]of Object.entries(scope))body.append(key==='batch'?'cohort':key,value);body.append('title','Network learning material');body.append('description','Real learning document');body.append('file',new Blob([pdf],{type:'application/pdf'}),'learning.pdf');
+  result=await request('POST','/teacher/materials',body,teacherUser,{'X-Academic-Terminology':'cohort'});assert.strictEqual(result.status,201,JSON.stringify(result.body));const note=result.body.note;
+  assert.strictEqual(note.cohort,scope.batch);
+  assert.strictEqual(note.batch,undefined);
   result=await request('GET','/teacher/my-course'+query);assert.strictEqual(result.body.notes.length,1);assert.strictEqual(result.body.notes[0]._id,note._id);assert.strictEqual(result.body.notes[0].hasAttachment,true);
   assert.strictEqual((await request('GET','/teacher/my-course'+otherQuery)).body.notes.length,0);
   assert.strictEqual((await request('GET','/teacher/materials/'+note._id+'/file',null,otherUser)).status,404);

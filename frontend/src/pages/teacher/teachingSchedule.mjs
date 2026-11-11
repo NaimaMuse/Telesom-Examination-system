@@ -13,7 +13,7 @@ export function classesOnDate(contracts, key) {
       : null);
     if (endKey && key > endKey) return [];
     const course = contract.course;
-    if (!course || (course.batch && course.batch !== contract.batch) || (course.academicYear && course.academicYear !== contract.academicYear)) return [];
+    if (!course || (course.cohort && course.cohort !== contract.cohort) || (course.academicYear && course.academicYear !== contract.academicYear)) return [];
     return (course.teachingSchedule || []).filter(slot => slot.day === date.getUTCDay()).map(slot => ({...contract, slot}));
   }).sort((a,b) => a.slot.startTime.localeCompare(b.slot.startTime));
 }

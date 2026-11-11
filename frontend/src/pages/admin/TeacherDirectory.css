@@ -28,16 +28,32 @@
 .dash-shell .dash-content .teacher-directory-pagination .page-btn{border-radius:7px;border:1px solid #e0e8e1;background:white;color:#456d53}
 .dash-shell .dash-content .teacher-directory-pagination .page-btn.active{background:#D7982F;border-color:#D7982F;color:#fff}
 @media(max-width:600px){.dash-shell .dash-content .teacher-directory-panel-header{padding:9px 10px}.dash-shell .dash-content .teacher-directory-toolbar button{font-size:11px;padding:8px 10px}}
-/* Preserve the restored overview and header actions; update palette only. */
-.dash-shell .dash-content .teacher-directory-page .teacher-directory-overview{padding:0;margin:0 0 10px;background:transparent;border:0;box-shadow:none}
-.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;background:none;border:0;box-shadow:none;width:100%}
+.teacher-directory-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+
+.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats {
+  display: grid;
+  flex: 0 1 405px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
 .dash-shell .dash-content .teacher-directory-page .teacher-directory-stats>div{position:relative;display:grid;gap:2px;min-width:0;padding:4px 8px;border:1px solid #c9dfd1;border-left:4px solid #124d34;border-radius:12px;background:linear-gradient(115deg,#edf6f0,#f7fbf8);box-shadow:0 3px 10px #183d2605}
 .dash-shell .dash-content .teacher-directory-page .teacher-directory-stats>div:nth-child(2){background:linear-gradient(115deg,#fff6e3,#fffbf2);border-color:#ecd4a5;border-left-color:#D7982F}
 .dash-shell .dash-content .teacher-directory-page .teacher-directory-stats>div:last-child{background:#f5f8f5;border:1px solid #d6e2d9;border-left:4px solid #79967e}
 .dash-shell .dash-content .teacher-directory-page .teacher-directory-stats .teacher-stat-label{font-size:10px;letter-spacing:1px;color:#3c6550;font-weight:750}
 .dash-shell .dash-content .teacher-directory-page .teacher-directory-stats>div:nth-child(2) .teacher-stat-label{color:#9a7129}
-.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats strong{color:#124d34;font-size:18px;font-weight:750;letter-spacing:-.7px;line-height:1.2}
-.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats small{font-size:11px;line-height:1.4;color:#7c9183}
+.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats strong{color:#124d34;font-size:16px;font-weight:750;letter-spacing:-.4px;line-height:1.2}
+.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats small{font-size:10px;line-height:1.3;color:#617568;white-space:normal}
 .dash-shell .dash-content .teacher-directory-panel-header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;min-height:0}
 .dash-shell .dash-content .teacher-directory-panel-header .teacher-directory-header-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dash-shell .dash-content .teacher-directory-panel-header button{min-height:30px;padding:4px 9px;border-radius:9px;font-size:12px;font-weight:650;line-height:1.3}
@@ -48,11 +64,16 @@
 .dash-shell .dash-content .teacher-directory-page button:focus-visible{outline:2px solid #D7982F;outline-offset:3px}
 @media(max-width:650px){.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats{gap:8px}.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats>div{padding:7px 8px}.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats strong{font-size:16px}.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats .teacher-stat-label{font-size:8px;letter-spacing:.3px}.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats small{font-size:10px}.dash-shell .dash-content .teacher-directory-panel-header{padding:9px 10px;flex-wrap:wrap}.dash-shell .dash-content .teacher-directory-panel-header button{font-size:11px;padding:4px 8px}}
 .dash-shell .dash-content .teacher-directory-page .teacher-directory-stats>div{justify-items:start;align-items:start;text-align:left}
-/* Narrower teacher overview cards. */
-.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats{max-width:960px;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-inline:auto}
-@media(min-width:1200px){.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats{width:78%}}
-@media(max-width:650px){.dash-shell .dash-content .teacher-directory-page .teacher-directory-stats{width:100%;gap:8px}}
-.teacher-management-nav { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.teacher-directory-top .teacher-management-nav { margin-bottom: 0; }
+.teacher-management-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: fit-content;
+  max-width: 100%;
+  gap: 7px;
+  margin: 12px 0 10px auto;
+}
 .teacher-management-nav a {
   display: inline-flex;
   align-items: center;

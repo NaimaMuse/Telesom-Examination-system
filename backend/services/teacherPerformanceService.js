@@ -90,7 +90,7 @@ const getPerformance = async (req) => {
   const course = req.query.courseId ? courses.find(c => String(c._id) === String(req.query.courseId)) : courses[0];
   if (req.query.courseId && !course) throw Object.assign(new Error('You can only view performance for your assigned courses.'), { statusCode: 403 });
   if (!['all','exam','quiz'].includes(req.query.assessmentType || 'all')) throw Object.assign(new Error('Invalid assessment type.'), { statusCode: 400 });
-  if (req.query.batch !== undefined && typeof req.query.batch !== 'string') throw Object.assign(new Error('Invalid year/batch filter.'), { statusCode: 400 });
+  if (req.query.batch !== undefined && typeof req.query.batch !== 'string') throw Object.assign(new Error('Invalid year/cohort filter.'), { statusCode: 400 });
   if (!course) return { success: true, courses: [], batches: [], results: [], students: [], assessments: [], summary: { classAverage: null, highestScore: null, passingStudents: 0, failingStudents: 0, enrolledStudents: 0, recordedStudents: 0, incompleteStudents: 0 } };
   const [exams, quizzes, enrollments] = await Promise.all([
     Exam.find({ course: course._id }).lean(), Quiz.find({ course: course._id }).lean(),

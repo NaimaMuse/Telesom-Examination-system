@@ -23,7 +23,7 @@ function StudentCourseDuration({schedules}) {
       const remaining = contract.remainingContractDays;
       return <li key={contract._id}>
         <h3>{contract.course.name}</h3>
-        <p>{[contract.batch, contract.academicYear].filter(Boolean).join(' · ')}</p>
+        <p>{[contract.cohort, contract.academicYear].filter(Boolean).join(' · ')}</p>
         <p>{formatCourseDate(contract.startDate)}{contract.endDate ? ' – ' + formatCourseDate(contract.endDate) : ''}</p>
         <dl>
           <div><dt>Course length</dt><dd>{contractDurationLabel(contract)}</dd></div>

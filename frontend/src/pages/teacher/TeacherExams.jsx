@@ -41,30 +41,30 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
       totalMarks: typeVal === 'quiz' ? 20 : 90,
       marksPublished:false,
       visibleToStudents:false,
-      batch:fixedScope?.batch||'',
+      cohort:fixedScope?.cohort||'',
       status: 'upcoming',
     };
   });
-  const [batches, setBatches] = useState([]);
-  const [batchesLoading, setBatchesLoading] = useState(true);
-  const [batchesError, setBatchesError] = useState('');
-  const [batchRetry, setBatchRetry] = useState(0);
+  const [cohorts, setCohorts] = useState([]);
+  const [cohortsLoading, setCohortsLoading] = useState(true);
+  const [cohortsError, setCohortsError] = useState('');
+  const [cohortRetry, setCohortRetry] = useState(0);
   const selectedCourse = assignedCourses.find(course => course._id === form.course);
   useEffect(() => {
     const controller = new AbortController();
-    setBatchesLoading(true); setBatchesError(''); setBatches([]);
-    if (!form.course) { setBatchesLoading(false); return () => controller.abort(); }
-    api.get('/academy/batches', {signal:controller.signal, params:{courseId:form.course,purpose:'assessment',...(fixedScope?.academicYear?{academicYear:fixedScope.academicYear}:{})}})
+    setCohortsLoading(true); setCohortsError(''); setCohorts([]);
+    if (!form.course) { setCohortsLoading(false); return () => controller.abort(); }
+    api.get('/academy/cohorts', {signal:controller.signal, params:{courseId:form.course,purpose:'assessment',...(fixedScope?.academicYear?{academicYear:fixedScope.academicYear}:{})}})
       .then(({data}) => {
         if (controller.signal.aborted) return;
-        const records = data.batches || [];
-        setBatches(records);
-        if (!initial && !fixedScope && records.length === 1) setForm(current => current.batch ? current : {...current,batch:records[0].name,academicYear:records[0].academicYear});
+        const records = data.cohorts || [];
+        setCohorts(records);
+        if (!initial && !fixedScope && records.length === 1) setForm(current => current.cohort ? current : {...current,cohort:records[0].name,academicYear:records[0].academicYear});
       })
-      .catch(() => { if (!controller.signal.aborted) setBatchesError('Could not load batches. Please retry.'); })
-      .finally(() => { if (!controller.signal.aborted) setBatchesLoading(false); });
+      .catch(() => { if (!controller.signal.aborted) setCohortsError('Could not load cohorts. Please retry.'); })
+      .finally(() => { if (!controller.signal.aborted) setCohortsLoading(false); });
     return () => controller.abort();
-  }, [form.course, selectedCourse?.academicYear, fixedScope?.academicYear, batchRetry]);
+  }, [form.course, selectedCourse?.academicYear, fixedScope?.academicYear, cohortRetry]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -78,7 +78,7 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
     setSaving(true);
     setError('');
     try {
-      if (form.batch && !fixedScope && !batches.some(batch => batch.name === form.batch && (!form.academicYear || batch.academicYear === form.academicYear)) && form.batch !== initial?.batch) throw new Error('Select a saved batch for this course.');
+      if (form.cohort && !fixedScope && !cohorts.some(cohort => cohort.name === form.cohort && (!form.academicYear || cohort.academicYear === form.academicYear)) && form.cohort !== initial?.cohort) throw new Error('Select a saved cohort for this course.');
       await onSave({ ...form, course: finalCourse });
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to save');
@@ -138,7 +138,7 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
                       className="form-control"
                       required
                       value={form.course || ''}
-                      onChange={(e) => setForm((p) => ({ ...p, course: e.target.value, batch: '', academicYear: '' }))}
+                      onChange={(e) => setForm((p) => ({ ...p, course: e.target.value, cohort: '', academicYear: '' }))}
                     >
                       <option value="">Select your assigned course…</option>
                       {assignedCourses.map((c) => (
@@ -214,11 +214,11 @@ function AssessmentModal({ title, initial, assignedCourses, typeVal, onSave, onC
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              <div className="form-group"><label className="form-label" htmlFor="assessment-batch">Batch (optional)</label><select id="assessment-batch" className="form-control" disabled={!!fixedScope || batchesLoading || !!batchesError} value={form.batch ? JSON.stringify([form.academicYear || selectedCourse?.academicYear || '',form.batch]) : ''} onChange={event => { const [academicYear,batch]=event.target.value ? JSON.parse(event.target.value) : ['', '']; setForm(current => ({...current,batch,academicYear})); }}>
-                <option value="">{batchesLoading ? 'Loading batches…' : batchesError ? 'Batches unavailable' : 'All batches'}</option>
-                {batches.map(batch=><option key={batch._id} value={JSON.stringify([batch.academicYear,batch.name])}>{batch.academicYear} / {batch.name}</option>)}
-                {form.batch && !batches.some(batch=>batch.name===form.batch && batch.academicYear===(form.academicYear || selectedCourse?.academicYear || '')) && <option value={JSON.stringify([form.academicYear || selectedCourse?.academicYear || '',form.batch])}>{form.academicYear || selectedCourse?.academicYear} / {form.batch} (saved)</option>}
-              </select>{batchesError && <small role="alert">{batchesError} <button type="button" onClick={()=>setBatchRetry(value=>value+1)}>Retry</button></small>}{!batchesLoading && !batchesError && !batches.length && <small>No active batches have been created by Admin.</small>}</div>
+              <div className="form-group"><label className="form-label" htmlFor="assessment-cohort">Cohort (optional)</label><select id="assessment-cohort" className="form-control" disabled={!!fixedScope || cohortsLoading || !!cohortsError} value={form.cohort ? JSON.stringify([form.academicYear || selectedCourse?.academicYear || '',form.cohort]) : ''} onChange={event => { const [academicYear,cohort]=event.target.value ? JSON.parse(event.target.value) : ['', '']; setForm(current => ({...current,cohort,academicYear})); }}>
+                <option value="">{cohortsLoading ? 'Loading cohorts…' : cohortsError ? 'Cohorts unavailable' : 'All cohorts'}</option>
+                {cohorts.map(cohort=><option key={cohort._id} value={JSON.stringify([cohort.academicYear,cohort.name])}>{cohort.academicYear} / {cohort.name}</option>)}
+                {form.cohort && !cohorts.some(cohort=>cohort.name===form.cohort && cohort.academicYear===(form.academicYear || selectedCourse?.academicYear || '')) && <option value={JSON.stringify([form.academicYear || selectedCourse?.academicYear || '',form.cohort])}>{form.academicYear || selectedCourse?.academicYear} / {form.cohort} (saved)</option>}
+              </select>{cohortsError && <small role="alert">{cohortsError} <button type="button" onClick={()=>setCohortRetry(value=>value+1)}>Retry</button></small>}{!cohortsLoading && !cohortsError && !cohorts.length && <small>No active cohorts have been created by Admin.</small>}</div>
 <div className="form-group"><label className="form-label">Publish marks</label><select className="form-control" value={form.marksPublished?'published':'unpublished'} onChange={e=>setForm(p=>({...p,marksPublished:e.target.value==='published'}))}><option value="unpublished">Unpublished marks</option><option value="published">Publish marks to students</option></select></div>
               <div className="form-group"><label className="form-label">Student visibility</label><select className="form-control" value={form.visibleToStudents?'visible':'hidden'} onChange={e=>setForm(p=>({...p,visibleToStudents:e.target.value==='visible'}))}><option value="hidden">Hidden from students</option><option value="visible">Visible to students</option></select></div>
             </div>
@@ -260,7 +260,7 @@ function ConfirmModal({ message, onConfirm, onCancel, loading }) {
 }
 
 export default function TeacherExams({scope,onEditingChange,onChange}) {
-  const scopeParams=scope?Object.fromEntries(['courseId','academicYear','batch','contractId'].map(k=>[k,scope[k]||''])):null;
+  const scopeParams=scope?Object.fromEntries(['courseId','academicYear','cohort','contractId'].map(k=>[k,scope[k]||''])):null;
   const scopeIdentity=JSON.stringify(scopeParams);
   const [search] = usePageSearch();
   const [tab, setTab] = useState('exams'); // 'exams' | 'quizzes' | 'assessments'
@@ -277,7 +277,7 @@ export default function TeacherExams({scope,onEditingChange,onChange}) {
   // Fetch teacher's assigned courses (strictly assigned to this teacher)
   const fetchAssignedCourses = useCallback(async (context = {}) => {
     try {
-      if(scope){setAssignedCourses([{...scope.course,academicYear:scope.academicYear,batch:scope.batch}]);return;}
+      if(scope){setAssignedCourses([{...scope.course,academicYear:scope.academicYear,cohort:scope.cohort}]);return;}
       const res = await api.get('/teacher/courses', {signal:context.signal});
       if (context.isCurrent && !context.isCurrent()) return;
       const courses = res.data?.courses || (res.data?.course ? [res.data.course] : []);
@@ -335,7 +335,7 @@ export default function TeacherExams({scope,onEditingChange,onChange}) {
     const payload = {
       marksPublished:form.marksPublished===true,
       visibleToStudents:form.visibleToStudents===true,
-      batch:form.batch||'',
+      cohort:form.cohort||'',
       academicYear:scope?.academicYear||form.academicYear||assignedCourses.find(c=>c._id===form.course)?.academicYear||String(new Date().getFullYear()),
       semester:assignedCourses.find(c=>c._id===form.course)?.semester||'',
       title: form.title,

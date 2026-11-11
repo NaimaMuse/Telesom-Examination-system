@@ -22,8 +22,7 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      // Students log in with Student ID only, so they do not store a password.
-      // Admin and teacher accounts still require a hashed password.
+      // Students set their own password after verifying their Google account.
       required: [
         function passwordRequired() {
           return this.role !== 'student';
@@ -47,6 +46,7 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
     mustChangePassword: { type: Boolean, default: false },
+    studentPasswordSet: { type: Boolean, default: false },
     authVersion: { type: Number, default: 0 },
     lastLogin: {
       type: Date,

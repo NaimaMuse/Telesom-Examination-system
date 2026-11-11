@@ -118,8 +118,7 @@ router.get('/materials/:id/file',asyncHandler(async(req,res)=>{
 const { pick } = require('../controllers/resourceController');
 const User = require('../models/User');
 router.put('/profile', asyncHandler(async (req, res) => {
-  const updates = pick(req.body, ['name', 'email']);
-  if (updates.email) updates.email = String(updates.email).trim().toLowerCase();
+  const updates = pick(req.body, ['name']);
   const user = await User.findById(req.user._id);
   user.set(updates);
   req.student.set(pick(req.body, ['phone', 'address']));

@@ -250,7 +250,7 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                {isStudent && <div className="form-field-group"><label>Student ID</label><p className="field-hint">Assigned automatically after registration (TL-YYYY-01).</p></div>}
+                {isStudent && <div className="form-field-group"><label>Student ID</label><p className="field-hint">Assigned automatically after registration (TAYY001).</p></div>}
 
                 {/* Email & Phone side by side */}
                 <div className="form-row-two-col">

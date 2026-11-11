@@ -1,13 +1,26 @@
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ChangePasswordModal from '../../components/ChangePasswordModal';
 import api from '../../services/api';
 
 export default function StudentProfile() {
   const [search] = usePageSearch();
   const { user, updateUser } = useAuth();
   const [editing, setEditing] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const resetPassword = params.get('reset') === 'password' && !user?.mustChangePassword;
+  const setResetPassword = open => {
+    setParams(current => {
+      const next = new URLSearchParams(current);
+      if (open) next.set('reset', 'password');
+      else next.delete('reset');
+      return next;
+    }, {replace:true});
+  };
+  const [passwordReset, setPasswordReset] = useState(false);
   const [form, setForm] = useState({
     name:      user?.name      || '',
     email:     user?.email     || '',
@@ -23,7 +36,8 @@ export default function StudentProfile() {
     const next = { ...data.profile, ...data.user };
     setProfile(next);
     setForm({ name: next.name || '', email: next.email || '', phone: next.phone || '', studentId: next.studentId || '', address: next.address || '', academicYear: next.academicYear || '' });
-    updateUser(next);
+    const {name, email, phone, address, academicYear, studentId} = next;
+    updateUser({name, email, phone, address, academicYear, studentId});
   };
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -31,7 +45,7 @@ export default function StudentProfile() {
     try { const { data } = await api.get('/profile', { signal }); if (isCurrent()) { applyProfile(data.data); setError(''); } }
     catch (err) { if (isCurrent()) setError(err.response?.data?.message || 'Profile could not refresh. Retrying automatically.'); }
     finally { if (isCurrent()) setLoading(false); }
-  }, { enabled: !editing && !saving });
+  }, { enabled: !editing && !saving && (!resetPassword || !profile) });
 
   const initials = (user?.name||'S').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 
@@ -41,7 +55,7 @@ export default function StudentProfile() {
     setError('');
     setSaving(true);
     try {
-      const res = await api.put('/student/profile', {name:form.name, email:form.email, phone:form.phone, address:form.address});
+      const res = await api.put('/student/profile', {name:form.name, phone:form.phone, address:form.address});
       applyProfile(res.data);
     } catch (err) { setError(err.response?.data?.message || 'Unable to save profile.'); setSaving(false); return; }
     setSaving(false);
@@ -58,10 +72,25 @@ export default function StudentProfile() {
       {error && <div className="card card-body" role="alert">{error}</div>}
       <div className="page-header">
         <div className="page-header-left"><h1>My Profile</h1><p>Manage your student account</p></div>
-        {!editing && <button className="btn btn-primary" onClick={()=>setEditing(true)}>✏️ Edit Profile</button>}
+        {!editing && <div style={{display:'flex', gap:'0.75rem', flexWrap:'wrap'}}>
+          {!user?.mustChangePassword && (
+            <button type="button" className="btn btn-secondary" onClick={() => {
+              setPasswordReset(false);
+              setResetPassword(true);
+            }}>Forgot password?</button>
+          )}
+          <button type="button" className="btn btn-primary" onClick={()=>setEditing(true)}>✏️ Edit Profile</button>
+        </div>}
       </div>
 
       {saved && <div role="status" style={{ background:'#d1fae5',color:'#065f46',padding:'0.75rem 1.25rem',borderRadius:'var(--radius-sm)',marginBottom:'1rem',fontWeight:600,fontSize:'0.875rem' }}>✅ Profile updated.</div>}
+      {passwordReset && <p className="card card-body" role="status">Portal password reset successfully.</p>}
+      {resetPassword && (
+        <ChangePasswordModal onClose={() => setResetPassword(false)} onSuccess={() => {
+          setResetPassword(false);
+          setPasswordReset(true);
+        }}/>
+      )}
 
       <div className="profile-header" style={{marginBottom:'1.5rem'}}>
         <div className="profile-avatar-lg">{initials}</div>
@@ -80,7 +109,7 @@ export default function StudentProfile() {
             <form onSubmit={handleSave}>
               <div className="grid-2">
                 <div className="form-group"><label className="form-label">Full Name *</label><input className="form-control" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} required/></div>
-                <div className="form-group"><label className="form-label" htmlFor="student-profile-email">Email (optional)</label><input id="student-profile-email" className="form-control" type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))}/></div>
+                <div className="form-group"><label className="form-label" htmlFor="student-profile-email">Registered email</label><input id="student-profile-email" className="form-control" type="email" value={form.email} readOnly /><small>Contact your administrator to update this email.</small></div>
                 <div className="form-group"><label className="form-label">Phone</label><input className="form-control" type="tel" value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))}/></div>
                 <div className="form-group"><label className="form-label">Student ID</label><input className="form-control" value={form.studentId} readOnly disabled style={{opacity:0.6}} /></div>
                 <div className="form-group"><label className="form-label">Address</label><input className="form-control" value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))}/></div>

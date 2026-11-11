@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ChangePasswordModal from './ChangePasswordModal';
 
 /**
  * ProtectedRoute
@@ -14,7 +15,7 @@ import { useAuth } from '../context/AuthContext';
  *   <ProtectedRoute roles={['teacher']}>    — teacher only
  */
 export default function ProtectedRoute({ children, roles }) {
-  const { isAuthenticated, user, authLoading } = useAuth();
+  const { isAuthenticated, user, authLoading, logout } = useAuth();
 
   if (authLoading) return <div className="spinner-wrap" role="status" aria-label="Checking session"><div className="spinner"/></div>;
 
@@ -32,5 +33,8 @@ export default function ProtectedRoute({ children, roles }) {
     return <Navigate to={roleHome[user.role] || '/login'} replace />;
   }
 
-  return children;
+  return <>
+    {children}
+    {roles?.includes('student') && user.mustChangePassword && <ChangePasswordModal required onSignOut={logout} />}
+  </>;
 }

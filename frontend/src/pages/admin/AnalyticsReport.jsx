@@ -18,7 +18,7 @@ export function buildAnalyticsPdf({courses,monthly=[],distribution=[],filters,st
     if(!rows.length)rows=[['No records for this selection.',...headers.slice(1).map(()=> '')]];
     rows.forEach((row,index)=>{const cells=row.map((v,i)=>wrap(v,Math.max(3,Math.floor((widths[i]-15)/4.5))));const height=Math.max(29,Math.max(...cells.map(c=>c.length))*12+14);if(y+height>790){page();header();}rect(32,y,531,height,index%2?[1,1,1]:[.95,.98,.96]);let x=40;cells.forEach((lines,i)=>{lines.forEach((line,j)=>text(line,x,y+7+j*12,8,ink,i===0));x+=widths[i];});y+=height;});y+=20;
   };
-  page();heading('Report scope');filters.forEach(([label,value])=>paragraph(label+': '+value));paragraph('Attendance dates apply only to attendance. Marks include all saved results in the selected course, teacher and batch. Search applies to course rows and the overview indicators.');
+  page();heading('Report scope');filters.forEach(([label,value])=>paragraph(label+': '+value));paragraph('Attendance dates apply only to attendance. Marks include all saved results in the selected course, teacher and cohort. Search applies to course rows and the overview indicators.');
   heading('Overview');table(['Indicator','Value'],stats.map(([label,value])=>[label,value]),[440,91]);
   heading('Course performance');table(['Course','Enrolled','Marked','Avg /100','Final','Passed','Attend.'],courses.map(c=>[c.title+' ('+c.courseCode+')',c.enrolled,c.recorded,c.average??'-',c.finalized,c.passed,c.attendanceRate==null?'-':c.attendanceRate+'%']),[198,53,53,64,45,50,68]);
   heading('Attendance by month');table(['Month','Present','Absent','Late','Excused','Rate'],monthly.map(m=>[m.month,m.present,m.absent,m.late,m.excused,m.rate==null?'-':m.rate+'%']),[146,77,77,77,77,77]);

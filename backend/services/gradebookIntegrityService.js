@@ -56,7 +56,7 @@ const assessmentWrites = (Model, handler, action) => asyncHandler(async (req, re
       const sameYear=rows.filter(row=>row.status!=='cancelled'&&!(existing&&String(row._id)===String(existing._id))&&(!year||!row.academicYear||row.academicYear===year));
       const groups=batch?[batch]:[...new Set(['',...sameYear.map(row=>row.batch||'')])];
       const changed=!existing||total!==existing.totalMarks||(req.body.batch!==undefined&&req.body.batch!==existing.batch)||(req.body.academicYear!==undefined&&req.body.academicYear!==existing.academicYear)||(existing.status==='cancelled'&&req.body.status!=='cancelled');
-      if(changed&&(req.body.status??existing?.status)!=='cancelled')for(const group of groups){const other=sameYear.filter(row=>!row.batch||row.batch===group).reduce((sum,row)=>sum+row.totalMarks,0);if(round(other+total)>90)fail('Teacher assessment allocations cannot exceed 90 marks per course, year and batch. Available: '+Math.max(0,round(90-other))+'.');}
+      if(changed&&(req.body.status??existing?.status)!=='cancelled')for(const group of groups){const other=sameYear.filter(row=>!row.batch||row.batch===group).reduce((sum,row)=>sum+row.totalMarks,0);if(round(other+total)>90)fail('Teacher assessment allocations cannot exceed 90 marks per course, year and cohort. Available: '+Math.max(0,round(90-other))+'.');}
       if (existing && await Result.exists({ [type]: existing._id, marksObtained: { $gt: total } })) fail('Maximum marks cannot be lower than an existing student score.');
       if (req.body.passingMarks == null) {
         const previousMaximum = existing?.totalMarks;

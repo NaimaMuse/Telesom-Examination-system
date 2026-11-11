@@ -4,12 +4,13 @@ const Student = require('../models/Student');
 const ids = require('../services/studentIdService');
 
 (async () => {
-  const counters = new Map();
+  const counters = new Map([['student-id:2026', 200]]);
   let existing = [];
   Sequence.findById = key => ({ lean: async () => counters.has(key) ? { value: counters.get(key) } : null });
   Student.find = filter => {
-    assert.match(filter.studentId.$regex, /^\^TL-\d{4}-/);
-    return { select: () => ({ lean: async () => existing }) };
+    assert.match(filter.studentId.$regex, /^\^TA\d{2}/);
+    const pattern = new RegExp(filter.studentId.$regex);
+    return { select: () => ({ lean: async () => existing.filter(row => pattern.test(row.studentId)) }) };
   };
   Sequence.updateOne = async (filter, update, options) => {
     assert.strictEqual(options.upsert, true);
@@ -23,19 +24,19 @@ const ids = require('../services/studentIdService');
     return { value };
   };
   const date = new Date('2026-10-26T12:00:00Z');
-  assert.strictEqual(await ids.nextStudentId(date), 'TL-2026-01');
-  assert.strictEqual(await ids.nextStudentId(date), 'TL-2026-02');
+  assert.strictEqual(await ids.nextStudentId(date), 'TA26001');
+  assert.strictEqual(await ids.nextStudentId(date), 'TA26002');
   const concurrent = await Promise.all(Array.from({length:50}, () => ids.nextStudentId(date)));
   assert.strictEqual(new Set(concurrent).size, 50);
-  assert.strictEqual(concurrent[49], 'TL-2026-52');
-  assert.strictEqual(await ids.nextStudentId(new Date('2026-12-31T20:59:59Z')), 'TL-2026-53');
-  assert.strictEqual(await ids.nextStudentId(new Date('2026-12-31T21:00:00Z')), 'TL-2027-01');
-  assert.strictEqual(await ids.nextStudentId(new Date('2027-01-01T12:00:00Z')), 'TL-2027-02');
-  existing = [{studentId:'TL-2028-09'}, {studentId:'TL-2028-100'}, {studentId:'TL-2028-02'}];
-  assert.strictEqual(await ids.nextStudentId(new Date('2028-01-01T12:00:00Z')), 'TL-2028-101');
+  assert.strictEqual(concurrent[49], 'TA26052');
+  assert.strictEqual(await ids.nextStudentId(new Date('2026-12-31T20:59:59Z')), 'TA26053');
+  assert.strictEqual(await ids.nextStudentId(new Date('2026-12-31T21:00:00Z')), 'TA27001');
+  assert.strictEqual(await ids.nextStudentId(new Date('2027-01-01T12:00:00Z')), 'TA27002');
+  existing = [{studentId:'TA28009'}, {studentId:'TA28999'}, {studentId:'TA28002'}, {studentId:'TL-2028-1200'}];
+  assert.strictEqual(await ids.nextStudentId(new Date('2028-01-01T12:00:00Z')), 'TA281000');
   // A consumed counter is never reused after a failed account creation.
-  assert.strictEqual(await ids.nextStudentId(new Date('2028-01-01T12:00:00Z')), 'TL-2028-102');
-  console.log('Student ID tests passed: sequence, parallel allocations, Nairobi year rollover, existing IDs and 100+ students.');
+  assert.strictEqual(await ids.nextStudentId(new Date('2028-01-01T12:00:00Z')), 'TA281001');
+  console.log('Student ID tests passed: sequence, parallel allocations, Nairobi year rollover, existing IDs and 1,000+ students.');
 
   const {register}=require('../controllers/authController');
   for(const role of ['student','teacher','admin']) {

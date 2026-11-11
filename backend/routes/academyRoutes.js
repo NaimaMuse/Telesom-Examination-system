@@ -29,7 +29,7 @@ async function outlineAccess(user,outline,write=false) {
     await contractService.authorize(user,contract,write);
   }
 }
-router.get('/batches',asyncHandler(async(req,res)=>{
+router.get(['/cohorts','/batches'],asyncHandler(async(req,res)=>{
   const filter={};if(req.query.academicYear){if(typeof req.query.academicYear!=='string')fail('Invalid academic year.');filter.academicYear=req.query.academicYear;}
   if(req.user.role!=='admin'){
     filter.status='active';let enrollments=[];
@@ -57,10 +57,10 @@ router.get('/batches',asyncHandler(async(req,res)=>{
   }
   res.json({batches:await Batch.find(filter).sort({academicYear:-1,name:1}).lean()});
 }));
-router.post('/batches',authorizeRoles('admin'),asyncHandler(async(req,res)=>res.status(201).json({batch:await Batch.create(pick(req.body,['name','academicYear']))})));
-router.patch('/batches/:id',authorizeRoles('admin'),asyncHandler(async(req,res)=>{
-  const batch=await Batch.findById(id(req.params.id));if(!batch)fail('Batch not found.',404);
-  if(!['active','archived'].includes(req.body.status))fail('Invalid batch status.');batch.status=req.body.status;await batch.save();res.json({batch});
+router.post(['/cohorts','/batches'],authorizeRoles('admin'),asyncHandler(async(req,res)=>res.status(201).json({batch:await Batch.create(pick(req.body,['name','academicYear']))})));
+router.patch(['/cohorts/:id','/batches/:id'],authorizeRoles('admin'),asyncHandler(async(req,res)=>{
+  const batch=await Batch.findById(id(req.params.id));if(!batch)fail('Cohort not found.',404);
+  if(!['active','archived'].includes(req.body.status))fail('Invalid cohort status.');batch.status=req.body.status;await batch.save();res.json({batch});
 }));
 router.get('/progress',authorizeRoles('student'),asyncHandler(async(req,res)=>{
   const student=await Student.findOne({user:req.user._id});if(!student)fail('Student not found.',404);
@@ -272,7 +272,7 @@ async function saveMakeup(req,res) {
     if(status==='scheduled'&&makeupDate<today)fail('Choose today or a future date for the replacement class.');
     const other={...(existing?{_id:{$ne:existing._id}}:{}),status:'scheduled'};
     const teacher=lesson?.teacher||contract.teacher,course=lesson?.course||contract.course,batch=lesson?.batch||contract.batch;
-    if(status==='scheduled'&&await Makeup.exists({...other,$or:[{lesson:lessonId},{start:{$lt:end},end:{$gt:start},$or:[{teacher},{course,batch}]}]}))fail('This lesson already has a makeup class or the teacher/batch schedule conflicts.');
+    if(status==='scheduled'&&await Makeup.exists({...other,$or:[{lesson:lessonId},{start:{$lt:end},end:{$gt:start},$or:[{teacher},{course,batch}]}]}))fail('This lesson already has a makeup class or the teacher/cohort schedule conflicts.');
     const record=existing||new Makeup();
     record.set({lesson:lessonId,attendance:absence?._id,contract:contract._id,teacher,course,batch,academicYear:contract.academicYear,originalDate,start,end,status,reason:req.body.reason||existing?.reason,createdBy:existing?.createdBy||req.user._id});
     await record.validate();

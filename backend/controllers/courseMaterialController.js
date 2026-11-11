@@ -2,10 +2,11 @@ const multer=require('multer'),mongoose=require('mongoose');
 const Note=require('../models/Note');
 const {asyncHandler}=require('./resourceController');
 const {validateInput}=require('../middleware/security');
+const {normalizeCohortField}=require('../middleware/cohortTerminology');
 const {resolveScope,materialFilter,safeMaterial}=require('../services/teacherCourseWorkspaceService');
 const fail=(message,statusCode=400)=>{throw Object.assign(new Error(message),{statusCode});};
 const receive=multer({storage:multer.memoryStorage(),limits:{files:1,fields:8,fieldSize:8000,fileSize:15*1024*1024}}).single('file');
-const upload=(req,res,next)=>receive(req,res,error=>{if(error){error.statusCode=error.code==='LIMIT_FILE_SIZE'?413:400;error.message=error.code==='LIMIT_FILE_SIZE'?'The document must be 15 MB or smaller.':error.message;return next(error);}validateInput(req,res,next);});
+const upload=(req,res,next)=>receive(req,res,error=>{if(error){error.statusCode=error.code==='LIMIT_FILE_SIZE'?413:400;error.message=error.code==='LIMIT_FILE_SIZE'?'The document must be 15 MB or smaller.':error.message;return next(error);}validateInput(req,res,()=>{normalizeCohortField(req.body);next();});});
 function attachment(file){
   if(!file)return null;
   const ext=file.originalname.split('.').pop().toLowerCase(),b=file.buffer;
@@ -28,7 +29,7 @@ async function loadOwned(req){
 }
 const list=asyncHandler(async(req,res)=>{const context=await resolveScope(req.user,req.query);res.json({notes:context.selected?(await Note.find(materialFilter(req.user,context.selected)).sort('-updatedAt').lean()).map(safeMaterial):[]});});
 const create=asyncHandler(async(req,res)=>{
-  const context=await resolveScope(req.user,req.body);if(!context.selected)fail('Select an assigned course and batch.');
+  const context=await resolveScope(req.user,req.body);if(!context.selected)fail('Select an assigned course and cohort.');
   const file=attachment(req.file);if(!file)fail('Select a learning document to upload.');
   if(String(req.body.description||'').length>4000)fail('Description must not exceed 4,000 characters.');
   const title=String(req.body.title||'').trim();if(!title)fail('Document title is required.');

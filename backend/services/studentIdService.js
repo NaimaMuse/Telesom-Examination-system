@@ -7,11 +7,12 @@ const getStudentIdYear = (now = new Date()) => Number(new Intl.DateTimeFormat('e
 
 const nextStudentId = async (now = new Date()) => {
   const year = getStudentIdYear(now);
-  const key = `student-id:${year}`;
+  const prefix = `TA${String(year).slice(-2)}`;
+  const key = `student-id:TA:${year}`;
   if (!await Sequence.findById(key).lean()) {
     // Initialize above existing IDs when enabling this format on an existing database.
-    const existing = await Student.find({ studentId: { $regex: `^TL-${year}-[0-9]+$` } }).select('studentId').lean();
-    const maximum = existing.reduce((max, row) => Math.max(max, Number(row.studentId.split('-')[2]) || 0), 0);
+    const existing = await Student.find({ studentId: { $regex: `^${prefix}[0-9]{3,}$` } }).select('studentId').lean();
+    const maximum = existing.reduce((max, row) => Math.max(max, Number(row.studentId.slice(prefix.length))), 0);
     try {
       await Sequence.updateOne({ _id: key }, { $max: { value: maximum } }, { upsert: true });
     } catch (error) {
@@ -22,7 +23,7 @@ const nextStudentId = async (now = new Date()) => {
   // MongoDB increments atomically, including across multiple server processes.
   const counter = await Sequence.findOneAndUpdate({ _id: key }, { $inc: { value: 1 } }, { new: true });
   if (!counter) throw new Error('Student ID counter is unavailable');
-  return `TL-${year}-${String(counter.value).padStart(2, '0')}`;
+  return `${prefix}${String(counter.value).padStart(3, '0')}`;
 };
 
 module.exports = { nextStudentId, getStudentIdYear };

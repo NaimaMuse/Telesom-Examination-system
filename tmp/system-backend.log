@@ -1,0 +1,16 @@
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node server.js`[39m
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+MongoDB connected: 127.0.0.1
+Server running in development mode on port 5000
+{"timestamp":"2026-11-09T08:45:35.765Z","requestId":"d1624b73-07ef-4593-bf71-6875c0b9f737","event":"login","actor":null,"method":"POST","route":"/api/auth","resource":null,"status":403,"outcome":"failure"}
+{"timestamp":"2026-11-09T09:16:01.135Z","requestId":"2816adb7-f82c-4a8c-8bac-0a98e4dc37f8","event":"login","actor":null,"method":"POST","route":"/api/auth","resource":null,"status":403,"outcome":"failure"}
+{"timestamp":"2026-11-09T09:17:04.111Z","requestId":"2faa9a46-b31b-4c78-a100-2e3349a1b503","event":"login","actor":null,"method":"POST","route":"/api/auth/login","resource":null,"status":400,"outcome":"failure"}
+{"timestamp":"2026-11-09T09:17:04.147Z","requestId":"cc08cdbf-4a16-4b13-b85d-f53f94818404","event":"login","actor":null,"method":"POST","route":"/api/auth/login","resource":null,"status":400,"outcome":"failure"}
+{"timestamp":"2026-11-09T09:17:04.155Z","requestId":"a1b6f4b3-b80d-4f92-b598-469d70b9bf19","event":"login","actor":null,"method":"POST","route":"/api/auth","resource":null,"status":403,"outcome":"failure"}
+{"timestamp":"2026-11-09T09:17:04.162Z","requestId":"e6c90e30-9767-4c1e-9ae7-936547f57224","event":"login","actor":null,"method":"POST","route":"/api/auth","resource":null,"status":403,"outcome":"failure"}

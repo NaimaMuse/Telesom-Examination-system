@@ -8,6 +8,7 @@ const types=['dropped','activities','exams','upcoming','outlines','makeup','cont
 const label=c=>c?.title||c?.name||'Unavailable course';
 const day=v=>v?require('./academicProgressService').day(v):'';
 async function getReport(type,query={}) {
+  if(type==='cohorts')type='batches';
   const fail=message=>{throw Object.assign(new Error(message),{statusCode:400});};
   if(!types.includes(type))fail('Unknown report.');
   const f={};for(const k of ['teacher','course','batch','academicYear','status','assessmentType','from','to']){if(query[k]!==undefined&&typeof query[k]!=='string')fail('Invalid report filter.');f[k]=query[k]||'';}

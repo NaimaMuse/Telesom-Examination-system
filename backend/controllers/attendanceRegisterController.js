@@ -35,7 +35,7 @@ exports.saveRegister=async(req,res,next)=>{try{
   const savedCount=await withCourseLock(course,async()=>{
     const [{students},session]=await Promise.all([roster(course,batch),getAttendanceSession(course,normalized)]);
     const allowed=new Set(students.map(s=>String(s._id))),seen=new Set();
-    for(const record of records){const id=String(record.student);if(!allowed.has(id))fail('Student is not enrolled in the selected course and batch.');requireScheduledAttendance(session,id);if(seen.has(id))fail('Duplicate student in submission.');seen.add(id);if(!statuses.includes(record.status))fail('Invalid attendance status.');if(typeof(record.remarks??'')!=='string'||(record.remarks||'').length>250)fail('Remarks must be at most 250 characters.');}
+    for(const record of records){const id=String(record.student);if(!allowed.has(id))fail('Student is not enrolled in the selected course and cohort.');requireScheduledAttendance(session,id);if(seen.has(id))fail('Duplicate student in submission.');seen.add(id);if(!statuses.includes(record.status))fail('Invalid attendance status.');if(typeof(record.remarks??'')!=='string'||(record.remarks||'').length>250)fail('Remarks must be at most 250 characters.');}
     const previous=await Attendance.find({course,student:{$in:[...seen]},date:{$gte:normalized,$lt:nextDay(normalized)}}).sort({updatedAt:1}).lean();
     const byStudent=new Map(previous.map(row=>[String(row.student),row]));
     await Attendance.bulkWrite(records.map(record=>({updateOne:{filter:byStudent.has(String(record.student))?{_id:byStudent.get(String(record.student))._id}:{course,student:record.student,date:normalized},update:{$set:{status:record.status,remarks:(record.remarks||'').trim(),recordedBy:req.user._id}},upsert:true}})),{ordered:true});

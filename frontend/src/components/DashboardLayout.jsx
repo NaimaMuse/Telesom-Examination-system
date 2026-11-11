@@ -4,7 +4,7 @@ import Evaluations from './Evaluations';
 import AcademyHeader from './AcademyHeader';
 import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
-import {AcademyReports,BatchManagement,CourseOutlines,MakeupClasses} from './AcademyWorkspace';
+import {AcademyReports,CohortManagement,CourseOutlines,MakeupClasses} from './AcademyWorkspace';
 import TeacherContracts from './TeacherContracts';
 import NotificationBell from './NotificationBell';
 import TelesomLogo from './TelesomLogo';
@@ -43,6 +43,7 @@ import StudentQuizzes    from '../pages/student/StudentQuizzes';
 import StudentNotes      from '../pages/student/StudentNotes';
 import StudentAttendance from '../pages/student/StudentAttendance';
 import StudentProfile    from '../pages/student/StudentProfile';
+import Certificates from '../pages/Certificates';
 
 import '../pages/teacher/TeacherDashboardLayout.css';
 import '../pages/teacher/TeacherDashboardReference.css';
@@ -67,9 +68,8 @@ const NAV = {
       section: 'Management',
       items: [
         { to: '/admin/students',   label: 'Student Management', icon: 'graduate' },
-        { to: '/admin/internships', label: 'Internships', icon: 'briefcase' },
         { to: '/admin/teachers',   label: 'Teacher Management', icon: 'teacher' },
-        { to: '/admin/batches', label: 'Years & Batches', icon: 'reschedule' },
+        { to: '/admin/cohorts', label: 'Years & Cohorts', icon: 'reschedule' },
         { to: '/admin/courses',    label: 'Course Management',  icon: 'book' },
       ],
     },
@@ -80,9 +80,16 @@ const NAV = {
         { to: '/admin/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
         { to: '/admin/marks',      label: 'Marks & Results',   icon: 'chart' },
         { to: '/admin/attendance', label: 'Attendance',         icon: 'calendar' },
-        { to: '/admin/reports', label: 'Reports Center', icon: 'file' },
         { to: '/admin/outlines', label: 'Teaching & Outlines', icon: 'book' },
         { to: '/admin/makeup', label: 'Makeup Classes', icon: 'reschedule' },
+        { to: '/admin/internships', label: 'Internships', icon: 'briefcase' },
+        { to: '/admin/certificates', label: 'Certificates', icon: 'graduate' },
+      ],
+    },
+    {
+      section: 'Analytics',
+      items: [
+        { to: '/admin/reports', label: 'Reports Center', icon: 'file' },
         { to: '/admin/analytics',  label: 'Analytics & Reports',icon: 'chart' },
       ],
     },
@@ -112,6 +119,7 @@ const NAV = {
       section: 'Academics',
       items: [
         { to: '/student/courses',   label: 'My Courses',      icon: 'book' },
+        { to: '/student/certificates', label: 'Certificates', icon: 'graduate' },
         { to: '/student/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
         { to: '/student/exams',     label: 'Exams & Results', icon: 'chart' },
         { to: '/student/quizzes',   label: 'Quizzes',         icon: 'clipboard' },
@@ -145,11 +153,13 @@ const ROLE_ROUTES = {
       <Route path="internships" element={<Internships />} />
       <Route path="teachers"  element={<TeacherMgmt />} />
       <Route path="reports" element={<AcademyReports />} />
-      <Route path="batches" element={<BatchManagement />} />
+      <Route path="cohorts" element={<CohortManagement />} />
+      <Route path="batches" element={<Navigate to="/admin/cohorts" replace />} />
       <Route path="outlines" element={<div className="admin-outlines-page"><TeacherContracts admin combined workspaceMode="outline" /></div>} />
       <Route path="makeup" element={<div className="admin-makeup-design"><MakeupClasses role="admin" /></div>} />
       <Route path="contracts" element={<TeacherContracts admin combined />} />
       <Route path="courses"   element={<CourseMgmt />} />
+      <Route path="certificates" element={<Certificates key="admin-certificates" admin />} />
       <Route path="exams"     element={<ExamMgmt />} />
       <Route path="marks"     element={<MarksMgmt />} />
       <Route path="attendance"element={<AttendanceMgmt />} />
@@ -180,6 +190,7 @@ const ROLE_ROUTES = {
       <Route path="evaluations" element={<Evaluations />} />
       <Route path="evaluations/:id" element={<Evaluations />} />
       <Route path="courses"     element={<StudentCourses />} />
+      <Route path="certificates" element={<Certificates key="student-certificates" />} />
       <Route path="exams"       element={<StudentExams />} />
       <Route path="quizzes"     element={<StudentQuizzes />} />
       <Route path="notes"       element={<StudentNotes />} />
@@ -197,7 +208,7 @@ const PAGE_META = {
   '/student/evaluations': {title:'Evaluation Forms',hint:'Complete your assigned course evaluations.'},
   '/teacher/my-course/outline': {title:'Course Planner',hint:'Plan lessons, organize topics and track teaching progress.'},
   '/admin/reports': {title:'Reports Center',hint:'Filtered academy reports and exports.'},
-  '/admin/batches': {title:'Years & Batches',hint:'Organize enrollments by academic year and batch.'},
+  '/admin/cohorts': {title:'Years & Cohorts',hint:'Organize enrollments by academic year and cohort.'},
   '/admin/outlines': {title:'Teaching & Outlines',hint:'Contract days, course plans and lesson progress.'},
   '/admin/makeup': {title:'Makeup Classes',hint:'Schedule replacements for missed lessons.'},
   '/teacher/outlines': {title:'Teaching & Outlines',hint:'Your contract and course plan in one workspace.'},
@@ -209,6 +220,7 @@ const PAGE_META = {
   '/admin/contracts': { title: 'Teacher Contracts', hint: 'Monitor completed teaching days and contract balances.' },
   '/admin/teachers': { title: 'Teacher Management', hint: 'Manage faculty accounts and assignments.' },
   '/admin/courses': { title: 'Course Management', hint: 'Create and organize academic courses.' },
+  '/admin/certificates': { title: 'Certificates', hint: 'Issue certificates for completed courses.' },
   '/admin/exams': { title: 'Exam & Quiz Management', hint: 'Schedule and configure assessments.' },
   '/admin/marks': { title: 'Marks & Results', hint: 'Review student marks and course results.' },
   '/admin/teacher-attendance': { title: 'Teacher Attendance', hint: 'Mark attendance and schedule makeup classes.' },
@@ -223,6 +235,7 @@ const PAGE_META = {
   '/teacher/profile': { title: 'My Profile', hint: 'Your account and contact details.' },
   '/student': { title: 'Student Dashboard', hint: 'Courses, marks, and upcoming exams.' },
   '/student/courses': { title: 'My Courses', hint: 'Enrolled courses and materials.' },
+  '/student/certificates': { title: 'Certificates', hint: 'View certificates awarded to you.' },
   '/student/makeup': { title: 'Makeup Classes', hint: 'Your scheduled replacement classes.' },
   '/student/exams': { title: 'Exams & Results', hint: 'Your marks, grades, and academic results.' },
   '/student/quizzes': { title: 'Quizzes', hint: 'Quiz scores and practice.' },
@@ -273,10 +286,7 @@ export default function DashboardLayout({ role }) {
   const search = pageSearch.path === location.pathname ? pageSearch.query : '';
   const setSearch = query => setPageSearch({ path: location.pathname, query });
 
-  const staffSidebar = role === 'admin' || role === 'teacher';
-  const navSections = staffSidebar
-    ? [{ section: 'Navigation', items: NAV[role].flatMap(section => section.items) }]
-    : NAV[role] || [];
+  const navSections = NAV[role] || [];
   const userRole = role.toUpperCase();
   const pageMeta = getPageMeta(location.pathname);
   const firstName = user?.name?.split(' ')[0] || 'User';
@@ -335,6 +345,7 @@ export default function DashboardLayout({ role }) {
         <nav className="sidebar-nav">
           {navSections.map((section) => (
             <div key={section.section}>
+              {role === 'admin' && <h2 className="sidebar-section-label">{section.section}</h2>}
               {section.items.map((item) => (
                 item.logout ? (
                   <button

@@ -29,7 +29,7 @@ class AppErrorBoundary extends Component {
  * App — root router + auth context wrapper.
  *
  * Routes:
- *   /           → redirect to /login
+ *   /           → redirect to /staff/login
  *   /login      → LoginPage (public)
  *   /signup     → SignupPage (public)
  *   /dashboard  → RoleRedirect (protected, redirects based on role)
@@ -43,11 +43,14 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Default: redirect root to /login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Default: open staff sign-in */}
+          <Route path="/" element={<Navigate to="/staff/login" replace />} />
 
           {/* Public Authentication Pages */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage key="student" />} />
+          <Route path="/student/forgot-password" element={<LoginPage key="student-recovery" recovery />} />
+          <Route path="/staff/login" element={<LoginPage key="staff" staff />} />
+          <Route path="/staff/forgot-password" element={<LoginPage key="staff-recovery" staff recovery />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/signup" element={<Navigate to="/login" replace />} />
 

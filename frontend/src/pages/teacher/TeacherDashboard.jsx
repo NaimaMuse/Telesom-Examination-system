@@ -113,14 +113,14 @@ export default function TeacherDashboard() {
   }, [load]);
 
 
-  const matchingContracts=contracts.filter(contract=>matchesPageSearch(search,contract.course?.title,contract.course?.name,contract.batch,contract.academicYear));
+  const matchingContracts=contracts.filter(contract=>matchesPageSearch(search,contract.course?.title,contract.course?.name,contract.cohort,contract.academicYear));
   const contractsByDate=matchingContracts.reduce((groups,contract)=>{
     const key=contract.startDate;
     if(key && contract.status !== 'cancelled' && contract.activeAssignment !== false) groups[key]=[...(groups[key]||[]),contract];
     return groups;
   },{});
   const makeupsByDate = makeupClassesByDate(makeupClasses.filter(item =>
-    matchesPageSearch(search, 'Makeup class', item.course?.title, item.course?.name, item.batch, item.academicYear)
+    matchesPageSearch(search, 'Makeup class', item.course?.title, item.course?.name, item.cohort, item.academicYear)
   ));
 
   const matchingExams = upcoming.filter(exam => matchesPageSearch(search, exam.title, exam.type, exam.course?.title, exam.course?.courseCode, exam.examDate, exam.date));
@@ -186,7 +186,7 @@ export default function TeacherDashboard() {
       <section className="teacher-two-column-layout" aria-label="Teaching overview and calendar"><div className="teacher-dashboard-stack">
 <section className="teacher-scheduled-panel"><header><h2><TeachingIcon name="clipboard"/> Scheduled Assessments</h2><span><TeachingIcon name="calendar" size={13}/>{formatDate(selectedLocalDate,{month:'short',day:'numeric'})}</span></header><p className="teacher-scheduled-date">{formatDate(selectedLocalDate,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</p>
           {assessmentsError && <p className="teacher-panel-message" role="alert">{assessmentsError} <button type="button" onClick={()=>load()}>Retry</button></p>}
-          {loading ? <p className="teacher-panel-message">Loading scheduled assessments…</p> : selectedAssessments.length ? <ul>{selectedAssessments.map(item=><li key={item.calendarKey}><span className="teacher-scheduled-time"><TeachingIcon name={item.type==='quiz'?'clipboard':'file'} size={19}/></span><div><Link to="/teacher/exams"><strong>{item.title}</strong></Link><small>{item.course?.title||item.course?.name||item.courseName||'Assigned course'}{item.batch?' · '+item.batch:''}</small><small className="teacher-assessment-timing"><TeachingIcon name="clock" size={12}/>{assessmentTime(item)}{item.durationMinutes?' · '+item.durationMinutes+' minutes':''}</small></div><span className={'teacher-scheduled-badge '+item.type}>{item.type||'Exam'}<small>{item.status}</small></span></li>)}</ul> : !assessmentsError && <p className="teacher-panel-message">No exams, quizzes or assessments scheduled for this date. Select a marked date in the calendar.</p>}
+          {loading ? <p className="teacher-panel-message">Loading scheduled assessments…</p> : selectedAssessments.length ? <ul>{selectedAssessments.map(item=><li key={item.calendarKey}><span className="teacher-scheduled-time"><TeachingIcon name={item.type==='quiz'?'clipboard':'file'} size={19}/></span><div><Link to="/teacher/exams"><strong>{item.title}</strong></Link><small>{item.course?.title||item.course?.name||item.courseName||'Assigned course'}{item.cohort?' · '+item.cohort:''}</small><small className="teacher-assessment-timing"><TeachingIcon name="clock" size={12}/>{assessmentTime(item)}{item.durationMinutes?' · '+item.durationMinutes+' minutes':''}</small></div><span className={'teacher-scheduled-badge '+item.type}>{item.type||'Exam'}<small>{item.status}</small></span></li>)}</ul> : !assessmentsError && <p className="teacher-panel-message">No exams, quizzes or assessments scheduled for this date. Select a marked date in the calendar.</p>}
         </section>
 <section className="teacher-assessments-panel"><header><h2><TeachingIcon name="calendar"/> Upcoming Assessments</h2><Link to="/teacher/exams">View all <TeachingIcon name="arrow" size={16}/></Link></header>
           {loading ? <p className="teacher-panel-message" role="status">Loading upcoming assessments…</p> : assessmentsError && !upcoming.length ? <p className="teacher-panel-message" role="alert">{assessmentsError}</p> : nextAssessments.length ? <ul>{nextAssessments.map(exam=><li key={exam.calendarKey||exam._id||exam.title}><span className="teacher-assessment-icon"><TeachingIcon name="file" size={25}/></span><div><Link to="/teacher/exams">{exam.title}</Link><p>{formatDate(parseExamDate(exam.examDate||exam.date),{weekday:'short',month:'short',day:'numeric',year:'numeric'})} · {assessmentTime(exam)}</p><small>{exam.course?.title||exam.courseName||'Assigned course'}</small></div><span className="teacher-assessment-type">{exam.status||'Upcoming'}</span></li>)}</ul> : <div className="teacher-assessments-empty"><TeachingIcon name="calendar" size={34}/><strong>No upcoming assessments.</strong><p>Your scheduled exams and quizzes will appear here.</p></div>}
@@ -196,9 +196,9 @@ export default function TeacherDashboard() {
           <section className="teacher-contract-panel"><header><h2><TeachingIcon name="briefcase"/> Teaching Contract</h2><Link to="/teacher/my-course?tab=outline">View details <TeachingIcon name="arrow" size={16}/></Link></header>
           {contractsError && <p className="teacher-panel-message" role="status">{contractsError}</p>}
           {loading && !contracts.length ? <p className="teacher-panel-message">Loading contracts…</p> : matchingContracts.length === 0 ? <p className="teacher-panel-message">{search ? 'No contracts match your search.' : 'Your teaching contract will appear when your administrator assigns it.'}</p> : matchingContracts.slice(0,3).map(contract => {
-            const params=new URLSearchParams({tab:'outline',courseId:String(contract.course?._id||contract.course),academicYear:contract.academicYear,batch:contract.batch,contractId:contract._id});
+            const params=new URLSearchParams({tab:'outline',courseId:String(contract.course?._id||contract.course),academicYear:contract.academicYear,cohort:contract.cohort,contractId:contract._id});
             return <article className="teacher-reference-contract" key={contract._id}>
-              <div className="teacher-contract-main"><span className="teacher-contract-emblem"><TeachingIcon name="book" size={32}/></span><div><Link to={'/teacher/my-course?'+params.toString()}>{contract.course?.title||contract.course?.name||'Assigned course'}</Link><p><TeachingIcon name="calendar" size={14}/>{contract.startDate} – {contract.endDate||'No end date'}</p><small>{contract.academicYear} / {contract.batch}</small></div><span className={'teacher-contract-state '+contract.contractStatus?.toLowerCase()}>{contract.contractStatus==='Active' && <TeachingIcon name="check" size={14}/>} {contract.contractStatus}</span></div>
+              <div className="teacher-contract-main"><span className="teacher-contract-emblem"><TeachingIcon name="book" size={32}/></span><div><Link to={'/teacher/my-course?'+params.toString()}>{contract.course?.title||contract.course?.name||'Assigned course'}</Link><p><TeachingIcon name="calendar" size={14}/>{contract.startDate} – {contract.endDate||'No end date'}</p><small>{contract.academicYear} / {contract.cohort}</small></div><span className={'teacher-contract-state '+contract.contractStatus?.toLowerCase()}>{contract.contractStatus==='Active' && <TeachingIcon name="check" size={14}/>} {contract.contractStatus}</span></div>
               <div className="teacher-contract-weekline"><TeachingIcon name="clock" size={16}/><strong>Weekly Schedule:</strong><span>{(contract.course?.teachingSchedule||[]).map(slot=>WEEK_DAYS[slot.day]+(new Set((contract.course?.teachingSchedule||[]).map(row=>row.startTime+'–'+row.endTime)).size>1?' '+slot.startTime+'–'+slot.endTime:'')).join(' – ')||'Not scheduled'}</span><span className="teacher-contract-weektime">{new Set((contract.course?.teachingSchedule||[]).map(slot=>slot.startTime+'–'+slot.endTime)).size===1 ? (contract.course.teachingSchedule[0].startTime+'–'+contract.course.teachingSchedule[0].endTime) : ''}</span></div>
               <div className="teacher-contract-totals"><span><strong>{contract.completedTeachingDays}</strong> taught</span><span><strong>{contract.remainingScheduledTeachingDays??'—'}</strong> upcoming</span><span><strong>{contract.targetTeachingDays??'—'}</strong> total teaching days</span></div>
             </article>;
@@ -265,11 +265,11 @@ export default function TeacherDashboard() {
             {makeupError && <p role="status">{makeupError}</p>}
             {selectedClasses.length || selectedMakeups.length ? <ul>
               {selectedClasses.map(item => <li key={item._id + '/' + item.slot.startTime}>
-                <strong>{item.course.title || item.course.name} · {item.batch}</strong>
+                <strong>{item.course.title || item.course.name} · {item.cohort}</strong>
                 <span>{item.slot.startTime}–{item.slot.endTime} EAT</span>
               </li>)}
               {selectedMakeups.map(item => <li key={item._id}>
-                <strong>Makeup class · {item.course?.title || item.course?.name || 'Course'} · {item.batch}</strong>
+                <strong>Makeup class · {item.course?.title || item.course?.name || 'Course'} · {item.cohort}</strong>
               </li>)}
             </ul> : !loading && <p>No classes scheduled for this date.</p>}
           </div>

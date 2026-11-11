@@ -12,11 +12,11 @@ function sessionId(req) {
   return value && /^[A-Za-z0-9_-]{43}$/.test(value) ? digest(value) : null;
 }
 
-async function startSession(req, res, user) {
+async function startSession(req, res, user, {googleVerified = false} = {}) {
   const token = randomBytes(32).toString('base64url');
   const previous = sessionId(req);
   if (previous) await Session.deleteOne({_id:previous});
-  await Session.create({_id:digest(token),user:user._id,authVersion:user.authVersion || 0,expiresAt:new Date(Date.now()+lifetime)});
+  await Session.create({_id:digest(token),user:user._id,authVersion:user.authVersion || 0,googleVerified,expiresAt:new Date(Date.now()+lifetime)});
   res.cookie(cookieName(), token, {...cookieOptions(),maxAge:lifetime});
 }
 

@@ -1,11 +1,21 @@
 require('dotenv').config({path:require('path').join(__dirname,'../.env')});
 const assert=require('assert'),crypto=require('crypto'),mongoose=require('mongoose'),bcrypt=require('bcryptjs');
+const jwt=require('jsonwebtoken');
+const {verifyPassword}=require('../utils/passwords');
 const User=require('../models/User'),Teacher=require('../models/Teacher'),Student=require('../models/Student'),Sequence=require('../models/Sequence');
 const generateToken=require('../utils/generateToken');
 const {app}=require('../server');
 const Session=require('../models/Session');
 const testDbName='telesom_auth_test_'+crypto.randomBytes(6).toString('hex');
 const created=[];
+const clientId='test-client.apps.googleusercontent.com';
+process.env.GOOGLE_CLIENT_ID=clientId;
+const {publicKey,privateKey}=crypto.generateKeyPairSync('rsa',{modulusLength:2048});
+const googleKey={...publicKey.export({format:'jwk'}),kid:'test-key',alg:'RS256'};
+const realFetch=global.fetch;
+global.fetch=(url,options)=>url==='https://www.googleapis.com/oauth2/v3/certs'
+ ? Promise.resolve(new Response(JSON.stringify({keys:[googleKey]}),{headers:{'Cache-Control':'max-age=60'}}))
+ : realFetch(url,options);
 let server;
 (async()=>{
  await mongoose.connect(process.env.MONGODB_URI,{dbName:testDbName,serverSelectionTimeoutMS:10000});
@@ -72,14 +82,86 @@ let server;
  assert.strictEqual((await request('POST','/auth/login',{email:'teacher@test.example',password:temporary,role:'teacher'})).status,401);
  login=await request('POST','/auth/login',{email:'teacher@test.example',password:'New-teacher-pass!',role:'teacher'});assert.strictEqual(login.status,200);
  assert.strictEqual((await request('GET','/profile',null,login.body.token)).status,200,'New session must work');
- const student=await request('POST','/users/students',{name:'Test Student',email:'student@test.example',gender:'female'},adminToken);
+ const studentEmail='registered-student@gmail.com';
+ const student=await request('POST','/users/students',{name:'Test Student',email:studentEmail,gender:'female'},adminToken);
  assert.strictEqual(student.status,201);created.push([User,student.body.data.user._id],[Student,student.body.data.student._id]);
- const studentId=student.body.data.student.studentId;assert.match(studentId,/^TL-\d{4}-\d{2,}$/);
- const studentLogin=await request('POST','/auth/login',{studentId,role:'student'});assert.strictEqual(studentLogin.status,200);
+ const studentId=student.body.data.student.studentId;assert.match(studentId,/^TA\d{5,}$/);
+ assert.strictEqual((await request('POST','/auth/login',{studentId,role:'student'})).status,401);
  assert.strictEqual((await request('POST','/auth/login',{studentId:'UNKNOWN',role:'student'})).status,401);
- assert.strictEqual((await request('POST','/users/teachers',{name:'Blocked',email:'blocked@test.example'},studentLogin.body.token)).status,403);
- assert.strictEqual((await request('PUT','/auth/password',{currentPassword:'anything',newPassword:'Something-new!'},studentLogin.body.token)).status,403);
- console.log('Account lifecycle integration passed: closed signup, admin-managed teacher passwords, session revocation, role checks, and automatic student ID login.');
+ const studentUserId=student.body.data.user._id;
+ const studentPassword='Student-portal-password!';
+ const legacyToken=generateToken(studentUserId);
+ assert.strictEqual((await request('PUT','/auth/student/password',{newPassword:studentPassword},legacyToken)).status,403);
+ assert.strictEqual((await request('POST','/auth/login',{email:studentEmail,password:studentPassword})).status,401);
+
+ const config=await fetch(base+'/auth/google/config',{method:'POST',headers:browserHeaders});
+ assert.strictEqual(config.status,200);
+ const {nonce}=await config.json();
+ const googleCookie=config.headers.get('set-cookie').split(';')[0];
+ const googleSignIn=(claims={},audience=clientId,Cookie=googleCookie)=>fetch(base+'/auth/google',{
+  method:'POST',headers:{...browserHeaders,Cookie},body:JSON.stringify({
+   credential:jwt.sign({sub:'test-google-subject',email:studentEmail,email_verified:true,nonce,...claims},privateKey,{
+    keyid:googleKey.kid,algorithm:'RS256',issuer:'https://accounts.google.com',audience,expiresIn:'5m',
+   }),
+  }),
+ });
+ assert.strictEqual((await googleSignIn({email:'unregistered@gmail.com'})).status,401);
+ assert.strictEqual((await googleSignIn({email_verified:false})).status,401);
+ assert.strictEqual((await googleSignIn({nonce:'wrong-nonce'})).status,401);
+ assert.strictEqual((await googleSignIn({},'wrong-client')).status,401);
+ assert.strictEqual((await googleSignIn({},clientId,'')).status,401);
+
+ const googleLogin=await googleSignIn();
+ assert.strictEqual(googleLogin.status,200);
+ const firstLogin=await googleLogin.json();
+ assert.strictEqual(firstLogin.user.mustChangePassword,true);
+ assert.strictEqual(firstLogin.user.studentId,studentId);
+ assert.strictEqual(firstLogin.token,undefined);
+ const googleSession=googleLogin.headers.getSetCookie().find(cookie=>cookie.startsWith('telesom_session=')).split(';')[0];
+ const pending=await fetch(base+'/auth/session',{headers:{Cookie:googleSession,Origin:origin}});
+ assert.strictEqual((await pending.json()).user.mustChangePassword,true);
+ const setup=await fetch(base+'/auth/student/password',{
+  method:'PUT',headers:{...browserHeaders,Cookie:googleSession},body:JSON.stringify({newPassword:studentPassword}),
+ });
+ assert.strictEqual(setup.status,200);
+ assert.strictEqual((await setup.json()).user.mustChangePassword,false);
+ let newSession=setup.headers.get('set-cookie').split(';')[0];
+ const restored=await fetch(base+'/auth/session',{headers:{Cookie:newSession,Origin:origin}});
+ assert.strictEqual(restored.status,200);
+ assert.strictEqual((await restored.json()).user.mustChangePassword,false);
+ assert.strictEqual((await fetch(base+'/auth/session',{headers:{Cookie:googleSession,Origin:origin}})).status,401);
+ const studentLogin=await request('POST','/auth/login',{email:studentEmail,password:studentPassword,role:'student'});
+ assert.strictEqual(studentLogin.status,401);
+ const studentRequest=(method,path,body)=>fetch(base+path,{
+  method,headers:{...browserHeaders,Cookie:newSession},body:body?JSON.stringify(body):undefined,
+ });
+ const sessionHash=crypto.createHash('sha256').update(newSession.split('=')[1]).digest('hex');
+ await Session.updateOne({_id:sessionHash},{$set:{googleVerified:false}});
+ assert.strictEqual((await studentRequest('GET','/profile')).status,401);
+ assert.strictEqual((await studentRequest('PUT','/auth/student/password',{newPassword:'Replacement-password!'})).status,401);
+ await Session.updateOne({_id:sessionHash},{$set:{googleVerified:true}});
+ const replacement='Replacement-password!';
+ const reset=await studentRequest('PUT','/auth/student/password',{newPassword:replacement});
+ assert.strictEqual(reset.status,200);
+ assert.strictEqual((await reset.json()).user.mustChangePassword,false);
+ assert.strictEqual((await studentRequest('GET','/profile')).status,401);
+ newSession=reset.headers.get('set-cookie').split(';')[0];
+ assert.strictEqual((await studentRequest('GET','/profile')).status,200);
+ const resetHash=(await User.findById(studentUserId).select('+password')).password;
+ assert.strictEqual(await verifyPassword(replacement,resetHash),true);
+ assert.strictEqual(await verifyPassword(studentPassword,resetHash),false);
+ assert.strictEqual((await request('POST','/auth/login',{email:studentEmail,password:replacement})).status,401);
+ assert.strictEqual((await studentRequest('POST','/users/teachers',{name:'Blocked',email:'blocked@test.example'})).status,403);
+ assert.strictEqual((await studentRequest('PUT','/auth/password',{currentPassword:'anything',newPassword:'Something-new!'})).status,403);
+ const profile=await studentRequest('PUT','/profile',{email:'other@gmail.com'});
+ assert.strictEqual((await profile.json()).data.user.email,studentEmail);
+ const newEmail='updated-student@gmail.com';
+ const updatedStudent=await request('PUT','/students/'+student.body.data.student._id,{email:newEmail},adminToken);
+ assert.strictEqual(updatedStudent.status,200);
+ assert.strictEqual((await studentRequest('GET','/profile')).status,401);
+ assert.strictEqual((await request('POST','/auth/login',{email:newEmail,password:studentPassword})).status,401);
+ assert.strictEqual((await googleSignIn()).status,401);
+ console.log('Account lifecycle integration passed, including verified Google sign-in and student password setup.');
 })().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{
  if(server)await new Promise(resolve=>server.close(resolve));
  if(mongoose.connection.readyState===1&&mongoose.connection.name===testDbName){for(const [Model,id]of created.reverse())await Model.deleteOne({_id:id});await Sequence.deleteMany({_id:{$regex:'^student-id:'}});await Session.deleteMany({});}

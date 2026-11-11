@@ -7,68 +7,147 @@ import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContex
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../services/api';
+import { findImportCourses } from '../../utils/studentImportCourse.mjs';
 import TeachingIcon from '../../components/TeachingIcon';
 
 // ─────────────────── STUDENT MANAGEMENT ────────────────────────
+const STUDENT_STATUSES = ['active', 'inactive', 'graduated', 'suspended', 'dropped', 'waiting'];
 const STUDENT_FIELDS = [
   { key: 'name', label: 'Name', type: 'text', required: true, example: 'Amina Hassan', guidance: 'Required. Enter the full name (2–100 characters).' },
   { key: 'studentId', label: 'Student ID (automatic)', type: 'text', readOnly: true },
-  { key: 'email', label: 'Email', type: 'email', example: 'amina@example.com', guidance: 'Optional. Enter a valid, unique email address or add it later.' },
+  { key: 'email', label: 'Email', type: 'email', example: 'amina@gmail.com', guidance: 'Enter the student’s Google account email to enable sign-in. You can add it later.' },
   { key: 'gender', label: 'Gender', type: 'select', options: ['male', 'female'], example: 'female', guidance: 'Optional. Use male or female if known.' },
   { key: 'phone', label: 'Phone', type: 'tel', example: '+252 61 1234567', guidance: 'Optional. Enter as text to keep the country code and leading zeros.' },
-  { key: 'course', label: 'Course', type: 'course', required: true, guidance: 'Required. Use an existing course name from the Available Courses sheet.' },
+  { key: 'course', label: 'Course', type: 'course', required: true, guidance: 'Required. Use an existing course name, code, or unique abbreviation from the Available Courses sheet.' },
   { key: 'address', label: 'Address', type: 'text', example: 'Hargeisa', guidance: 'Optional. Enter the student address.' },
-  { key: 'academicYear', label: 'Academic year', type: 'year', required:true, guidance: 'Required. Select the academic year that owns the batch.' },
-  { key: 'batch', label: 'Batch', type: 'batch', guidance:'Optional. Use an active batch from the Available Batches sheet matching the academic year.' },
-  { key: 'status', label: 'Status', type: 'select', options: ['active','inactive','graduated','suspended','dropped'], example: 'active', guidance: 'Optional. Use active, inactive, graduated or suspended. Defaults to active.' },
+  { key: 'academicYear', label: 'Academic year', type: 'year', required:true, guidance: 'Required. Select the academic year that owns the cohort.' },
+  { key: 'cohort', label: 'Cohort', type: 'cohort', guidance:'Optional. Use an active cohort from the Available Cohorts sheet matching the academic year.' },
+  { key: 'status', label: 'Status', type: 'select', options: STUDENT_STATUSES, example: 'active', guidance: `Optional. Allowed values are ${STUDENT_STATUSES.join(', ')}. Defaults to active.` },
 ];
 
-function StudentDetailsDialog({ student, course, academicYear, batch, onClose }) {
+function StudentDetailsDialog({ studentId, onClose }) {
   const dialog = useRef(null);
+  const [record, setRecord] = useState(null);
+  const [error, setError] = useState('');
   useEffect(() => {
     const element = dialog.current;
     element.showModal();
     return () => element.close();
   }, []);
 
-  const details = [
-    ['Student ID', student.studentId],
-    ['Email', student.email],
-    ['Phone', student.phone],
-    ['Gender', student.gender],
-    ['Address', student.address],
-    ['Course', course],
-    ['Academic year', academicYear],
-    ['Batch', batch],
-    ['Student status', student.status || 'active'],
-    ['Login status', student.user?.isActive == null ? '' : student.user.isActive ? 'Active' : 'Disabled'],
+  useEffect(() => {
+    const request = new AbortController();
+    const {signal} = request;
+    const loadEnrollments = async () => {
+      const enrollments = [];
+      let pages = 1;
+      for (let page = 1; page <= pages; page++) {
+        const {data} = await api.get('/enrollments', {
+          signal, params:{student:studentId, page, limit:100},
+        });
+        enrollments.push(...data.data);
+        pages = data.pagination.pages;
+      }
+      return enrollments;
+    };
+
+    Promise.all([api.get(`/students/${studentId}`, {signal}), loadEnrollments()])
+      .then(([{data}, enrollments]) => {
+        if (!signal.aborted) setRecord({student:data.data, enrollments});
+      })
+      .catch(() => {
+        if (!signal.aborted) setError('Student details could not load. Close and reopen this record to try again.');
+      });
+    return () => request.abort();
+  }, [studentId]);
+
+  const {student = {}, enrollments = []} = record || {};
+  const name = student.user?.name?.trim() || 'Student details';
+  const initials = name.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+  const studentStatus = student.status || 'active';
+  const loginStatus = student.user?.isActive;
+  const enrollmentDetails = (enrollment) => {
+    const course = enrollment?.course;
+    const academicYear = enrollment?.academicYear || student.academicYear;
+    const cohort = enrollment?.cohort ||
+      (academicYear === student.academicYear ? student.cohort : '') ||
+      (course?.academicYear === academicYear ? course?.cohort : '');
+    return [
+      ['Course', course?.title || course?.name || course?.courseCode],
+      ['Cohort', cohort],
+      ['Academic year', academicYear],
+      ...(enrollment ? [['Enrollment status', enrollment.status]] : []),
+    ];
+  };
+  const enrollmentSections = enrollments.length
+    ? enrollments.map((enrollment, index) => [
+      enrollments.length === 1 ? 'Enrollment' : `Enrollment ${index + 1}`,
+      enrollmentDetails(enrollment),
+    ])
+    : [['Enrollment', enrollmentDetails()]];
+  const sections = [
+    ['Student information', [
+      ['Email', student.user?.email],
+      ['Phone', student.phone],
+      ['Gender', student.gender],
+      ['Address', student.address],
+      ...(student.droppedAt ? [['Dropped on', new Intl.DateTimeFormat('en-GB', {
+        dateStyle: 'medium', timeZone: 'Africa/Nairobi',
+      }).format(new Date(student.droppedAt))]] : []),
+    ]],
+    ...enrollmentSections,
   ];
-  if (student.droppedAt) {
-    details.push(['Dropped on', new Intl.DateTimeFormat('en-GB', {
-      dateStyle: 'medium', timeZone: 'Africa/Nairobi',
-    }).format(new Date(student.droppedAt))]);
-  }
 
   return (
-    <dialog ref={dialog} className="modal-box student-details-dialog" aria-labelledby="student-details-title"
+    <dialog ref={dialog} className="student-details-dialog" aria-labelledby="student-details-title"
       onCancel={event => { event.preventDefault(); onClose(); }}>
-      <header className="modal-header">
-        <h2 id="student-details-title" className="modal-title">{student.name || 'Student details'}</h2>
-        <button type="button" className="modal-close" aria-label="Close student details" onClick={onClose}>×</button>
+      <header className="student-details-header">
+        <span className="student-details-avatar" aria-hidden="true">{initials}</span>
+        <div className="student-details-identity">
+          <p className="student-details-kicker">Student record</p>
+          <h2 id="student-details-title">{name}</h2>
+          {record && <p className="student-details-id">Student ID <strong>{student.studentId || '—'}</strong></p>}
+        </div>
+        <button type="button" className="student-details-close" aria-label="Close student details" onClick={onClose}>×</button>
       </header>
-      <dl className="modal-body student-details-fields">
-        {details.map(([label, value]) => (
-          <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>
-        ))}
-      </dl>
+      <div className="student-details-body" aria-busy={!record && !error}>
+        {error && <p role="alert">{error}</p>}
+        {!record && !error && <p role="status">Loading student details…</p>}
+        {record && (
+          <>
+            <dl className="student-details-status">
+              <div>
+                <dt>Student status</dt>
+                <dd><span className={studentStatus === 'active' ? 'is-active' : ''}>{studentStatus}</span></dd>
+              </div>
+              <div>
+                <dt>Login status</dt>
+                <dd><span className={loginStatus ? 'is-active' : ''}>{loginStatus == null ? '—' : loginStatus ? 'Active' : 'Disabled'}</span></dd>
+              </div>
+            </dl>
+            <div className="student-details-sections">
+              {sections.map(([title, fields]) => (
+                <section key={title} className="student-details-section">
+                  <h3>{title}</h3>
+                  <dl className="student-details-fields">
+                    {fields.map(([label, value]) => (
+                      <div key={label}><dt>{label}</dt><dd>{value || '—'}</dd></div>
+                    ))}
+                  </dl>
+                </section>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </dialog>
   );
 }
 
 function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, onClose }) {
   const [form, setForm] = useState({...initial,academicYear:initial?.academicYear||String(new Date().getFullYear())});
-  const [batches,setBatches]=useState([]);
-  useEffect(()=>{api.get('/academy/batches').then(r=>setBatches(r.data.batches.filter(b=>b.status==='active'))).catch(()=>setError('Batches could not load. Please reopen this form.'));},[]);
+  const [cohorts,setCohorts]=useState([]);
+  useEffect(()=>{api.get('/academy/cohorts').then(r=>setCohorts(r.data.cohorts.filter(b=>b.status==='active'))).catch(()=>setError('Cohorts could not load. Please reopen this form.'));},[]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -97,7 +176,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
               {fields.map(f => (
                 <div className="form-group" key={f.key}>
                   <label className="form-label" htmlFor={`student-${f.key}`}>{f.label}{f.required && ' *'}</label>
-                  {f.type === 'year' ? <select id={`student-${f.key}`} className="form-control" required value={form.academicYear||''} onChange={e=>setForm(p=>({...p,academicYear:e.target.value,batch:''}))}><option value="">Select academic year</option>{[...new Set([form.academicYear,...batches.map(b=>b.academicYear)].filter(Boolean))].sort().map(y=><option key={y}>{y}</option>)}</select> : f.type === 'batch' ? <select id={`student-${f.key}`} className="form-control" value={form.batch||''} onChange={e=>handleChange('batch',e.target.value)}><option value="">No batch assigned</option>{batches.filter(b=>b.academicYear===form.academicYear).map(b=><option key={b._id} value={b.name}>{b.name}</option>)}{form.batch&&!batches.some(b=>b.name===form.batch&&b.academicYear===form.academicYear)&&<option>{form.batch}</option>}</select> : f.type === 'course' ? (
+                  {f.type === 'year' ? <select id={`student-${f.key}`} className="form-control" required value={form.academicYear||''} onChange={e=>setForm(p=>({...p,academicYear:e.target.value,cohort:''}))}><option value="">Select academic year</option>{[...new Set([form.academicYear,...cohorts.map(b=>b.academicYear)].filter(Boolean))].sort().map(y=><option key={y}>{y}</option>)}</select> : f.type === 'cohort' ? <select id={`student-${f.key}`} className="form-control" value={form.cohort||''} onChange={e=>handleChange('cohort',e.target.value)}><option value="">No cohort assigned</option>{cohorts.filter(b=>b.academicYear===form.academicYear).map(b=><option key={b._id} value={b.name}>{b.name}</option>)}{form.cohort&&!cohorts.some(b=>b.name===form.cohort&&b.academicYear===form.academicYear)&&<option>{form.cohort}</option>}</select> : f.type === 'course' ? (
                     <select id={`student-${f.key}`} className="form-control" required={f.required} value={form.course || ''} disabled={coursesLoading || courses.length === 0} onChange={e => handleChange(f.key, e.target.value)}>
                       <option value="">{coursesLoading ? 'Loading courses…' : courses.length ? 'Select a course' : 'No courses available'}</option>
                       {courses.map(course => <option key={course._id} value={course._id}>{course.title || course.name || 'Course'}</option>)}
@@ -105,7 +184,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
                   ) : f.type === 'select' ? (
                     <select id={`student-${f.key}`} className="form-control" required={f.required} value={form[f.key] || ''} onChange={e => handleChange(f.key, e.target.value)}>
                       <option value="">Select…</option>
-                      {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                      {f.options.map(o => <option key={o} value={o}>{o === 'waiting' ? 'Waiting' : o}</option>)}
                     </select>
                   ) : (
                     <input
@@ -184,8 +263,10 @@ const STUDENT_COLUMN_MAP = {
   mobile: 'phone',
   phonenumber: 'phone',
   address: 'address',
+  cohortyear: 'academicYear',
   batchyear: 'academicYear',
-  batch: 'batch',
+  cohort: 'cohort',
+  batch: 'cohort',
   academicyear: 'academicYear',
   year: 'academicYear',
   course: 'course',
@@ -218,7 +299,7 @@ function downloadStudentTemplate(courses) {
       ['Student import template', 'Instructions'],
       ['Students sheet', 'Replace the example row with real student data. Keep headings in row 1. One student per row.'],
       ['Required fields', STUDENT_REQUIRED_FIELDS.map(field => field.label).join(', ') + '.'],
-      ['Student ID', 'Generated by the system as TL-YYYY-01. Do not enter a Student ID.'],
+      ['Student ID', 'Generated automatically as TAYY001, using the last two digits of the registration year. Do not enter a Student ID.'],
       ...STUDENT_IMPORT_FIELDS.map(field => [field.label, field.guidance]),
     ]);
     instructions['!cols'] = [{wch:24}, {wch:110}];
@@ -272,7 +353,7 @@ function ImportStudentsModal({ courses = [], onClose, onImport, importing, repor
           <button type="button" className="modal-close" aria-label="Close upload dialog" onClick={onClose}>×</button>
         </div>
         <div className="modal-body student-import-body">
-          <p className="student-import-intro">Choose an Excel workbook or CSV file. Each valid row creates a student account using the Student ID sign-in flow.</p>
+          <p className="student-import-intro">Choose an Excel workbook or CSV file. Include each student’s Google account email to enable sign-in.</p>
           <button type="button" className="student-template-button" onClick={() => downloadStudentTemplate(courses).catch(() => setParseError('The template could not be downloaded. Please try again.'))}><span aria-hidden="true">↓</span> Download Excel template</button>
           <label className="student-file-drop">
             <span className="student-file-icon" aria-hidden="true">↑</span>
@@ -282,7 +363,7 @@ function ImportStudentsModal({ courses = [], onClose, onImport, importing, repor
           </label>
           <div className="student-import-requirements"><strong>Required columns</strong><span>{STUDENT_REQUIRED_FIELDS.map(field => field.label).join(' · ')}</span></div>
           <div className="student-import-requirements"><strong>Optional columns</strong><span>{STUDENT_IMPORT_FIELDS.filter(field => !field.required).map(field => field.label).join(' · ')}</span></div>
-          <p className="student-import-intro">Student IDs are assigned automatically. Use an existing course from the Available Courses sheet. Replace the example row before uploading.</p>
+          <p className="student-import-intro">Student IDs are assigned automatically. Enter a course name, code, or unique abbreviation such as CCNA. Replace the example row before uploading.</p>
           {rows.length > 0 && !report && <div className="student-import-preview" role="status">{rows.length} student {rows.length === 1 ? 'row' : 'rows'} ready to import.</div>}
           {parseError && <div className="student-import-error" role="alert">{parseError}</div>}
           {report && (
@@ -313,12 +394,12 @@ export default function StudentMgmt() {
   const [filterStatus, setFilter]   = useState('');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterAcademicYear, setFilterAcademicYear] = useState('');
-  const [filterBatch,setFilterBatch]=useState('');
+  const [filterCohort,setFilterCohort]=useState('');
   const [page, setPage]             = useState(1);
   useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal]   = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [viewTarget, setViewTarget] = useState(null);
+  const [viewStudentId, setViewStudentId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting]     = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -330,10 +411,16 @@ export default function StudentMgmt() {
   const fetchCourses = useCallback(async (background = false, context = {}) => {
     if (!background) setCoursesLoading(true);
     try {
-      const response = await api.get('/courses', { signal: context.signal, params: { limit: 100 } });
+      const records = [];
+      let pages = 1;
+      for (let page = 1; page <= pages; page++) {
+        const {data} = await api.get('/courses', {signal:context.signal, params:{page, limit:100}});
+        const items = data?.data || data?.courses || data;
+        if (Array.isArray(items)) records.push(...items);
+        pages = data?.pagination?.pages ?? 1;
+      }
       if (context.isCurrent && !context.isCurrent()) return;
-      const records = response.data?.data || response.data?.courses || response.data;
-      if (Array.isArray(records)) setCourses(records.filter(course => course.status !== 'inactive' && course.status !== 'archived' && course.isActive !== false));
+      setCourses(records.filter(course => course.status !== 'inactive' && course.status !== 'archived' && course.isActive !== false));
     } catch {
       if (context.isCurrent && !context.isCurrent()) return;
       if (!background) setCourses([]);
@@ -344,10 +431,15 @@ export default function StudentMgmt() {
 
   const fetchEnrollments = useCallback(async (background = false, context = {}) => {
     try {
-      const response = await api.get('/enrollments', { signal: context.signal, params: { limit: 100 } });
+      const records = [];
+      let pages = 1;
+      for (let page = 1; page <= pages; page++) {
+        const {data} = await api.get('/enrollments', {signal:context.signal, params:{page, limit:100}});
+        if (Array.isArray(data?.data)) records.push(...data.data);
+        pages = data?.pagination?.pages ?? 1;
+      }
       if (context.isCurrent && !context.isCurrent()) return;
-      const records = response.data?.data || [];
-      setEnrollments(Array.isArray(records) ? records : []);
+      setEnrollments(records);
     } catch {
       if (context.isCurrent && !context.isCurrent()) return;
       setEnrollments([]);
@@ -388,10 +480,20 @@ export default function StudentMgmt() {
   });
 
   const getStudentAcademicYear = (student) => student.academicYear || getStudentEnrollment(student)?.academicYear || '';
+  const getStudentCohort = (student) => {
+    const enrollment = getStudentEnrollment(student);
+    const course = enrollment?.course;
+    const courseCohort = course?.academicYear === enrollment?.academicYear ? course?.cohort : '';
+    return enrollment?.cohort || student.cohort || courseCohort || '';
+  };
   const academicYears = [...new Set([
     ...students.map(getStudentAcademicYear),
     ...enrollments.map((enrollment) => enrollment.academicYear),
   ].filter(Boolean))].sort((left, right) => String(right).localeCompare(String(left), undefined, { numeric: true }));
+  const cohortOptions = [...new Set(students
+    .filter(student => !filterAcademicYear || getStudentAcademicYear(student) === filterAcademicYear)
+    .map(getStudentCohort)
+    .filter(Boolean))].sort();
 
   const getStudentCourseName = (student) => {
     const enrollment = getStudentEnrollment(student);
@@ -409,8 +511,8 @@ export default function StudentMgmt() {
     const enrolledYear = getStudentAcademicYear(s);
     const matchCourse = !filterCourse || String(enrolledCourseId) === String(filterCourse);
     const matchAcademicYear = !filterAcademicYear || String(enrolledYear) === String(filterAcademicYear);
-    const matchBatch=!filterBatch||(enrollment?.batch||s.batch)===filterBatch;
-    return matchSearch && matchStatus && matchCourse && matchAcademicYear && matchBatch;
+    const matchCohort = !filterCohort || getStudentCohort(s) === filterCohort;
+    return matchSearch && matchStatus && matchCourse && matchAcademicYear && matchCohort;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -429,7 +531,7 @@ export default function StudentMgmt() {
     } else {
       const response = await api.post('/users/students', studentFields);
       const createdStudent = response.data?.data?.student;
-      if (createdStudent?.studentId) setCreatedStudentLogin({ name: form.name, studentId: createdStudent.studentId });
+      if (createdStudent?.studentId) setCreatedStudentLogin({ name: form.name, studentId: createdStudent.studentId, email: form.email });
       studentId = response.data?.data?.student?._id || response.data?.student?._id;
       if (!studentId) throw new Error('Student was created, but the server did not return a student ID.');
     }
@@ -439,7 +541,7 @@ export default function StudentMgmt() {
       student: studentId,
       course: courseId,
       academicYear,
-      batch:form.batch||'',
+      cohort:form.cohort||'',
       semester: selectedCourse?.semester || '',
       status: 'enrolled',
     };
@@ -495,16 +597,20 @@ export default function StudentMgmt() {
           continue;
         }
         try {
-          const selectedCourse = courses.find(course => [course._id, course.courseCode, course.title, course.name].some(value => String(value || '').trim().toLowerCase() === String(payload.course).trim().toLowerCase()));
+          const [selectedCourse, ...otherMatches] = findImportCourses(courses, payload);
           if (!selectedCourse) {
-            errors.push({ row, message: `Course "${payload.course}" was not found. Use a course name from the course list.` });
+            errors.push({ row, message: `Course "${payload.course}" was not found. Use a course name, code, or abbreviation from the course list.` });
+            continue;
+          }
+          if (otherMatches.length) {
+            errors.push({ row, message: `Course "${payload.course}" matches multiple courses. Use the matching academic year and cohort, or use the full course code.` });
             continue;
           }
           const { course: ignoredCourse, ...studentPayload } = payload;
           delete studentPayload.studentId;
           studentPayload.academicYear = studentPayload.academicYear || selectedCourse.academicYear || new Intl.DateTimeFormat('en-US', {timeZone:'Africa/Nairobi', year:'numeric'}).format(new Date());
           studentPayload.status = String(studentPayload.status || 'active').trim().toLowerCase();
-          if (!STUDENT_FIELDS.find(field => field.key === 'status').options.includes(studentPayload.status)) { errors.push({ row, message: 'Status must be active, inactive, graduated or suspended.' }); continue; }
+          if (!STUDENT_STATUSES.includes(studentPayload.status)) { errors.push({ row, message: `Allowed status values are ${STUDENT_STATUSES.join(', ')}.` }); continue; }
           const response = await api.post('/users/students', studentPayload);
           const createdStudentId = response.data?.data?.student?._id || response.data?.student?._id;
           if (!createdStudentId) throw new Error('Student was created, but the server did not return its ID.');
@@ -512,7 +618,7 @@ export default function StudentMgmt() {
             student: createdStudentId,
             course: selectedCourse._id,
             academicYear: studentPayload.academicYear,
-            batch:studentPayload.batch||'',
+            cohort:studentPayload.cohort||'',
             semester: selectedCourse.semester || '',
             status: 'enrolled',
           });
@@ -551,7 +657,7 @@ export default function StudentMgmt() {
 
   return (
     <>
-      {createdStudentLogin && <div className="card card-body" role="status" style={{marginBottom:16,display:'flex',gap:12,alignItems:'center',justifyContent:'space-between'}}><div><strong>{createdStudentLogin.name}: account ready</strong><p>Student ID: <strong>{createdStudentLogin.studentId}</strong>. Use this ID in the Student sign-in tab.</p></div><button type="button" className="btn btn-sm btn-secondary" aria-label="Dismiss student sign-in details" onClick={()=>setCreatedStudentLogin(null)}>×</button></div>}
+      {createdStudentLogin && <div className="card card-body" role="status" style={{marginBottom:16,display:'flex',gap:12,alignItems:'center',justifyContent:'space-between'}}><div><strong>{createdStudentLogin.name}: account created</strong><p>Student ID: <strong>{createdStudentLogin.studentId}</strong>. {createdStudentLogin.email ? `Sign in with the Google account for ${createdStudentLogin.email}.` : 'Add the student’s Google account email to enable sign-in.'}</p></div><button type="button" className="btn btn-sm btn-secondary" aria-label="Dismiss student sign-in details" onClick={()=>setCreatedStudentLogin(null)}>×</button></div>}
       <div className="page-header student-management-header">
         <div className="student-management-actions">
         <button type="button" className="btn btn-sm btn-secondary student-view-toggle" aria-pressed={showAllDetails} onClick={() => setShowAllDetails(current => !current)}>
@@ -584,13 +690,14 @@ export default function StudentMgmt() {
               <option value="inactive">Inactive</option>
               <option value="graduated">Graduated</option>
               <option value="suspended">Suspended</option>
+              <option value="waiting">Waiting</option>
               <option value="dropped">Dropped</option>
             </select>
             <select aria-label="Filter students by academic year" className="form-control student-filter-select" value={filterAcademicYear} onChange={event => { setFilterAcademicYear(event.target.value); setPage(1); }}>
               <option value="">All academic years</option>
               {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
             </select>
-            <select aria-label="Filter students by batch" className="form-control student-filter-select" value={filterBatch} onChange={e=>{setFilterBatch(e.target.value);setPage(1);}}><option value="">All batches</option>{[...new Set(enrollments.filter(e=>!filterAcademicYear||e.academicYear===filterAcademicYear).map(e=>e.batch).filter(Boolean))].sort().map(b=><option key={b}>{b}</option>)}</select>
+            <select aria-label="Filter students by cohort" className="form-control student-filter-select" value={filterCohort} onChange={e=>{setFilterCohort(e.target.value);setPage(1);}}><option value="">All cohorts</option>{cohortOptions.map(cohort=><option key={cohort}>{cohort}</option>)}</select>
           </div>
         </div>
 
@@ -611,7 +718,7 @@ export default function StudentMgmt() {
                   <th>Name</th>
                   <th>Phone</th>
                   <th>Course</th>
-                  <th>Batch / Year</th>
+                  <th>Cohort / Year</th>
                   <th>Status</th>
                   {showAllDetails && <><th>Student ID</th><th>Email</th><th>Gender</th><th>Address</th></>}
                   <th>Actions</th>
@@ -624,7 +731,7 @@ export default function StudentMgmt() {
                     <td><div className="student-record-person"><span aria-hidden="true">{(s.name || 'S').split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span><strong>{s.name || 'Student'}</strong></div></td>
                     <td>{s.phone || '—'}</td>
                     <td><span className="student-course-tag">{getStudentCourseName(s)}</span></td>
-                    <td>{getStudentAcademicYear(s) || '—'}</td>
+                    <td>{[getStudentCohort(s) || 'Unassigned', getStudentAcademicYear(s)].filter(Boolean).join(' / ')}</td>
                     <td>
                       <span className={`student-record-status ${s.status === 'active' ? 'is-active' : ''}`}><i aria-hidden="true" />
                         {s.status || 'active'}
@@ -633,8 +740,8 @@ export default function StudentMgmt() {
                     {showAllDetails && <><td><code>{s.studentId || '—'}</code></td><td>{s.email || '—'}</td><td>{s.gender || '—'}</td><td>{s.address || '—'}</td></>}
                     <td>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <button type="button" className="student-row-edit student-row-view" title="View student details"
-                          aria-label={`View details for ${s.name || 'student'}`} aria-haspopup="dialog" onClick={() => setViewTarget(s)}>
+                        <button type="button" className="student-row-view" title="View student details"
+                          aria-label={`View details for ${s.name || 'student'}`} aria-haspopup="dialog" onClick={() => setViewStudentId(s._id)}>
                           <TeachingIcon name="eye" size={16} />
                         </button>
                         <button type="button" className="student-row-edit" onClick={() => { const enrollment = getStudentEnrollment(s); setEditTarget({ ...s, course: enrollment?.course?._id || enrollment?.course || '' }); setShowModal(true); }}>Edit</button>
@@ -664,7 +771,7 @@ export default function StudentMgmt() {
         <CrudModal
           title={editTarget ? 'Edit Student' : 'Add New Student'}
           fields={STUDENT_FIELDS}
-          initial={editTarget ? {...editTarget,batch:getStudentEnrollment(editTarget)?.batch||editTarget.batch||''} : {}}
+          initial={editTarget ? {...editTarget,cohort:getStudentEnrollment(editTarget)?.cohort||editTarget.cohort||''} : {}}
           courses={courses}
           coursesLoading={coursesLoading}
           onSave={handleSave}
@@ -673,10 +780,8 @@ export default function StudentMgmt() {
       )}
 
       {/* Delete confirm */}
-      {viewTarget && (
-        <StudentDetailsDialog student={viewTarget} course={getStudentCourseName(viewTarget)}
-          academicYear={getStudentAcademicYear(viewTarget)} batch={getStudentEnrollment(viewTarget)?.batch || viewTarget.batch}
-          onClose={() => setViewTarget(null)} />
+      {viewStudentId && (
+        <StudentDetailsDialog key={viewStudentId} studentId={viewStudentId} onClose={() => setViewStudentId(null)} />
       )}
       {deleteTarget && (
         <ConfirmModal

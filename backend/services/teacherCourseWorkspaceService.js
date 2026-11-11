@@ -10,7 +10,7 @@ const publicCourse=course=>{const {performanceWriteLock,__v,...safe}=course;retu
 const id=value=>String(value?._id||value||'');
 const cohortKey=s=>[id(s.course),s.academicYear,s.batch||''].join(':');
 async function resolveScope(user,query={}) {
-  for(const key of ['courseId','academicYear','batch','contractId'])if(query[key]!==undefined&&typeof query[key]!=='string')fail('Invalid '+key+' filter.');
+  for(const key of ['courseId','academicYear','batch','contractId'])if(query[key]!==undefined&&typeof query[key]!=='string')fail('Invalid '+(key==='batch'?'cohort':key)+' filter.');
   const teacher=await Teacher.findOne({user:user._id}).lean();if(!teacher)fail('Teacher profile not found.',404);
   const assignments=(await Assignment.find({teacher:teacher._id,status:'active'}).populate('course').lean()).filter(a=>a.course);
   const pairs=assignments.map(a=>({course:a.course._id,academicYear:a.academicYear}));
@@ -34,11 +34,11 @@ async function resolveScope(user,query={}) {
     ? yearMatches.find(c=>c.batch===query.batch) ||
       (query.batch==='' && yearMatches.find(c=>c.batch===enrollmentBatch({course:c.course,academicYear:c.academicYear})))
     : yearMatches[0];
-  if(query.batch!==undefined&&!selected)fail('Batch not found in your assigned course and year.',403);
+  if(query.batch!==undefined&&!selected)fail('Cohort not found in your assigned course and year.',403);
   if(!selected)return {teacher,cohorts,contracts:[],selected:null,courses:[]};
   const matchingContracts=contracts.filter(c=>cohortKey(c)===cohortKey(selected));
   const contract=query.contractId?matchingContracts.find(c=>id(c)===query.contractId):matchingContracts.find(c=>c.status==='active'&&c.startDate<=teachingDay()&&(!c.endDate||c.endDate>=teachingDay()))||matchingContracts.find(c=>c.status==='active')||matchingContracts[0]||null;
-  if(query.contractId&&!contract)fail('Contract does not belong to the selected course and batch.',403);
+  if(query.contractId&&!contract)fail('Contract does not belong to the selected course and cohort.',403);
   const courses=[...new Map(assignments.map(a=>[id(a.course),a.course])).values()];
   return {teacher,cohorts,courses,contracts:matchingContracts,selected,contract};
 }

@@ -1,0 +1,113 @@
+.announcement-trigger { flex-shrink: 0; }
+
+.announcement-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(440px, calc(100% - 24px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--brand-green-border);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--text-primary);
+  box-shadow: 0 20px 60px #15362340;
+}
+
+.announcement-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.announcement-dialog::backdrop { background: #102b2366; }
+
+.announcement-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border-top: 3px solid var(--brand-gold);
+  border-bottom: 1px solid var(--brand-green-border);
+  background: var(--brand-green-tint);
+}
+
+.announcement-header-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--brand-green-soft);
+  color: var(--brand-green-deep);
+}
+
+.announcement-header h2 {
+  flex: 1;
+  margin: 0;
+  color: var(--brand-green-deep);
+  font-size: 0.98rem;
+}
+
+.announcement-close {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--brand-green-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--brand-green-deep);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.announcement-body { min-height: 0; padding: 11px 13px 13px; overflow-y: auto; }
+.announcement-toolbar, .announcement-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.announcement-toolbar { margin-bottom: 9px; }
+.announcement-dialog .btn { min-height: 30px; padding: 5px 9px; font-size: 12px; }
+.announcement-toolbar button[aria-pressed="true"] { box-shadow: inset 0 -2px var(--brand-gold); }
+.announcement-pagination { justify-content: space-between; font-size: 12px; }
+.announcement-feed, .announcement-form { display: grid; gap: 8px; }
+.announcement-feed > p, .announcement-form p { margin: 0; font-size: 13px; }
+
+.announcement-item {
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--brand-green-border);
+  border-radius: 7px;
+  background: var(--brand-green-tint);
+  overflow-wrap: anywhere;
+}
+
+.announcement-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.announcement-item h3 { margin: 3px 0; color: var(--brand-green-deep); font-size: 13px; }
+.announcement-item p { margin: 0; font-size: 12px; line-height: 1.4; white-space: pre-wrap; }
+.announcement-form > label, .announcement-teacher-select { display: grid; gap: 4px; font-size: 12px; font-weight: 650; }
+.announcement-dialog .announcement-form .form-control { min-height: 32px; padding: 5px 8px; font-size: 12px; }
+.announcement-form textarea { resize: vertical; }
+.announcement-form > button { justify-self: start; }
+.announcement-form fieldset { min-width: 0; margin: 0; padding: 8px 10px 10px; border: 1px solid var(--brand-green-border); border-radius: 8px; }
+.announcement-form legend { padding: 0 4px; font-size: 13px; font-weight: 650; }
+.announcement-recipients { display: flex; flex-wrap: wrap; gap: 7px 16px; }
+.announcement-recipients label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.announcement-recipients input { accent-color: var(--brand-green-active); }
+
+.announcement-targets { display: grid; gap: 8px; background: var(--brand-green-tint); }
+.announcement-recipient-option { display: flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; }
+.announcement-recipient-option input { accent-color: var(--brand-green-active); }
+.announcement-recipient-option small { margin-inline-start: 4px; color: var(--text-secondary); }
+.announcement-roster { display: grid; gap: 6px; max-height: 128px; padding: 7px; overflow-y: auto; background: #fff; border: 1px solid var(--brand-green-border); border-radius: 6px; }
+.announcement-roster-heading { display: flex; justify-content: space-between; gap: 6px; color: var(--brand-green-deep); font-size: 11px; }
+.announcement-select-all { padding-bottom: 5px; border-bottom: 1px solid var(--brand-green-border); font-weight: 650; }
+
+.announcement-notice, .announcement-error { padding: 8px 10px; border-radius: 7px; }
+.announcement-notice { margin: 0 0 12px; background: var(--brand-green-soft); color: var(--brand-green-deep); font-size: 13px; }
+.announcement-error { background: #fff0ed; color: #922f24; }

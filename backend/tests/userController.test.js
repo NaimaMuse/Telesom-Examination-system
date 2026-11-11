@@ -5,7 +5,7 @@ const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 const studentIds = require('../services/studentIdService');
-studentIds.nextStudentId = async () => 'TL-2026-01';
+studentIds.nextStudentId = async () => 'TA26001';
 
 const runTests = async () => {
   let passed = 0;
@@ -167,7 +167,7 @@ const runTests = async () => {
         result.responseBody?.success === true &&
         result.responseBody?.data?.user?.role === 'student' &&
         result.responseBody?.data?.user?.email === 'amina@student.telesom.com' &&
-        result.responseBody?.data?.student?.studentId === 'TL-2026-01' &&
+        result.responseBody?.data?.student?.studentId === 'TA26001' &&
         createdUserPayload.password === undefined &&
         result.responseBody?.data?.user?.password === undefined,
       'Student account ignores manual ID, assigns a server ID and returns safe data'

@@ -2,6 +2,7 @@ export default function TeachingIcon({name, size=20}) {
   const paths = {
     search: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></>,
     bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></>,
+    megaphone: <path d="M3 10a2 2 0 0 1 2-2h4l10-4v16L9 16H5a2 2 0 0 1-2-2Zm6-2v8m-3 0 1.5 5h3L9 16m13-6v4"/>,
     menu: <path d="M3 6h18M3 12h18M3 18h18"/>,
     graduate: <><path d="m2 9 10-5 10 5-10 5Z M6 11v6c4 3 8 3 12 0v-6 M22 9v7"/></>,
     teacher: <><rect x="8" y="3" width="13" height="12" rx="2"/><circle cx="5" cy="13" r="3"/><path d="M1 22v-2a4 4 0 0 1 8 0v2m3-15h5m-5 4h3m-1 4v5m-3 1h6"/></>,
@@ -24,6 +25,7 @@ export default function TeachingIcon({name, size=20}) {
     bolt: <path d="m13 2-9 12h7l-1 8 10-13h-7z"/>,
     filter: <path d="M3 4h18l-7 8v8l-4-2v-6z"/>,
     eye: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></>,
+    eyeOff: <><path d="m3 3 18 18M10 5.2a10 10 0 0 1 2-.2c6 0 10 7 10 7a16 16 0 0 1-2.6 3.3M6 6.6A17 17 0 0 0 2 12s4 7 10 7c1.8 0 3.4-.6 4.8-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2"/></>,
     arrow: <path d="M5 12h14m-5-5 5 5-5 5"/>,
     briefcase: <><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12a24 24 0 0 0 18 0M12 11v4"/></>,
     play: <path d="m8 4 12 8-12 8z"/>,

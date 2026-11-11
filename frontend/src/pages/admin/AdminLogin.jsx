@@ -111,6 +111,9 @@ export default function AdminLoginPage() {
             </button>
 
             <div className="admin-auth-footer">
+              <Link to="/staff/forgot-password">Forgot password?</Link>
+            </div>
+            <div className="admin-auth-footer">
               <Link to="/login">Back to portal selection</Link>
             </div>
           </form>

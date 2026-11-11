@@ -1,9 +1,7 @@
 const {hashPassword} = require('../utils/passwords');
-const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { login } = require('../controllers/authController');
 const User = require('../models/User');
-const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
 
 process.env.JWT_SECRET = 'test_secret_for_login_tests_12345';
@@ -63,142 +61,26 @@ const runTests = async () => {
   const hashedPassword = await hashPassword(plainPassword);
 
   // Save original model methods
-  const origStudentFindOne = Student.findOne;
   const origUserFindById = User.findById;
   const origUserFindOne = User.findOne;
   const origUserFindByIdAndUpdate = User.findByIdAndUpdate;
   const origTeacherFindOne = Teacher.findOne;
   Teacher.findOne = async () => null;
 
-  console.log('--- Running Login Controller Tests (Student ID-Only Login & Staff Login) ---\n');
+  console.log('--- Running Login Controller Tests ---');
 
-  // Test 1: Valid Student ID login without a password
   {
-    const studentUserId = new mongoose.Types.ObjectId();
-    const mockStudent = {
-      _id: new mongoose.Types.ObjectId(),
-      studentId: 'STD-1001',
-      user: studentUserId,
-    };
-    const mockUser = {
-      _id: studentUserId,
-      name: 'Ahmed Student',
-      email: 'ahmed@student.telesom.com',
-      role: 'student',
-      isActive: true,
-    };
-
-    Student.findOne = () => Promise.resolve(mockStudent);
-    User.findById = () => Promise.resolve(mockUser);
-    User.findByIdAndUpdate = () => Promise.resolve();
-
-    // Notice: NO password provided in body
-    const { req, res, next, getResult } = createMock({
-      studentId: 'std-1001', // Normalization test (lowercase to uppercase)
-    });
+    const { req, res, next, getResult } = createMock({studentId:'STD-1001'});
     await login(req, res, next);
-    const result = getResult();
-
-    assert(
-      result.statusCode === 200 &&
-      result.responseBody?.success === true &&
-      result.responseBody?.token &&
-      result.responseBody?.user?.studentId === 'STD-1001' &&
-      result.responseBody?.user?.role === 'student' &&
-      result.responseBody?.user?.password === undefined,
-      'Valid Student ID login without a password succeeds'
-    );
+    assert(getResult().statusCode === 401, 'Student ID alone cannot sign in');
   }
 
-  // Test 2: Unknown Student ID
   {
-    Student.findOne = () => Promise.resolve(null);
-
-    const { req, res, next, getResult } = createMock({
-      studentId: 'STD-UNKNOWN-999',
-    });
+    const { req, res, next, getResult } = createMock({});
     await login(req, res, next);
-    const result = getResult();
-
-    assert(
-      result.nextCalled &&
-      result.statusCode === 401 &&
-      result.nextError?.message === 'Invalid credentials',
-      'Unknown Student ID returns generic 401'
-    );
+    assert(getResult().statusCode === 400, 'Missing email returns 400 Bad Request');
   }
-
-  // Test 3: Missing Student ID
-  {
-    const { req, res, next, getResult } = createMock({}); // Empty request body
-    await login(req, res, next);
-    const result = getResult();
-
-    assert(
-      result.nextCalled &&
-      result.statusCode === 400 &&
-      result.nextError?.message.includes('required to log in'),
-      'Missing Student ID returns 400 Bad Request'
-    );
-  }
-
-  // Test 4: Student record without an associated User account
-  {
-    const mockStudent = {
-      _id: new mongoose.Types.ObjectId(),
-      studentId: 'STD-1002',
-      user: null, // Missing User reference
-    };
-    Student.findOne = () => Promise.resolve(mockStudent);
-
-    const { req, res, next, getResult } = createMock({
-      studentId: 'STD-1002',
-    });
-    await login(req, res, next);
-    const result = getResult();
-
-    assert(
-      result.nextCalled &&
-      result.statusCode === 401 &&
-      result.nextError?.message === 'Invalid credentials',
-      'Student without an associated User account returns 401'
-    );
-  }
-
-  // Test 5: Inactive student account
-  {
-    const studentUserId = new mongoose.Types.ObjectId();
-    const mockStudent = {
-      _id: new mongoose.Types.ObjectId(),
-      studentId: 'STD-1003',
-      user: studentUserId,
-    };
-    const mockUser = {
-      _id: studentUserId,
-      name: 'Inactive Student',
-      email: 'inactive@student.telesom.com',
-      role: 'student',
-      isActive: false, // Inactive account
-    };
-
-    Student.findOne = () => Promise.resolve(mockStudent);
-    User.findById = () => Promise.resolve(mockUser);
-
-    const { req, res, next, getResult } = createMock({
-      studentId: 'STD-1003',
-    });
-    await login(req, res, next);
-    const result = getResult();
-
-    assert(
-      result.nextCalled &&
-      result.statusCode === 401 &&
-      result.nextError?.message === 'Invalid credentials',
-      'Inactive student account returns 401'
-    );
-  }
-
-  // Test 6: Admin email + password login
+  // Admin email and password login
   {
     const adminId = new mongoose.Types.ObjectId();
     const mockAdmin = {
@@ -232,7 +114,7 @@ const runTests = async () => {
     );
   }
 
-  // Test 7: Teacher email + password login
+  // Teacher email and password login
   {
     const teacherId = new mongoose.Types.ObjectId();
     const mockTeacher = {
@@ -265,49 +147,34 @@ const runTests = async () => {
     );
   }
 
-  // Test 8: Safe response data and JWT generation
+  // Students must use Google even after creating a portal password.
   {
-    const studentUserId = new mongoose.Types.ObjectId();
-    const mockStudent = {
-      _id: new mongoose.Types.ObjectId(),
-      studentId: 'STD-1005',
-      user: studentUserId,
-    };
     const mockUser = {
-      _id: studentUserId,
+      _id: new mongoose.Types.ObjectId(),
       name: 'Mariam Student',
-      email: 'mariam@student.telesom.com',
+      email: 'mariam@gmail.com',
       role: 'student',
       isActive: true,
       password: hashedPassword,
+      studentPasswordSet: true,
     };
 
-    Student.findOne = () => Promise.resolve(mockStudent);
-    User.findById = () => Promise.resolve(mockUser);
-    User.findByIdAndUpdate = () => Promise.resolve();
+    User.findOne = () => ({select:async () => mockUser});
 
     const { req, res, next, getResult } = createMock({
-      studentId: 'STD-1005',
+      email: mockUser.email,
+      password: plainPassword,
     });
     await login(req, res, next);
     const result = getResult();
 
-    // Verify token can be verified and decoded
-    const decoded = jwt.verify(result.responseBody.token, process.env.JWT_SECRET);
-    const hasNoPassword = !('password' in result.responseBody.user);
-
     assert(
-      decoded.id === studentUserId.toString() &&
-      hasNoPassword &&
-      result.responseBody.user.studentId === 'STD-1005' &&
-      result.responseBody.user.studentProfileId.toString() === mockStudent._id.toString(),
-      'Safe response data and JWT generation verified'
+      result.statusCode === 401 && result.responseBody === null,
+      'A valid student portal password cannot establish a session'
     );
   }
 
   // Restore original methods
-  Student.findOne = origStudentFindOne;
-  User.findById = origUserFindById;
   User.findOne = origUserFindOne;
   User.findByIdAndUpdate = origUserFindByIdAndUpdate;
   Teacher.findOne = origTeacherFindOne;

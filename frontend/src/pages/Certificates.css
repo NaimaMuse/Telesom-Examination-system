@@ -1,0 +1,105 @@
+.certificates-page {
+  display: grid;
+  gap: 1rem;
+  max-width: 76rem;
+}
+
+.certificates-panel {
+  background: #fff;
+  border: 1px solid #cde4d4;
+  border-top: 3px solid #d69b28;
+  border-radius: 14px;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  color: #164b32;
+}
+
+.certificates-panel h2 { margin: 0 0 .5rem; font-size: 1.2rem; }
+.certificates-panel h3 { margin: 0; font-size: 1rem; }
+.certificates-panel p { margin: .55rem 0; color: #435e51; }
+.certificates-panel .certificates-error { color: #9a2821; }
+.certificates-panel small { font-weight: 400; color: #435e51; }
+.certificates-intro, .certificates-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+}
+.certificates-course { max-width: 32rem; margin: .95rem 0 1.15rem; }
+.certificates-total {
+  display: grid;
+  gap: .15rem;
+  background: #f7f3e7;
+  border-radius: 8px;
+  padding: .55rem .85rem;
+}
+.certificates-toolbar { margin-bottom: .65rem; }
+.certificates-panel label { display: grid; gap: .3rem; font-size: .9rem; font-weight: 650; min-width: 0; }
+.certificates-panel input:not([type="checkbox"]), .certificates-panel select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.4rem;
+  border: 1px solid #bdd9c7;
+  border-radius: 7px;
+  background: #fff;
+  color: #164b32;
+  padding: .45rem .65rem;
+  font: inherit;
+}
+.certificates-panel input[type="checkbox"] { width: 1rem; height: 1rem; accent-color: #22743b; vertical-align: middle; }
+.certificates-panel .certificates-check { display: flex; align-items: center; white-space: nowrap; }
+.certificates-table-wrap { overflow-x: auto; border: 1px solid #d9e9de; border-radius: 10px; }
+.certificates-table { width: 100%; min-width: 37rem; border-collapse: collapse; font-size: .9rem; }
+.certificates-table th { text-align: left; background: #eaf5ed; }
+.certificates-table th, .certificates-table td { padding: .55rem .75rem; }
+.certificates-table td { border-top: 1px solid #e3eee6; }
+.certificates-table tbody tr:nth-child(even) { background: #f8fbf8; }
+.certificates-table td small { display: block; margin-top: .18rem; }
+.certificates-table .certificates-badge { margin: 0; }
+.certificates-badge[data-status="enrolled"] { color: #775014; background: #faf1d9; }
+.certificates-badge[data-status="issued"] { color: #245177; background: #e9f2f9; }
+.certificates-list { list-style: none; padding: 0; margin: .65rem 0 0; }
+.certificates-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  padding: .7rem 0;
+  border-top: 1px solid #deebe1;
+  overflow-wrap: anywhere;
+}
+.certificates-list li small { display: block; margin-top: .2rem; }
+.certificates-badge {
+  display: inline-block;
+  margin-top: .35rem;
+  border-radius: 20px;
+  padding: .15rem .55rem;
+  font-size: .75rem;
+  background: #e9f5eb;
+}
+.certificates-form {
+  display: grid;
+  gap: .7rem;
+  background: #f3f9f4;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: .75rem;
+}
+.certificates-fields { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.certificates-number-fill { display: flex; flex-wrap: wrap; align-items: end; gap: .55rem; }
+.certificates-number-fill label { flex: 1 1 9rem; }
+.certificates-drafts { display: grid; gap: .5rem; max-height: 28rem; overflow: auto; }
+.certificates-draft {
+  display: grid;
+  gap: .6rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  background: #fff;
+  border: 1px solid #deebe1;
+  border-radius: 8px;
+  padding: .6rem;
+}
+.certificates-draft p { grid-column: 1 / -1; }
+.certificates-serial { display: flex; align-items: center; gap: .4rem; }
+.certificates-serial > span { flex: none; }
+.certificates-actions { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; }

@@ -119,7 +119,7 @@ const handleAccountError = (error, res, next, duplicateFallback) => {
   return next(error);
 };
 
-// @desc    Create a student account (Student ID-only login, no password)
+// @desc    Create a student account for Google sign-in.
 // @route   POST /api/users/students
 // @access  Admin only
 const createStudent = async (req, res, next) => {
@@ -155,10 +155,6 @@ const createStudent = async (req, res, next) => {
     await batchService.validateBatch(req.body.batch, academicYear);
     const normalizedStudentId = await studentIds.nextStudentId();
 
-    // SECURITY: Student accounts have no password because login uses Student ID only.
-    // Anyone who knows a Student ID can access that student's records until extra
-    // verification is added. Do not expose real grades or attendance on this login
-    // method in a production setting without a stronger identity check.
     const { user, profile: student } = await createUserWithProfile({
       userData: {
         name: String(name).trim(),

@@ -31,7 +31,11 @@ export default function MyCourse({outlinePage=false}) {
   const tab=['overview','outline','notes','students','assessments'].includes(params.get('tab'))?params.get('tab'):'overview';
   const setTab=next=>next==='outline'?navigate(outlineUrl()):setParams(previous=>{const nextParams=new URLSearchParams(previous);nextParams.set('tab',next);return nextParams;});
   const [workspace,setWorkspace]=useState(null),[revision,setRevision]=useState(0),[childBusy,setChildBusy]=useState(false),[assessmentView,setAssessmentView]=useState('activities');
-  const requestScope=useMemo(()=>Object.fromEntries(['courseId','academicYear','batch','contractId'].filter(k=>params.has(k)).map(k=>[k,params.get(k)])),[params]);
+  const requestScope=useMemo(()=>{
+    const scope=Object.fromEntries(['courseId','academicYear','cohort','contractId'].filter(k=>params.has(k)).map(k=>[k,params.get(k)]));
+    if(!params.has('cohort')&&params.has('batch'))scope.cohort=params.get('batch');
+    return scope;
+  },[params]);
   const scopeKey=JSON.stringify(requestScope);
   const updateContract=useCallback(data=>{if(data?.contract)setWorkspace(p=>p?{...p,contract:{...p.contract,...data.contract}}:p);setRevision(v=>v+1);},[]);
   const [course, setCourse] = useState(null);
@@ -118,7 +122,7 @@ export default function MyCourse({outlinePage=false}) {
   const changeCohort=key=>{
     const cohort=workspace.cohorts.find(c=>c.key===key);if(!cohort)return;
     setLoading(true);setWorkspace(null);setCourse(null);setStudents([]);setUpcoming([]);setNotes([]);setChildBusy(false);
-    setParams(previous=>{const next=new URLSearchParams(previous);next.set('courseId',cohort.courseId);next.set('academicYear',cohort.academicYear);next.set('batch',cohort.batch);next.delete('contractId');return next;});
+    setParams(previous=>{const next=new URLSearchParams(previous);next.set('courseId',cohort.courseId);next.set('academicYear',cohort.academicYear);next.set('cohort',cohort.cohort);next.delete('contractId');return next;});
   };
 
 
@@ -136,14 +140,14 @@ export default function MyCourse({outlinePage=false}) {
           <div className="notes-form-actions"><button type="submit" className="notes-button primary" disabled={uploading}><TeachingIcon name="file" size={15}/>{uploading?'Saving…':editingNoteId?'Save changes':'Upload document'}</button>{(editingNoteId||form.title||form.description||form.file)&&<button type="button" className="notes-button secondary" disabled={uploading} onClick={()=>{setEditingNoteId(null);setForm({title:'',description:'',file:null});setNoteError('');setRevision(value=>value+1);}}>Cancel</button>}</div>
         </form>
         <section className="notes-library-column" aria-label="Document library">
-        <div className="notes-library-toolbar"><div><h3>Document library <span>{filteredNotes.length}</span></h3><p>Materials for this course and batch</p></div><label className="notes-library-search"><TeachingIcon name="search" size={17}/><input type="search" aria-label="Search uploaded notes" placeholder="Search documents…" value={noteSearch} onChange={event=>setNoteSearch(event.target.value)}/></label></div>
+        <div className="notes-library-toolbar"><div><h3>Document library <span>{filteredNotes.length}</span></h3><p>Materials for this course and cohort</p></div><label className="notes-library-search"><TeachingIcon name="search" size={17}/><input type="search" aria-label="Search uploaded notes" placeholder="Search documents…" value={noteSearch} onChange={event=>setNoteSearch(event.target.value)}/></label></div>
         {!filteredNotes.length ? <div className="notes-library-empty"><span><TeachingIcon name="folder" size={32}/></span><h3>{notes.length?'No matching documents':'No documents yet'}</h3><p>{notes.length?'Try another title, description or filename.':'Upload your first document to start the course library.'}</p></div> : <div className="notes-library-list">{filteredNotes.map(note=><article className={'notes-document'+(editingNoteId===note._id?' is-editing':'')} key={note._id}><div className="notes-document-icon"><TeachingIcon name="file" size={24}/><span>{note.fileType?.toUpperCase()||note.filename?.split('.').pop()?.toUpperCase()||'DOC'}</span></div><div className="notes-document-copy"><h4>{note.title}</h4><p className="notes-document-meta"><span>{note.filename||'Document'}</span><span>{note.size||'Size unavailable'}</span></p>{note.description&&<p className="notes-document-description">{note.description}</p>}</div><div className="notes-document-actions"><button type="button" className="notes-button primary" disabled={uploading} onClick={()=>downloadNote(note)}>Download</button><button type="button" className="notes-button secondary" disabled={uploading} onClick={()=>{setEditingNoteId(note._id);setForm({title:note.title,description:note.description||'',file:null});setNoteError('');}}>Edit</button><button type="button" className="notes-button delete" disabled={uploading} onClick={()=>handleDelete(note._id)}>Delete</button></div></article>)}</div>}
         </section>
       </div>
     </section>
   );
 
-  const renderStudents = () => <CourseStudents key={scopeKey} students={students} course={course} search={search} cohorts={workspace?.cohorts||[]} selectedScope={workspace?.scope} onBatchChange={cohort=>{setLoading(true);setParams(previous=>{const next=new URLSearchParams(previous);next.set('tab','students');next.set('courseId',cohort.courseId);next.set('academicYear',cohort.academicYear);next.set('batch',cohort.batch);next.delete('contractId');return next;});}}/>;
+  const renderStudents = () => <CourseStudents key={scopeKey} students={students} course={course} search={search} cohorts={workspace?.cohorts||[]} selectedScope={workspace?.scope} onCohortChange={cohort=>{setLoading(true);setParams(previous=>{const next=new URLSearchParams(previous);next.set('tab','students');next.set('courseId',cohort.courseId);next.set('academicYear',cohort.academicYear);next.set('cohort',cohort.cohort);next.delete('contractId');return next;});}}/>;
 
   if(!outlinePage&&tab==='outline')return <Navigate to={outlineUrl()} replace/>;
   if(outlinePage)return <div className="teacher-scope teacher-course-page professional-course-page dedicated-outline-page">
@@ -188,7 +192,7 @@ export default function MyCourse({outlinePage=false}) {
         ) : !course ? (<div className="card course-panel"><div className="empty-state"><h3>No assigned course available</h3><p>{error||'Your administrator has not assigned a course yet.'}</p></div></div>) : tab === 'overview' ? (
           renderOverview()
         ) : tab === 'outline' ? (
-          workspace?.contract?<TeacherContracts key={workspace.scope.contractId} combined controlledContractId={workspace.scope.contractId} workspaceMode="outline" onContractUpdate={updateContract} onEditingChange={setChildBusy}/>:<div className="card course-panel"><div className="empty-state"><h3>Teaching contract not configured</h3><p>Your administrator must configure a contract for this course and batch before you add outlines and lessons.</p></div></div>
+          workspace?.contract?<TeacherContracts key={workspace.scope.contractId} combined controlledContractId={workspace.scope.contractId} workspaceMode="outline" onContractUpdate={updateContract} onEditingChange={setChildBusy}/>:<div className="card course-panel"><div className="empty-state"><h3>Teaching contract not configured</h3><p>Your administrator must configure a contract for this course and cohort before you add outlines and lessons.</p></div></div>
         ) : tab === 'assessments' ? (
           course&&<div className="mycourse-assessment-panel"><div className="course-assessment-tabs"><button type="button" disabled={childBusy} className={assessmentView==='activities'?'active':''} onClick={()=>setAssessmentView('activities')}>Exams, quizzes &amp; assignments</button><button type="button" disabled={childBusy} className={assessmentView==='marks'?'active':''} onClick={()=>setAssessmentView('marks')}>Results &amp; marks</button></div>{assessmentView==='activities'?<TeacherExams key={scopeKey} scope={{...workspace.scope,course}} onEditingChange={setChildBusy} onChange={()=>setRevision(v=>v+1)}/>:<TeacherResults key={scopeKey} scope={workspace.scope} onEditingChange={setChildBusy}/>}</div>
         ) : tab === 'notes' ? (

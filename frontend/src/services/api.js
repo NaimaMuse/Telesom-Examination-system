@@ -11,13 +11,14 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
+    'X-Academic-Terminology': 'cohort',
   },
 });
 
 api.interceptors.response.use(
   (response) => publishAssessmentChange(response),
   (error) => {
-    if (error.response?.status === 401 && !['/auth/login','/auth/session'].includes(error.config?.url)) {
+    if (error.response?.status === 401 && !['/auth/login','/auth/google','/auth/session'].includes(error.config?.url)) {
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
     return Promise.reject(error);

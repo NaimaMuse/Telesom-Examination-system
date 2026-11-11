@@ -63,35 +63,122 @@ export default function TeacherAttendance() {
     }
   }
 
-  return <section className="academy-workspace teacher-attendance-page">
-    <header className="academy-heading teacher-attendance-heading">
-      <div className="teacher-attendance-title">
-        <span className="teacher-attendance-icon"><TeachingIcon name="calendar" size={21}/></span>
-        <div><h1>Teacher Attendance</h1><p>Record attendance and schedule makeup classes.</p></div>
-      </div>
-      <Link className="btn btn-secondary" to="/admin/makeup">View makeup classes</Link>
-    </header>
-    {error&&!absence&&<p className="academy-error" role="alert">{error}</p>}
-    {notice&&<p className="teacher-attendance-notice" role="status"><TeachingIcon name="check" size={17}/>{notice}</p>}
-    <div className="academy-panel teacher-attendance-panel">
-      <div className="teacher-attendance-toolbar"><div><h2>Daily register</h2><p>{records.length} {records.length===1?"teaching contract":"teaching contracts"}</p></div><label>Attendance date <input className="form-control" type="date" max={nairobiToday()} value={date} disabled={busy} onChange={event=>{setDate(event.target.value);setNotice('');}}/></label></div>
-      {date&&loading?<p role="status">Loading attendance…</p>:!date?<p>Choose an attendance date.</p>:!records.length?<p>No active teaching contracts for this date.</p>:
-        <div className="academy-table"><table>
-          <thead><tr><th>Teacher</th><th>Course / Batch</th><th>Attendance</th><th>Actions</th></tr></thead>
-          <tbody>{[...records].sort((a,b)=>Number(b.scheduled)-Number(a.scheduled)||a.teacher.localeCompare(b.teacher)).map(record=><tr key={record.contract}>
-            <td><strong>{record.teacher}</strong>{record.scheduled&&<small>Scheduled teaching day</small>}</td>
-            <td>{record.course}<small>{record.academicYear} · {record.batch}</small></td>
-            <td><span className={'teacher-attendance-status is-'+(record.attendance?.status||'unmarked')}>{record.attendance?.status==='present'?'Present':record.attendance?.status==='absent'?'Absent':'Not marked'}</span></td>
-            <td><div className="academy-actions teacher-attendance-actions">
-              <button type="button" className="btn btn-sm btn-secondary attendance-present" aria-label="Mark present" title="Mark present" disabled={busy||record.attendance?.status==='present'||record.attendance?.hasMakeup} onClick={()=>mark(record.contract,'present')}><TeachingIcon name="check" size={17}/></button>
-              <button type="button" className="btn btn-sm btn-secondary attendance-absent" aria-label="Mark absent" title="Mark absent" disabled={busy||record.attendance?.status==='absent'} onClick={()=>mark(record.contract,'absent')}><TeachingIcon name="cross" size={17}/></button>
-              {record.attendance?.status==='absent'&&(record.attendance.hasMakeup?<Link to="/admin/makeup">View makeup</Link>:
-                <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={()=>{setError('');setAbsence({...record,date});}}>Schedule makeup class</button>)}
-            </div></td>
-          </tr>)}</tbody>
-        </table></div>}
-    </div>
-    {absence&&<MakeupScheduleDialog absence={absence} lessons={[]} busy={busy} error={error}
-      onClose={()=>{setAbsence(null);setError('');}} onSave={schedule}/>}
-  </section>;
+  const present = records.filter(record => record.attendance?.status === 'present').length;
+  const absent = records.filter(record => record.attendance?.status === 'absent').length;
+  const summary = [
+    ['Teaching contracts', records.length, 'clipboard', 'contracts'],
+    ['Present', present, 'check', 'present'],
+    ['Absent', absent, 'cross', 'absent'],
+    ['Not marked', records.length - present - absent, 'clock', 'unmarked'],
+  ];
+  const sortedRecords = [...records].sort((a, b) =>
+    Number(b.scheduled) - Number(a.scheduled) || a.teacher.localeCompare(b.teacher)
+  );
+  const statusLabels = {present:'Present', absent:'Absent', unmarked:'Not marked'};
+
+  return (
+    <section className="teacher-attendance-page" aria-labelledby="teacher-attendance-title">
+      <header className="teacher-attendance-heading">
+        <div className="teacher-attendance-title">
+          <span className="teacher-attendance-icon"><TeachingIcon name="calendar" size={25}/></span>
+          <div>
+            <p className="teacher-attendance-kicker">Teaching operations</p>
+            <h1 id="teacher-attendance-title">Teacher Attendance</h1>
+            <p>Mark attendance by date and schedule makeup classes for absences.</p>
+          </div>
+        </div>
+        <Link className="teacher-attendance-makeup-link" to="/admin/makeup">
+          <TeachingIcon name="reschedule" size={17}/> Makeup classes <TeachingIcon name="arrow" size={15}/>
+        </Link>
+      </header>
+
+      <dl className="teacher-attendance-summary" aria-label="Attendance totals">
+        {summary.map(([label, total, icon, tone]) => (
+          <div className={`teacher-attendance-metric is-${tone}`} key={tone}>
+            <dt><span className="teacher-attendance-metric-icon"><TeachingIcon name={icon} size={20}/></span>{label}</dt>
+            <dd>{!date || loading || (error && !records.length) ? '—' : total}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <section className="teacher-attendance-panel" aria-labelledby="teacher-register-title">
+        <div className="teacher-attendance-toolbar">
+          <div>
+            <h2 id="teacher-register-title">Daily register</h2>
+            <p>Scheduled teaching days appear first.</p>
+          </div>
+          <label className="teacher-attendance-date">
+            Attendance date
+            <input className="form-control" type="date" max={nairobiToday()} value={date} disabled={busy}
+              onChange={event => {
+                const nextDate = event.target.value;
+                setDate(nextDate);
+                setRecords([]);
+                setLoading(Boolean(nextDate));
+                setError('');
+                setNotice('');
+              }}/>
+          </label>
+        </div>
+        {error && !absence && <p className="teacher-attendance-feedback is-error" role="alert">{error}</p>}
+        {notice && <p className="teacher-attendance-feedback" role="status"><TeachingIcon name="check" size={17}/>{notice}</p>}
+        {!date || loading || !records.length ? (
+          <div className="teacher-attendance-empty" role="status">
+            <TeachingIcon name="clipboard" size={26}/>
+            <p>{!date ? 'Choose an attendance date.' : loading ? 'Loading attendance…' : error ? 'Attendance could not be loaded.' : 'No active teaching contracts for this date.'}</p>
+          </div>
+        ) : (
+          <div className="teacher-attendance-table" tabIndex={0} role="region" aria-label="Daily register table">
+            <table aria-labelledby="teacher-register-title">
+              <thead>
+                <tr><th scope="col">Teacher</th><th scope="col">Course / Cohort</th><th scope="col">Attendance</th><th scope="col">Actions</th></tr>
+              </thead>
+              <tbody>
+                {sortedRecords.map(record => {
+                  const status = record.attendance?.status || 'unmarked';
+                  const initials = record.teacher.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+                  return (
+                    <tr key={record.contract}>
+                      <th scope="row">
+                        <div className="teacher-attendance-person">
+                          <span className="teacher-attendance-avatar" aria-hidden="true">{initials}</span>
+                          <div><strong>{record.teacher}</strong>{record.scheduled && <small>Scheduled teaching day</small>}</div>
+                        </div>
+                      </th>
+                      <td><strong>{record.course}</strong><small>{[record.academicYear, record.cohort].filter(Boolean).join(' · ')}</small></td>
+                      <td><span className={`teacher-attendance-status is-${status}`}>{statusLabels[status]}</span></td>
+                      <td>
+                        <div className="teacher-attendance-actions">
+                          <div className="teacher-attendance-mark">
+                            <button type="button" className="attendance-present" aria-label={`Mark ${record.teacher} present`}
+                              disabled={busy || status === 'present' || record.attendance?.hasMakeup} onClick={() => mark(record.contract, 'present')}>
+                              <TeachingIcon name="check" size={15}/> Present
+                            </button>
+                            <button type="button" className="attendance-absent" aria-label={`Mark ${record.teacher} absent`}
+                              disabled={busy || status === 'absent'} onClick={() => mark(record.contract, 'absent')}>
+                              <TeachingIcon name="cross" size={15}/> Absent
+                            </button>
+                          </div>
+                          {status === 'absent' && (record.attendance.hasMakeup ? (
+                            <Link className="teacher-attendance-makeup-action" to="/admin/makeup">View makeup <TeachingIcon name="arrow" size={14}/></Link>
+                          ) : (
+                            <button type="button" className="teacher-attendance-makeup-action" disabled={busy}
+                              onClick={() => { setError(''); setAbsence({...record, date}); }}>
+                              Schedule makeup <TeachingIcon name="arrow" size={14}/>
+                            </button>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      {absence && <MakeupScheduleDialog absence={absence} lessons={[]} busy={busy} error={error}
+        onClose={() => { setAbsence(null); setError(''); }} onSave={schedule}/>}
+    </section>
+  );
 }

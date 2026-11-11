@@ -1,40 +1,123 @@
-import WeeklySchedule from '../../components/WeeklySchedule';
+import WeeklySchedule, { WEEK_DAYS } from '../../components/WeeklySchedule';
+import TeachingIcon from '../../components/TeachingIcon';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../services/api';
 
 const COURSE_FIELDS = [
   { key: 'courseCode', label: 'Course code', type: 'text' },
   { key: 'name', label: 'Course name', type: 'text', required: true },
   { key: 'credits', label: 'Credit hours', type: 'number', required: true },
-  { key: 'academicYear', label: 'Year / Batch', type: 'batch', required: true },
-  { key: 'description', label: 'Description', type: 'textarea' },
+  { key: 'durationMonths', label: 'Course duration (months)', type: 'number', min: 0.25, step: 0.25 },
+  { key: 'academicYear', label: 'Year / Cohort', type: 'cohort', required: true },
   { key: 'status', label: 'Status', type: 'select', options: ['active', 'inactive', 'archived'] },
+  { key: 'description', label: 'Description', type: 'textarea' },
 ];
 
 const PAGE_SIZE = 8;
+const WEEKS_PER_TEACHING_MONTH = 4;
+
+function timeInMinutes(time = '') {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function CourseDetails({ course, onClose }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const trigger = document.activeElement;
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      trigger?.focus();
+    };
+  }, []);
+
+  const fields = [
+    ['Credit hours', course.credits],
+    ['Duration', course.durationWeeks
+      ? `${course.durationWeeks / WEEKS_PER_TEACHING_MONTH} ${course.durationWeeks === WEEKS_PER_TEACHING_MONTH ? 'month' : 'months'}`
+      : null],
+    ['Academic year', course.academicYear],
+    ['Cohort', course.cohort || course.batch],
+  ];
+  if (course.department) fields.push(['Department', course.department]);
+  if (course.semester) fields.push(['Semester', course.semester]);
+  const schedule = [...(course.teachingSchedule || [])].sort((a, b) => a.day - b.day);
+
+  return (
+    <dialog ref={dialogRef} className="course-details-dialog" aria-labelledby="course-details-title"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}>
+      <header className="course-details-header">
+        <span className="course-details-symbol"><TeachingIcon name="book" size={22} /></span>
+        <div className="course-details-identity">
+          <div className="course-details-meta">
+            <span>{course.courseCode || 'Course details'}</span>
+            <span className="course-details-status" data-status={course.status}>{course.status}</span>
+          </div>
+          <h2 id="course-details-title">{course.name}</h2>
+        </div>
+        <button type="button" className="course-details-close" aria-label="Close course details" onClick={onClose}>×</button>
+      </header>
+      <div className="course-details-body">
+        <dl className="course-details-fields">
+          {fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value ?? '—'}</dd></div>)}
+        </dl>
+        <section className="course-details-section">
+          <h3>Description</h3>
+          <p className="course-details-description">{course.description || 'No description added.'}</p>
+        </section>
+        <section className="course-details-section">
+          <h3><TeachingIcon name="calendar" size={17} /> Weekly teaching schedule</h3>
+          {schedule.length ? <ul className="course-details-schedule">
+            {schedule.map((slot) => (
+              <li key={slot.day}>
+                <strong>{WEEK_DAYS[slot.day]}</strong>
+                <span><TeachingIcon name="clock" size={14} /> {slot.startTime}–{slot.endTime}</span>
+              </li>
+            ))}
+          </ul> : <p>No teaching days configured.</p>}
+        </section>
+      </div>
+    </dialog>
+  );
+}
 
 function CourseModal({ initial, onSave, onClose }) {
-  const [form, setForm] = useState({ credits: 3, status: 'active', teachingSchedule: [], ...(initial || {}) });
-  const [batches, setBatches] = useState([]);
-  const [batchesLoading, setBatchesLoading] = useState(true);
-  const [batchError, setBatchError] = useState('');
+  const [form, setForm] = useState({
+    credits: 3,
+    status: 'active',
+    teachingSchedule: [],
+    ...initial,
+    durationMonths: initial?.durationWeeks ? initial.durationWeeks / WEEKS_PER_TEACHING_MONTH : '',
+  });
+  const durationWeeks = Number(form.durationMonths) * WEEKS_PER_TEACHING_MONTH;
+  const sessionMinutes = form.teachingSchedule.map(slot => timeInMinutes(slot.endTime) - timeInMinutes(slot.startTime));
+  const canCalculate = Number.isSafeInteger(durationWeeks) && durationWeeks > 0
+    && sessionMinutes.length > 0 && sessionMinutes.every(minutes => minutes > 0);
+  const certificateHours = canCalculate
+    ? Math.round(sessionMinutes.reduce((sum, minutes) => sum + minutes, 0) * durationWeeks / 60 * 100) / 100
+    : null;
+  const [cohorts, setCohorts] = useState([]);
+  const [cohortsLoading, setCohortsLoading] = useState(true);
+  const [cohortError, setCohortError] = useState('');
   useEffect(() => {
     const controller = new AbortController();
-    api.get('/academy/batches', {signal: controller.signal})
-      .then(({data}) => { if (!controller.signal.aborted) setBatches((data.batches || []).filter(batch => batch.status === 'active' || (batch.name === initial?.batch && batch.academicYear === initial?.academicYear))); })
-      .catch(() => { if (!controller.signal.aborted) setBatchError('Could not load years and batches. Close and reopen this form to retry.'); })
-      .finally(() => { if (!controller.signal.aborted) setBatchesLoading(false); });
+    api.get('/academy/cohorts', {signal: controller.signal})
+      .then(({data}) => { if (!controller.signal.aborted) setCohorts((data.cohorts || []).filter(cohort => cohort.status === 'active' || (cohort.name === initial?.cohort && cohort.academicYear === initial?.academicYear))); })
+      .catch(() => { if (!controller.signal.aborted) setCohortError('Could not load years and cohorts. Close and reopen this form to retry.'); })
+      .finally(() => { if (!controller.signal.aborted) setCohortsLoading(false); });
     return () => controller.abort();
   }, [initial]);
-  const selectedBatch = batches.find(batch => batch.name === form.batch && batch.academicYear === form.academicYear);
+  const selectedCohort = cohorts.find(cohort => cohort.name === form.cohort && cohort.academicYear === form.academicYear);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!selectedBatch) { setError('Select an existing year / batch.'); return; }
+    if (!selectedCohort) { setError('Select an existing year / cohort.'); return; }
     if (form.teachingSchedule.some(row => row.endTime <= row.startTime)) { setError('End time must be after start time.'); return; }
     setSaving(true);
     setError('');
@@ -61,14 +144,14 @@ function CourseModal({ initial, onSave, onClose }) {
                 <div className={`form-group ${field.type === 'textarea' ? 'course-form-wide' : ''}`} key={field.key}>
                   <label className="form-label" htmlFor={`course-${field.key}`}>{field.label}{field.required ? ' *' : ''}</label>
                   {field.key === 'courseCode' ? (
-                    <input id="course-courseCode" className="form-control" type="text" readOnly value={initial?.courseCode || ''} placeholder="Generated automatically when saved" />
-                  ) : field.type === 'batch' ? (
-                    <><select id={`course-${field.key}`} className="form-control" required disabled={batchesLoading || !!batchError || !batches.length} value={selectedBatch?._id || ''} onChange={event => {
-                      const batch = batches.find(item => item._id === event.target.value);
-                      setForm(current => ({...current, academicYear: batch?.academicYear || '', batch: batch?.name || ''}));
-                    }}><option value="">{batchesLoading ? 'Loading years / batches…' : batchError ? 'Years / batches unavailable' : batches.length ? 'Select year / batch' : 'No active batches available'}</option>{batches.map(batch => <option key={batch._id} value={batch._id}>{batch.academicYear} / {batch.name}</option>)}</select>
-                    {batchError && <p role="alert" className="course-form-error">{batchError}</p>}
-                    {!batchesLoading && !batchError && !batches.length && <p>Create a batch in Years &amp; Batches first.</p>}</>
+                    <input id="course-courseCode" className="form-control" type="text" readOnly value={initial?.courseCode || ''} placeholder="Automatic" />
+                  ) : field.type === 'cohort' ? (
+                    <><select id={`course-${field.key}`} className="form-control" required disabled={cohortsLoading || !!cohortError || !cohorts.length} value={selectedCohort?._id || ''} onChange={event => {
+                      const cohort = cohorts.find(item => item._id === event.target.value);
+                      setForm(current => ({...current, academicYear: cohort?.academicYear || '', cohort: cohort?.name || ''}));
+                    }}><option value="">{cohortsLoading ? 'Loading years / cohorts…' : cohortError ? 'Years / cohorts unavailable' : cohorts.length ? 'Select year / cohort' : 'No active cohorts available'}</option>{cohorts.map(cohort => <option key={cohort._id} value={cohort._id}>{cohort.academicYear} / {cohort.name}</option>)}</select>
+                    {cohortError && <p role="alert" className="course-form-error">{cohortError}</p>}
+                    </>
                   ) : field.type === 'select' ? (
                     <select id={`course-${field.key}`} className="form-control" value={form[field.key] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))}>
                       {field.options.map((option) => <option value={option} key={option}>{option[0].toUpperCase() + option.slice(1)}</option>)}
@@ -76,12 +159,15 @@ function CourseModal({ initial, onSave, onClose }) {
                   ) : field.type === 'textarea' ? (
                     <textarea id={`course-${field.key}`} className="form-control" rows="2" value={form[field.key] || ''} onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))} />
                   ) : (
-                    <input id={`course-${field.key}`} className="form-control" type={field.type} min={field.type === 'number' ? 1 : undefined} required={field.required} value={form[field.key] ?? ''} onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))} />
+                    <input id={`course-${field.key}`} className="form-control" type={field.type} min={field.type === 'number' ? field.min ?? 1 : undefined} step={field.step} required={field.required} value={form[field.key] ?? ''} onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))} />
                   )}
                 </div>
               ))}
             </div>
             <WeeklySchedule value={form.teachingSchedule || []} onChange={teachingSchedule => setForm(current => ({...current,teachingSchedule}))} />
+            {certificateHours !== null && <p className="course-certificate-hours" role="status">
+              <strong>Certificate credit hours</strong> {certificateHours} hours
+            </p>}
             {error && <div className="course-form-error" role="alert">{error}</div>}
           </div>
           <footer className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save course'}</button></footer>
@@ -112,6 +198,7 @@ export default function CourseMgmt() {
   useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [viewCourse, setViewCourse] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -140,7 +227,7 @@ export default function CourseMgmt() {
 
   useAutoRefresh(async context => {
     await Promise.all([fetchCourses(!context.initial, context)]);
-  }, { enabled: !showModal && !deleting });
+  }, { enabled: !showModal && !viewCourse && !deleting });
 
   const activeCount = courses.filter((course) => course.status === 'active').length;
   const inactiveCount = courses.filter((course) => course.status === 'inactive').length;
@@ -155,9 +242,10 @@ export default function CourseMgmt() {
       name: String(form.name || '').trim(),
       title: String(form.name || '').trim(),
       credits: Number(form.credits) || 3,
+      durationWeeks: form.durationMonths ? Number(form.durationMonths) * WEEKS_PER_TEACHING_MONTH : null,
       teachingSchedule: form.teachingSchedule || [],
       academicYear: String(form.academicYear || '').trim(),
-      batch: String(form.batch || '').trim(),
+      cohort: String(form.cohort || '').trim(),
       description: String(form.description || '').trim(),
       status: form.status || 'active',
     };
@@ -215,7 +303,14 @@ export default function CourseMgmt() {
                   <td><span className="course-term-value"><small>{course.academicYear || 'Year not set'}</small></span></td>
                   <td><span className="course-description-cell">{course.description || 'No description added'}</span></td>
                   <td><span className={`course-status-pill ${course.status === 'active' ? 'is-active' : course.status === 'archived' ? 'is-archived' : ''}`}><i aria-hidden="true"/>{course.status}</span></td>
-                  <td><div className="course-row-actions"><button type="button" className="course-row-edit" onClick={() => { setEditTarget(course); setShowModal(true); }}>Edit</button><button type="button" className="course-row-delete" aria-label={`Delete ${course.name}`} onClick={() => setDeleteTarget(course)}>×</button></div></td>
+                  <td><div className="course-row-actions">
+                    <button type="button" className="course-row-view" title="View course details"
+                      aria-label={`View details for ${course.name}`} aria-haspopup="dialog" onClick={() => setViewCourse(course)}>
+                      <TeachingIcon name="eye" size={16} />
+                    </button>
+                    <button type="button" className="course-row-edit" onClick={() => { setEditTarget(course); setShowModal(true); }}>Edit</button>
+                    <button type="button" className="course-row-delete" aria-label={`Delete ${course.name}`} onClick={() => setDeleteTarget(course)}>×</button>
+                  </div></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -226,6 +321,7 @@ export default function CourseMgmt() {
       </section>
 
       {showModal && <CourseModal initial={editTarget} onSave={saveCourse} onClose={() => { setShowModal(false); setEditTarget(null); }} />}
+      {viewCourse && <CourseDetails course={viewCourse} onClose={() => setViewCourse(null)} />}
       {deleteTarget && <ConfirmModal course={deleteTarget} onConfirm={deleteCourse} onCancel={() => setDeleteTarget(null)} loading={deleting} />}
     </div>
   );
