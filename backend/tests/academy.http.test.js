@@ -65,7 +65,9 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   const afterRead = (await request('GET','/announcements',null,su)).body;
   assert.strictEqual(afterRead.unreadCount,3);
   assert.strictEqual(afterRead.announcements.find(item => item._id === schoolUpdate._id).read,true);
-  assert.strictEqual((await request('DELETE',announcementPath,null,admin)).status,404);
+  assert.strictEqual((await request('DELETE',announcementPath,null,admin)).status,200);
+  assert(!(await announcementTitles(admin)).includes('School update'));
+  assert((await announcementTitles(su)).includes('School update'));
   assert.strictEqual((await request('DELETE',announcementPath,null,su)).status,200);
   assert.strictEqual((await request('DELETE',announcementPath,null,su)).status,200);
   assert(!(await announcementTitles(su)).includes('School update'));

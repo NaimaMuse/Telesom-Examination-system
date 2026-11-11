@@ -30,6 +30,8 @@ function countUnread(user) {
   });
 }
 
+const visibleScopes = user => [...recipientScopes(user), {sender:user._id}];
+
 router.get('/unread-count', asyncHandler(async (req, res) => {
   res.json({unreadCount:await countUnread(req.user)});
 }));
@@ -40,9 +42,8 @@ router.get('/', asyncHandler(async (req, res) => {
     fail(400, 'Invalid announcement page.');
   }
   const {_id} = req.user;
-  const visible = [...recipientScopes(req.user), {sender:_id}];
   const [rows, unreadCount] = await Promise.all([
-    Announcement.find({$or:visible, dismissedBy:{$ne:_id}})
+    Announcement.find({$or:visibleScopes(req.user), dismissedBy:{$ne:_id}})
       .select('sender senderName senderRole audience targetTeacher title message createdAt readBy')
       .sort({createdAt:-1, _id:-1}).skip((page - 1) * pageSize).limit(pageSize + 1).lean(),
     countUnread(req.user),
@@ -69,7 +70,11 @@ router.patch('/:id/read', asyncHandler(async (req, res) => {
 }));
 
 router.delete('/:id', asyncHandler(async (req, res) => {
-  const result = await Announcement.updateOne(recipientAnnouncement(req), {$addToSet:{dismissedBy:req.user._id}});
+  if (!isObjectIdOrHexString(req.params.id)) fail(400, 'Invalid announcement ID.');
+  const result = await Announcement.updateOne(
+    {_id:req.params.id, $or:visibleScopes(req.user)},
+    {$addToSet:{dismissedBy:req.user._id}},
+  );
   if (!result.matchedCount) fail(404, 'Announcement not found.');
   res.json({success:true});
 }));

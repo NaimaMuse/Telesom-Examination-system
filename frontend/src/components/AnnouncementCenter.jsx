@@ -234,9 +234,9 @@ export default function AnnouncementCenter({ role }) {
                       <div className="announcement-item-actions">
                         <button type="button" className="btn btn-secondary" title="View announcement" aria-label={`View announcement: ${item.title}`}
                           disabled={Boolean(deleting)} onClick={() => viewAnnouncement(item)}><TeachingIcon name="eye" size={16}/></button>
-                        {!item.sentByMe && <button type="button" className="btn btn-secondary announcement-delete" title="Delete announcement"
+                        <button type="button" className="btn btn-secondary announcement-delete" title="Remove from my announcements"
                           aria-label={`Delete announcement: ${item.title}`} disabled={Boolean(deleting)}
-                          onClick={() => deleteAnnouncement(item)}><TeachingIcon name="trash" size={16}/></button>}
+                          onClick={() => deleteAnnouncement(item)}><TeachingIcon name="trash" size={16}/></button>
                       </div>
                     </div>
                     <p>{item.message}</p>
