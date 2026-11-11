@@ -39,15 +39,50 @@ export function AcademyReports(){
 export function CohortManagement(){
   const [loading,setLoading]=useState(true),[loadError,setLoadError]=useState(''),[notice,setNotice]=useState('');
   const [rows,setRows]=useState([]),[form,setForm]=useState(()=>({name:'',academicYear:new Intl.DateTimeFormat('en',{year:'numeric',timeZone:'Africa/Nairobi'}).format(new Date())})),[busy,setBusy]=useState(false),[error,setError]=useState(''),[revision,setRevision]=useState(0);
+  const [editingId,setEditingId]=useState(null);
+  const yearInput=useRef(null);
   useAutoRefresh(async({signal,isCurrent})=>{try{const r=await api.get('/academy/cohorts',{signal});if(isCurrent()){setRows(r.data.cohorts);setLoadError('');}}catch(e){if(isCurrent())setLoadError(message(e));}finally{if(isCurrent())setLoading(false);}},{enabled:!busy,deps:[revision]});
-  const save=async e=>{e.preventDefault();setBusy(true);setError('');try{await api.post('/academy/cohorts',form);setForm(previous=>({...previous,name:''}));setNotice('Cohort created successfully.');setRevision(v=>v+1);}catch(e){setError(message(e));}finally{setBusy(false);}};
+  function edit(row){
+    setEditingId(row._id);
+    setForm({name:row.name,academicYear:row.academicYear});
+    setError('');
+    setNotice('');
+    yearInput.current?.focus();
+  }
+  function cancelEdit(){
+    setEditingId(null);
+    setForm(previous=>({...previous,name:''}));
+    setError('');
+    setNotice('');
+  }
+  async function save(event){
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try{
+      if(editingId){
+        const {data}=await api.patch('/academy/cohorts/'+editingId,form);
+        setRows(previous=>previous.map(row=>row._id===editingId?data.cohort:row));
+      }else{
+        await api.post('/academy/cohorts',form);
+      }
+      cancelEdit();
+      setNotice(editingId?'Cohort updated successfully.':'Cohort created successfully.');
+      setRevision(value=>value+1);
+    }catch(error){
+      setError(message(error));
+    }finally{
+      setBusy(false);
+    }
+  }
   const toggle=async row=>{setBusy(true);try{await api.patch('/academy/cohorts/'+row._id,{status:row.status==='active'?'archived':'active'});setRevision(v=>v+1);}catch(e){setError(message(e));}finally{setBusy(false);}};
   return <div className="academy-workspace cohort-workspace"><header className="cohort-page-heading"><span className="cohort-title-icon"><TeachingIcon name="graduate" size={36}/></span><h1>Academic years &amp; cohorts</h1></header>
   {loadError&&<p className="academy-error" role="alert">{loadError}</p>}
   <div className="cohort-split-workspace">
     <section className="cohort-directory" aria-label="Academic cohorts"><header><span className="cohort-directory-icon"><TeachingIcon name="users" size={30}/></span><div><h2>Cohort directory <span>{loading?'—':rows.length}</span></h2><p>Create a cohort before enrolling students.</p></div></header>
-    {loading?<p className="academy-empty" role="status">Loading cohorts…</p>:!rows.length?<div className="cohort-empty"><TeachingIcon name="calendar" size={32}/><h3>No cohorts yet</h3><p>Add your first cohort to organize student enrollments.</p></div>:<div className="cohort-card-grid">{rows.map(r=><article className="cohort-record-card" key={r._id}><div className="cohort-record-top"><span className="cohort-calendar-icon"><TeachingIcon name="calendar" size={22}/></span><span className={'cohort-status '+(r.status==='active'?'is-active':'')}>{r.status==='active'?'Active':'Archived'}</span></div><div className="cohort-record-identity"><div><span className="cohort-year-label">ACADEMIC YEAR</span><strong className="cohort-year">{r.academicYear}</strong></div><h3>{r.name}</h3></div><footer><span><TeachingIcon name="users" size={18}/>{r.status==='active'?'Available for enrollment':'Not accepting enrollments'}</span><button disabled={busy} className="btn btn-sm btn-secondary" onClick={()=>toggle(r)}>{r.status==='active'?'Archive':'Reactivate'}</button></footer></article>)}</div>}</section>
-    <section className="cohort-create-panel" aria-labelledby="cohort-create-title"><header><span className="cohort-eyebrow">NEW ACADEMIC GROUP</span><h2 id="cohort-create-title">Create cohort</h2><p>Set the academic year and give your cohort a name.</p></header><form onSubmit={save}><div className="academy-form cohort-form-grid"><Field label="Academic year"><input required disabled={busy} maxLength={30} placeholder="e.g. 2026" value={form.academicYear} onChange={e=>{setNotice('');setForm(p=>({...p,academicYear:e.target.value}));}}/></Field><Field label="Cohort name"><input required disabled={busy} maxLength={100} placeholder="e.g. Cohort 1" value={form.name} onChange={e=>{setNotice('');setForm(p=>({...p,name:e.target.value}));}}/></Field><p className="cohort-form-note"><span className="cohort-note-icon" aria-hidden="true">i</span><span>Use the same academic year when enrolling students into this cohort.</span></p></div>{error&&<p className="academy-error" role="alert">{error}</p>}{notice&&<p className="cohort-save-notice" role="status">✓ {notice}</p>}<footer><button className="btn btn-primary" disabled={busy}><span>{busy?'Saving…':'Save cohort'}</span><TeachingIcon name="arrow" size={20}/></button></footer></form></section>
+    {loading?<p className="academy-empty" role="status">Loading cohorts…</p>:!rows.length?<div className="cohort-empty"><TeachingIcon name="calendar" size={32}/><h3>No cohorts yet</h3><p>Add your first cohort to organize student enrollments.</p></div>:<div className="cohort-card-grid">{rows.map(r=><article className="cohort-record-card" key={r._id}><div className="cohort-record-top"><span className="cohort-calendar-icon"><TeachingIcon name="calendar" size={22}/></span><span className={'cohort-status '+(r.status==='active'?'is-active':'')}>{r.status==='active'?'Active':'Archived'}</span></div><div className="cohort-record-identity"><div><span className="cohort-year-label">ACADEMIC YEAR</span><strong className="cohort-year">{r.academicYear}</strong></div><h3>{r.name}</h3></div><footer><span><TeachingIcon name="users" size={18}/>{r.status==='active'?'Available for enrollment':'Not accepting enrollments'}</span><div className="cohort-record-actions"><button type="button" disabled={busy} className="btn btn-sm btn-secondary" aria-label={'Edit '+r.name+' ('+r.academicYear+')'} onClick={()=>edit(r)}>Edit</button><button type="button" disabled={busy} className="btn btn-sm btn-secondary" onClick={()=>toggle(r)}>{r.status==='active'?'Archive':'Reactivate'}</button></div></footer></article>)}</div>}</section>
+    <section className="cohort-create-panel" aria-labelledby="cohort-create-title"><header><h2 id="cohort-create-title">{editingId?'Edit cohort':'Create cohort'}</h2><p>{editingId?'Update the cohort name or academic year.':'Set the academic year and give your cohort a name.'}</p></header><form onSubmit={save}><div className="academy-form cohort-form-grid"><Field label="Academic year"><input ref={yearInput} required disabled={busy} maxLength={30} placeholder="e.g. 2026" value={form.academicYear} onChange={e=>{setNotice('');setForm(p=>({...p,academicYear:e.target.value}));}}/></Field><Field label="Cohort name"><input required disabled={busy} maxLength={100} placeholder="e.g. Cohort 1" value={form.name} onChange={e=>{setNotice('');setForm(p=>({...p,name:e.target.value}));}}/></Field><p className="cohort-form-note"><span className="cohort-note-icon" aria-hidden="true">i</span><span>{editingId?'The academic year can be changed before records are linked to the cohort.':'Use the same academic year when enrolling students into this cohort.'}</span></p></div>{error&&<p className="academy-error" role="alert">{error}</p>}{notice&&<p className="cohort-save-notice" role="status">✓ {notice}</p>}<footer className="cohort-form-actions"><button type="submit" className="btn btn-primary" disabled={busy}><span>{busy?'Saving…':editingId?'Save changes':'Save cohort'}</span><TeachingIcon name="arrow" size={20}/></button>{editingId&&<button type="button" className="btn btn-secondary" disabled={busy} onClick={cancelEdit}>Cancel</button>}</footer></form></section>
   </div></div>;
 }
 export function AssessmentProgress({courseMarksOnly=false}={}){

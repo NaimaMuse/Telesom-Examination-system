@@ -1,0 +1,83 @@
+.dash-content:has(> .defense-page) { padding-block-start: 6px; padding-inline: clamp(8px,1vw,16px); }
+.evaluations.defense-page { max-width: none; margin: 0; padding: 0 0 22px; }
+.defense-toolbar { position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px 10px; margin-bottom:7px; padding:3px 0; background:#f2f8f4; }
+.defense-toolbar-actions { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.defense-page .defense-toolbar :is(a.btn,button),.defense-page .defense-group-panel button { min-height:28px; padding:4px 9px; font-size:11px; }
+.defense-page .defense-toolbar a.btn-primary { background:#07643c; border-color:#07643c; color:#fff; }
+.defense-page .defense-toolbar a.btn-primary:hover { background:#064c31; }
+.defense-group-panel { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px 10px; margin-bottom:7px; padding:5px 8px; background:#fff; border:1px solid #dce8df; border-bottom:2px solid #cb982e; border-radius:7px; }
+.defense-group-tabs,.defense-group-controls { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.defense-group-controls { gap:8px 12px; color:#174732; }
+.defense-group-tabs button[aria-pressed="true"],
+.defense-group-tabs button[aria-pressed="true"]:hover:not(:disabled) { background:#175338; color:#fff; border-color:#175338; }
+.defense-group-controls button.defense-group-reset { color:#a83227; border-color:#e6bcb6; }
+.defense-group-controls button.defense-group-reset:hover:not(:disabled) { background:#fff2ef; border-color:#d9a49b; }
+.defense-title { display:flex; align-items:center; gap:13px; overflow:hidden; min-height:68px; padding:8px 14px; border-radius:9px; margin-bottom:8px; background:radial-gradient(ellipse at 90% 185%,#b3c52d 0%,transparent 59%),linear-gradient(110deg,#034630,#08703d); }
+.defense-title img { width:42px; height:auto; flex-shrink:0; }
+.defense-title > div { border-left:2px solid #f1bd27; padding-left:12px; }
+.defense-title h2 { color:#fff; margin:0 0 2px; font-size:clamp(15px,2vw,20px); line-height:1.2; }
+.defense-title p { margin:0; color:#e3f4e9; }
+.defense-title-art { position:relative; align-self:stretch; display:grid; align-items:end; justify-items:center; flex:0 0 102px; margin-left:auto; }
+.defense-title-screen { display:grid; place-items:center; width:66px; height:40px; transform:skew(-10deg); background:#edf8f0; color:#075636; border:3px solid #183c32; border-bottom-width:5px; border-radius:6px; font-size:19px; font-weight:700; }
+.defense-title-art svg { position:absolute; top:-6px; right:4px; color:#ffcf4c; padding:4px; background:#16382f; border-radius:6px; transform:rotate(10deg); }
+.defense-page fieldset { min-width:0; border:0; padding:0; margin:0; }
+.defense-page legend { color:#174732; font-weight:650; padding:0; }
+.defense-section { background:#fff; border:1px solid #e0eae3; border-radius:9px; padding:8px 10px; box-shadow:0 3px 10px #163d2c0b; }
+.defense-section + .defense-section { margin-top:8px; }
+.defense-page .defense-wording-editor fieldset { margin-top:12px; padding:8px 10px; border:1px solid #dce8df; border-radius:6px; }
+.defense-wording-editor fieldset legend { padding-inline:5px; }
+.defense-wording-editor label { margin-top:6px; }
+.defense-mark-section { padding:8px 4px; border-bottom:1px solid #e0eae3; }
+.defense-mark-section h4 { margin:0 0 6px; color:#174732; }
+.defense-page .defense-section-heading { display:flex; align-items:center; gap:7px; border-left:3px solid #e3ae28; background:linear-gradient(100deg,#eff8f2,#e2f0e8); color:#17372c; padding:3px 7px; margin:0 0 7px; border-radius:5px; font-size:13px; }
+.defense-icon { display:grid; place-items:center; width:24px; height:24px; flex-shrink:0; border-radius:50%; background:#ceebd9; color:#075a35; }
+.defense-details { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px 10px; align-items:end; margin-bottom:8px; }
+.defense-details label { margin:0; }
+.defense-field-label { display:flex; align-items:center; gap:5px; }
+.defense-field-label svg { color:#127344; }
+.defense-page .defense-student-picker { border:1px solid #deebe2; background:#f4faf6; padding:3px 6px 5px; border-radius:6px; }
+.defense-student-picker legend { padding:2px 7px; border-radius:5px; background:#e0f1e7; }
+.defense-student-picker legend svg { vertical-align:middle; }
+.defense-students { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr)); gap:4px; max-height:140px; overflow:auto; }
+.defense-students label { margin:0; padding:3px 5px; border:1px solid #e0ebe3; border-radius:5px; background:#fff; }
+.defense-students label,.defense-outcomes label { display:flex; gap:8px; align-items:center; }
+.defense-page input[type="checkbox"],.defense-page input[type="radio"] { accent-color:#165c3a; }
+.defense-page .defense-criterion { padding:4px 0 8px; margin-bottom:7px; }
+.defense-page textarea { min-height:54px; }
+.defense-page input:not([type=checkbox]):not([type=radio]),.defense-page select,.defense-page textarea { padding:7px 9px; margin-top:4px; }
+.defense-guidance { margin:3px 0 8px; color:#76561b; }
+.defense-scores { display:flex; align-items:center; flex-wrap:wrap; gap:7px; }
+.defense-scores > span { margin-right:4px; font-weight:650; }
+.defense-scores .defense-rating { position:relative; margin:0; }
+.defense-rating input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+.defense-rating span { display:grid; place-items:center; min-width:36px; padding-inline:5px; height:34px; border:1px solid #b9cabc; border-radius:6px; }
+.defense-rating input:checked + span { background:#175338; color:#fff; border-color:#175338; }
+.defense-rating input:focus-visible + span { outline:2px solid #b58321; outline-offset:2px; }
+.defense-matrix { width:100%; border-collapse:collapse; margin-bottom:16px; }
+.defense-matrix th,.defense-matrix td { padding:8px 10px; text-align:left; border:1px solid #dce8df; }
+.defense-matrix thead,.defense-matrix tfoot { background:#f1f7f3; color:#174732; }
+.defense-matrix td { white-space:nowrap; }
+.defense-matrix-scroll { overflow-x:auto; }
+.defense-professional td,.defense-professional th:not(:first-child) { text-align:center; padding-inline:5px; }
+.defense-page .defense-outcomes { margin-bottom:16px; }
+.defense-print { display:none; }
+@media(max-width:780px) {
+  .defense-details { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:480px) {
+  .defense-title-art { display:none; }
+  .defense-details { grid-template-columns:1fr; }
+}
+@media print {
+  body:has(.defense-page) :is(.dash-shell,.dash-main,.dash-content) { display:block; height:auto; max-height:none; overflow:visible; margin:0; padding:0; }
+  body:has(.defense-page) .dash-shell > :not(.dash-main),
+  body:has(.defense-page) .dash-main > :not(.dash-content) { display:none!important; }
+  .defense-page { width:100%; max-width:none; margin:0; padding:0; }
+  .defense-page form { border:0; padding:0; }
+  .defense-title,.defense-section { background:none; box-shadow:none; }
+  .defense-title h2,.defense-title p { color:#174732; }
+  .defense-page .defense-screen { display:none!important; }
+  .defense-page .defense-print { display:block; margin:4px 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .defense-criterion,.defense-matrix tr { break-inside:avoid; }
+  .defense-section h3 { break-after:avoid; }
+}

@@ -9,6 +9,7 @@ const Lesson=require('../models/TeachingLesson'),Teacher=require('../models/Teac
 const Contract=require('../models/TeacherContract'),Enrollment=require('../models/Enrollment');
 const TeacherAttendance=require('../models/TeacherAttendance');
 const Course=require('../models/Course');
+const Exam=require('../models/Exam'),Quiz=require('../models/Quiz'),Note=require('../models/Note');
 const contractService=require('../services/teacherContractService');
 const {enrollmentBatch}=require('../services/batchService');
 const {getStudentProgress}=require('../services/academicProgressService');
@@ -59,8 +60,52 @@ router.get(['/cohorts','/batches'],asyncHandler(async(req,res)=>{
 }));
 router.post(['/cohorts','/batches'],authorizeRoles('admin'),asyncHandler(async(req,res)=>res.status(201).json({batch:await Batch.create(pick(req.body,['name','academicYear']))})));
 router.patch(['/cohorts/:id','/batches/:id'],authorizeRoles('admin'),asyncHandler(async(req,res)=>{
-  const batch=await Batch.findById(id(req.params.id));if(!batch)fail('Cohort not found.',404);
-  if(!['active','archived'].includes(req.body.status))fail('Invalid cohort status.');batch.status=req.body.status;await batch.save();res.json({batch});
+  const batchId=id(req.params.id);
+  const details=pick(req.body,['name','academicYear']);
+  const changesDetails=Object.keys(details).length>0;
+  const hasStatus=Object.hasOwn(req.body,'status');
+  if((hasStatus||!changesDetails)&&!['active','archived'].includes(req.body.status))fail('Invalid cohort status.');
+  for(const value of Object.values(details)){
+    if(typeof value!=='string'||!value.trim())fail('Enter a cohort name and academic year.');
+  }
+
+  async function updateCohort(session){
+    const batch=await Batch.findById(batchId).session(session);
+    if(!batch)fail('Cohort not found.',404);
+    const previous={batch:batch.name,academicYear:batch.academicYear};
+    batch.set(details);
+    if(hasStatus)batch.status=req.body.status;
+    if(!batch.isModified('name')&&!batch.isModified('academicYear'))return batch.save({session});
+
+    const scopedModels=[Student,Enrollment,Course,Contract,Outline,Makeup,Exam,Quiz,Note];
+    const changingYear=batch.isModified('academicYear');
+    if(changingYear){
+      for(const Model of scopedModels){
+        if(await Model.exists(previous).session(session)){
+          fail('This cohort has linked records. Its academic year cannot be changed.',409);
+        }
+      }
+    }
+    await batch.save({session});
+    if(!changingYear){
+      const contracts=await Contract.distinct('_id',previous).session(session);
+      for(const Model of scopedModels){
+        await Model.updateMany(previous,{$set:{batch:batch.name}},{session});
+      }
+      await Lesson.updateMany({contract:{$in:contracts},batch:previous.batch},{$set:{batch:batch.name}},{session});
+    }
+    return batch;
+  }
+
+  try{
+    const batch=changesDetails
+      ? await mongoose.connection.transaction(updateCohort)
+      : await updateCohort(null);
+    res.json({batch});
+  }catch(error){
+    if(error.code===11000)fail('That cohort name is already in use for this academic year or conflicts with linked records.',409);
+    throw error;
+  }
 }));
 router.get('/progress',authorizeRoles('student'),asyncHandler(async(req,res)=>{
   const student=await Student.findOne({user:req.user._id});if(!student)fail('Student not found.',404);
