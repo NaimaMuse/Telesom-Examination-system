@@ -158,7 +158,9 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
     setSaving(true);
     setError('');
     try { await onSave(form); }
-    catch (saveError) { setError(saveError.message || 'Student could not be saved.'); }
+    catch (saveError) {
+      setError(saveError.response?.data?.message || saveError.message || 'Student could not be saved.');
+    }
     finally { setSaving(false); }
   };
 
