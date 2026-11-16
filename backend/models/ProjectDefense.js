@@ -3,6 +3,9 @@ const {Schema} = mongoose;
 
 const schema = new Schema({
   course: {type:Schema.Types.ObjectId,ref:'Course',required:true,index:true},
+  assessment: {type:Schema.Types.ObjectId},
+  assessmentType: {type:String,enum:['exam','quiz']},
+  assessmentTitle: {type:String},
   students: [{type:Schema.Types.ObjectId,ref:'Student'}],
   evaluator: {type:Schema.Types.ObjectId,ref:'User',required:true},
   evaluatorName: {type:String,trim:true,maxlength:200,default:''},

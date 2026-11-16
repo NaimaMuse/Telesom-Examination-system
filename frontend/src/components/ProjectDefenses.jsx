@@ -116,22 +116,29 @@ function Rating({criterion,value,options,onChange}){
   </label>);
 }
 
+const sectionMarks={B:15,C:20,D:20,E:15,F:10,G:10};
+const totalMarks=Object.values(sectionMarks).reduce((sum,marks)=>sum+marks,0);
+const formatMarks=marks=>marks===null?'Incomplete':marks.toFixed(2);
+
 function defenseScores(ratings,maxRating){
-  const averages=rubric.map(([, ,criteria])=>{
-    const rated=criteria.map(([key])=>ratings[key]).filter(Boolean);
-    return rated.length?rated.reduce((sum,value)=>sum+value,0)/rated.length:0;
+  const marks=rubric.map(([section,,criteria])=>{
+    const values=criteria.map(([key])=>ratings[key]);
+    if(values.some(value=>value===undefined))return null;
+    const sum=values.reduce((total,value)=>total+value,0);
+    return sum/(criteria.length*maxRating)*sectionMarks[section];
   });
-  return {averages,percentage:averages.reduce((sum,average)=>sum+average,0)/(rubric.length*maxRating)*100};
+  const total=marks.includes(null)?null:marks.reduce((sum,value)=>sum+value,0);
+  return {marks,total};
 }
 
 function DefenseMarksEditor({ratings,ratingOptions,maxRating,wording,busy,error,onSave,onCancel}){
   const [draft,setDraft]=useState(()=>({...ratings}));
-  const {percentage}=defenseScores(draft,maxRating);
+  const {total}=defenseScores(draft,maxRating);
   return <form className="defense-section defense-marks-editor defense-screen" onSubmit={event=>{
     event.preventDefault();
     if(!busy)onSave(draft);
   }}>
-    <DefenseSectionTitle icon="chart">Edit Marks · {percentage.toFixed(1)}%</DefenseSectionTitle>
+    <DefenseSectionTitle icon="chart">Edit Marks · {total===null?'Incomplete':`${formatMarks(total)} / ${totalMarks}`}</DefenseSectionTitle>
     <fieldset disabled={busy}>
       {rubric.map(([section,title,criteria])=><section className="defense-mark-section" key={section}>
         <h4>{wording(section,title)}</h4>
@@ -273,22 +280,26 @@ function DefenseForm({id,initialCourse}){
   const [groups,setGroups]=useState(()=>[{...empty,groupName:'Group 1'}]);
   const [activeGroup,setActiveGroup]=useState(0);
   const [courses,setCourses]=useState(null);
+  const [assessments,setAssessments]=useState([]);
   const [error,setError]=useState('');
   const [notice,setNotice]=useState('');
   const [busy,setBusy]=useState(false);
   const [editingWording,setEditingWording]=useState(false);
   const [editingMarks,setEditingMarks]=useState(false);
+  const [showScoring,setShowScoring]=useState(false);
   useEffect(()=>{
     const controller=new AbortController();
     const options={signal:controller.signal};
-    Promise.all([api.get('/evaluations/courses',options),id?api.get(endpoint+'/'+id,options):null])
-      .then(([courseResult,recordResult])=>{
+    Promise.all([api.get('/evaluations/courses',options),id?api.get(endpoint+'/'+id,options):null,
+      api.get(endpoint+'/assessments',options)])
+      .then(([courseResult,recordResult,assessmentResult])=>{
         if(controller.signal.aborted)return;
         if(recordResult)setGroups([recordResult.data.record]);
         else if(courseResult.data.courses.some(course=>course._id===initialCourse)){
           setGroups([{...empty,course:initialCourse,groupName:'Group 1'}]);
         }
         setCourses(courseResult.data.courses);
+        setAssessments(assessmentResult.data.assessments);
       })
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
@@ -307,11 +318,13 @@ function DefenseForm({id,initialCourse}){
   }
   function selectGroup(index){
     setActiveGroup(index);
+    setShowScoring(false);
     setNotice('');
     setError('');
   }
   function addGroup(){
     setGroups(previous=>[...previous,{...empty,course:form.course,cohort:form.cohort,cohortYear:form.cohortYear,
+      assessment:form.assessment,assessmentType:form.assessmentType,assessmentTitle:form.assessmentTitle,
       groupName:'Group '+(previous.length+1)}]);
     selectGroup(groups.length);
   }
@@ -323,13 +336,33 @@ function DefenseForm({id,initialCourse}){
   }
   const patch=(key,value)=>{setNotice('');setForm(previous=>({...previous,[key]:value}));};
   const rate=(key,value)=>patch('ratings',{...form.ratings,[key]:value});
-  const {averages,percentage}=defenseScores(form.ratings,maxRating);
+  const {marks,total}=defenseScores(form.ratings,maxRating);
   const course=courses?.find(course=>course._id===form.course);
+  const courseAssessments=assessments.filter(item=>!form.course||item.course._id===form.course);
+  const assessmentValue=form.assessment?form.assessmentType+':'+form.assessment:'';
+  const assessmentKey=assessment=>assessment.type+':'+assessment._id;
   const courseLabel=course?.name||course?.title||'';
   const backTo=form.course?defenseHome+'?'+new URLSearchParams({course:form.course}):defenseHome;
   async function save(finalize){
     if(busy||finalized)return;
-    if(finalize&&!window.confirm('Finalize this evaluation? Its scores and recommendation will be locked.'))return;
+    if(finalize){
+      const missing=[
+        !form.evaluatorName?.trim()&&'Evaluator name',
+        !form.students.length&&'At least one enrolled student',
+        !form.projectTitle?.trim()&&'Project title',
+        !form.cohort?.trim()&&'Training cohort',
+        !form.defenseDate&&'Defense date',
+        ...rubric.flatMap(([section,,criteria])=>criteria
+          .filter(([key])=>form.ratings[key]===undefined)
+          .map(([key,label])=>`Section ${section} rating — ${wording(key,label)}`)),
+      ].filter(Boolean);
+      if(missing.length){
+        setNotice('');
+        setError(['Complete these items before finalizing:',...missing.map(item=>'• '+item)].join('\n'));
+        return;
+      }
+    }
+    if(finalize&&!window.confirm('Finalize this evaluation with the displayed marks?'))return;
     setBusy(true);
     setError('');
     setNotice('');
@@ -338,7 +371,7 @@ function DefenseForm({id,initialCourse}){
         ? await api.put(endpoint+'/'+form._id,{...form,finalize})
         : await api.post(endpoint,{...form,finalize});
       setForm(response.data.record);
-      setNotice(finalize?'Evaluation finalized.':'Draft saved.');
+      setNotice(finalize?'Evaluation finalized.':form._id?'Draft saved.':'Defense form created. You can score it now or open it later from Saved Defenses.');
     }catch(error){
       setError(message(error));
     }finally{
@@ -374,9 +407,9 @@ function DefenseForm({id,initialCourse}){
     <nav className="defense-toolbar defense-screen" aria-label="Project defense actions">
       <Link className="btn" to={backTo}><span aria-hidden="true">←</span> Back to Project Defense</Link>
       <div className="defense-toolbar-actions">
-        {courses&&<><span className="ev-status">{finalized?'Finalized':'Draft'}</span>
+        {courses&&<>{finalized&&<span className="ev-status">Finalized</span>}
           {!finalized&&<button type="button" disabled={busy||editing} onClick={()=>setEditingWording(true)}>Edit Form</button>}
-          <button type="button" disabled={busy||editing} onClick={()=>{setError('');setNotice('');setEditingMarks(true);}}>Edit Marks</button>
+          {form._id&&<button type="button" disabled={busy||editing} onClick={()=>{setError('');setNotice('');setEditingMarks(true);}}>Edit Marks</button>}
           <button type="button" disabled={editing} onClick={()=>window.print()}><TeachingIcon name="file" size={15}/> Print / Save PDF</button></>}
         <Link className="btn btn-primary" to={route}><TeachingIcon name="folder" size={15}/> Saved Defenses</Link>
       </div>
@@ -418,13 +451,26 @@ function DefenseForm({id,initialCourse}){
           <section className="defense-section">
             <DefenseSectionTitle icon="users">Section A · {wording('A',candidateTitle)}</DefenseSectionTitle>
             <div className="defense-details">
-              <label className="defense-screen"><span className="defense-field-label"><TeachingIcon name="graduate" size={15}/> Course</span><select value={form.course} required onChange={event=>{
+              <label className="defense-screen"><span className="defense-field-label"><TeachingIcon name="clipboard" size={15}/> Exam or quiz</span><select value={assessmentValue} required={!form._id} onChange={event=>{
+                const selected=courseAssessments.find(item=>assessmentKey(item)===event.target.value);
+                if(!selected)return;
                 setNotice('');
-                setForm(previous=>({...previous,course:event.target.value,cohort:'',cohortYear:'',students:[]}));
+                setForm(previous=>({...previous,assessment:selected._id,assessmentType:selected.type,assessmentTitle:selected.title,
+                  ...(previous.course===selected.course._id?{}:{course:selected.course._id,cohort:'',cohortYear:'',students:[]})}));
               }}>
-                <option value="">Select a course</option>
-                {courses.map(course=><option key={course._id} value={course._id}>{course.name||course.title}</option>)}
+                <option value="" disabled>{courseAssessments.length?'Select an exam or quiz':'No teacher-created exams or quizzes'}</option>
+                {assessmentValue&&!courseAssessments.some(item=>assessmentKey(item)===assessmentValue)&&
+                  <option value={assessmentValue}>{form.assessmentTitle||'Saved assessment'}</option>}
+                {['exam','quiz'].map(type=>{
+                  const options=courseAssessments.filter(item=>item.type===type);
+                  return options.length>0&&<optgroup key={type} label={type==='exam'?'Exams':'Quizzes'}>
+                    {options.map(item=><option key={assessmentKey(item)} value={assessmentKey(item)}>
+                      {item.title}
+                    </option>)}
+                  </optgroup>;
+                })}
               </select></label>
+              {form.assessmentTitle&&<p className="defense-print">Assessment · {form.assessmentTitle}</p>}
               <p className="defense-print">Course · {courseLabel}</p>
               {details.map(([field,label,icon,placeholder,maxLength])=><label key={field}>
                 <span className="defense-field-label"><span className="defense-screen"><TeachingIcon name={icon} size={15}/></span>{label}</span>
@@ -451,6 +497,18 @@ function DefenseForm({id,initialCourse}){
               course={form.course} cohort={form.cohort} cohortYear={form.cohortYear}
               selected={form.students} onChange={value=>patch('students',value)}/></div>
           </section>
+          {!finalized&&<div className="defense-scoring-bar defense-screen">
+            <span className="defense-icon"><TeachingIcon name="chart" size={17}/></span>
+            <div>
+              <strong>Defense Rubric</strong>
+              <p>{form._id?`Score the defense out of ${totalMarks} marks.`:'You can create this form without entering marks.'}</p>
+            </div>
+            <button type="button" aria-expanded={showScoring} aria-controls="defense-scoring"
+              onClick={()=>{setShowScoring(previous=>!previous);setError('');}}>
+              {showScoring?'Hide Rubric':form._id?'Open Scoring':'Preview Rubric'}
+            </button>
+          </div>}
+          <div id="defense-scoring" className={showScoring||finalized?'defense-scoring':'defense-scoring is-collapsed'}>
           {rubric.map(([section,title,criteria])=><section className="defense-section" key={section}>
             <DefenseSectionTitle icon={section==='G'?'users':'clipboard'}>Section {section} · {wording(section,title)}</DefenseSectionTitle>
             {section==='G'?<div className="defense-matrix-scroll"><table className="defense-matrix defense-professional">
@@ -474,8 +532,8 @@ function DefenseForm({id,initialCourse}){
           <section className="defense-section">
             <DefenseSectionTitle icon="chart">Section I · {wording('I',placementTitle)}</DefenseSectionTitle>
             <table className="defense-matrix"><thead><tr><th scope="col">Assessment category</th><th scope="col">Score</th></tr></thead>
-              <tbody>{rubric.map(([section,title],index)=><tr key={section}><th scope="row">{wording(section,title)}</th><td>{averages[index].toFixed(1)} / {maxRating}</td></tr>)}</tbody>
-              <tfoot><tr><th scope="row">Aggregate total score</th><td>{percentage.toFixed(1)}%</td></tr></tfoot>
+              <tbody>{rubric.map(([section,title],index)=><tr key={section}><th scope="row">{wording(section,title)}</th><td>{formatMarks(marks[index])} / {sectionMarks[section]}</td></tr>)}</tbody>
+              <tfoot><tr><th scope="row">Final system marks</th><td>{formatMarks(total)} / {totalMarks}</td></tr></tfoot>
             </table>
             <fieldset className="defense-outcomes">
               <legend>Defense outcome recommendation</legend>
@@ -493,13 +551,14 @@ function DefenseForm({id,initialCourse}){
                 <span className="defense-print">{form.signatureDate||'—'}</span></label>
             </div>
           </section>
+          </div>
         </fieldset>
-        <footer className="defense-screen">
-          {error&&<p className="ev-error" role="alert">{error}</p>}
+        <footer className="defense-footer defense-screen">
+          {error&&<p className="ev-error defense-save-error" role="alert">{error}</p>}
           {notice&&<p className="ev-notice" role="status">{notice}</p>}
           {!finalized&&<div className="ev-actions">
-            <button type="submit" className="btn-primary" disabled={busy}>{busy?'Saving…':'Save Draft'}</button>
-            <button type="button" disabled={busy||!form.course} onClick={()=>save(true)}>Finalize Evaluation</button>
+            <button type="submit" className="btn-primary" disabled={busy}>{busy?'Saving…':form._id?'Save Draft':'Create Defense Form'}</button>
+            {form._id&&showScoring&&<button type="button" disabled={busy||!form.course} onClick={()=>save(true)}>Finalize Evaluation</button>}
           </div>}
         </footer>
       </form>}

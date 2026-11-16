@@ -322,3 +322,109 @@
 .ev-recent-table .ev-status[data-state="finalized"] { background: #e5f5ea; border-color: #cce7d4; color: #175a38; }
 .evaluations .ev-recent-table a.btn { min-height: 27px; padding: 3px 8px; background: #f3faf5; color: #165c38; white-space: nowrap; }
 .evaluations .ev-recent-table a.btn:hover { background: #e3f3e8; }
+
+/* Admin evaluation list */
+.dash-content:has(> .ev-admin-list) {
+  padding-block-start: 4px;
+  background: var(--brand-green-tint);
+}
+.evaluations.ev-admin-list {
+  max-width: none;
+  padding: 0;
+  color: var(--brand-green-deep);
+}
+.evaluations.ev-admin-list > .ev-actions:first-child {
+  background: var(--brand-green-deep);
+  border-color: var(--brand-gold);
+  box-shadow: none;
+}
+.evaluations.ev-admin-list > .ev-actions:first-child h2 { color: #fff; }
+.ev-admin-list .ev-admin-grid {
+  gap: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--brand-green-soft);
+}
+.ev-admin-list .ev-admin-card {
+  position: relative;
+  overflow: hidden;
+  padding: 0 14px 14px;
+  background: #fff;
+  border-color: var(--brand-green-border);
+  box-shadow: 0 4px 9px #164f241a;
+  color: var(--brand-green-deep);
+}
+.ev-admin-list .ev-admin-card-heading {
+  width: calc(100% + 28px);
+  margin-inline: -14px;
+  align-items: center;
+  padding-right: 10px;
+  box-sizing: border-box;
+}
+.ev-card-course {
+  display: flex;
+  flex: 1;
+  align-self: stretch;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 10px 22px 10px 13px;
+  border-radius: 0 0 44px 0;
+  box-shadow: 5px 2px 0 var(--brand-gold);
+  background: var(--brand-green-deep);
+  color: #fff;
+}
+.ev-card-course svg,.ev-card-deadline svg,.ev-card-links svg { flex-shrink: 0; }
+.ev-admin-list .ev-admin-card .ev-status {
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+}
+.ev-admin-list .ev-admin-card .ev-status[data-state="draft"] {
+  background: var(--brand-gold-soft);
+  color: var(--brand-gold-active);
+  border-color: var(--brand-gold-border);
+}
+.ev-admin-list .ev-admin-card h3 { margin-top: 10px; color: var(--brand-green-deep); font-size: 15px; }
+.ev-admin-list .ev-admin-card > p { color: #385844; }
+.ev-admin-list .ev-admin-card-counts {
+  margin-top: auto;
+  gap: 0;
+  padding: 8px 5px;
+  background: var(--brand-gold-soft);
+  color: var(--brand-green-deep);
+}
+.ev-admin-list .ev-admin-card-counts > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 5px;
+  align-items: center;
+  padding: 0 5px;
+}
+.ev-admin-list .ev-admin-card-counts > div + div { border-left: 1px solid var(--brand-gold-border); }
+.ev-admin-list .ev-admin-card-counts svg { grid-row: span 2; color: var(--brand-gold-active); }
+.ev-admin-list .ev-admin-card-counts dd { color: var(--brand-green-deep); }
+.ev-card-deadline { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.ev-admin-list .ev-card-links { width: 100%; padding-top: 3px; margin-top: 0; gap: 5px; }
+.ev-admin-list .ev-card-links :is(a.btn,button) { flex: 1 0 auto; padding: 5px 7px; gap: 4px; }
+.ev-admin-list .ev-card-links a.btn { border-color: var(--brand-green-deep); color: var(--brand-green-deep); }
+.ev-admin-list .ev-card-links a.btn-primary { background: var(--brand-green-deep); color: #fff; }
+.ev-admin-list .ev-card-links a.btn-primary:hover { background: var(--brand-green-active); }
+.ev-admin-list .ev-card-links a.btn:not(.btn-primary):hover { background: var(--brand-green-soft); }
+.ev-admin-list .ev-card-links .ev-delete { border-color: #d86560; color: #ad211a; }
+.ev-list-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--brand-green-border);
+  border-radius: 10px;
+  background: var(--brand-green-soft);
+  color: var(--brand-green-deep);
+}
+.ev-list-notice [role="status"] { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.ev-list-notice svg { color: var(--brand-green-active); }
+.evaluations .ev-list-notice button { background: transparent; border-color: transparent; color: inherit; font-size: 18px; }

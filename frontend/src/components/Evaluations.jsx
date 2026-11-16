@@ -20,11 +20,30 @@ function courseFormContent(course){
    questions:courseEvaluationTemplate(),
  };
 }
-function CourseOptions({courses}){
+function CourseOptions({courses,allowAll=false}){
  return <>
    <option value="">Select a course</option>
+   {allowAll&&<option value="all">All Courses</option>}
    {courses.map(course=><option key={course._id} value={course._id}>{courseName(course)}</option>)}
  </>;
+}
+function CreateEvaluationForm({courses,busy,onCreate,onCancel}){
+ const [scope,setScope]=useState('');
+ return <form className="ev-card ev-create-evaluation" onSubmit={event=>{
+   event.preventDefault();
+   if(scope&&!busy)onCreate(scope);
+ }}>
+   <h3>New Evaluation Form</h3>
+   <label>Choose a course
+     <select required disabled={busy} value={scope} onChange={event=>setScope(event.target.value)}>
+       <CourseOptions courses={courses} allowAll/>
+     </select>
+   </label>
+   <div className="ev-actions">
+     <button type="submit" className="btn-primary" disabled={busy||!scope}>Create Draft</button>
+     <button type="button" disabled={busy} onClick={onCancel}>Cancel</button>
+   </div>
+ </form>;
 }
 const defenseDateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
 function RecentDefenses({course}){
@@ -123,24 +142,26 @@ export function NewEvaluation(){
    {courses&&<RecentDefenses key={selectedDefenseCourse?._id||'none'} course={selectedDefenseCourse}/>}
  </div>;
 }
-function AdminEvaluationCard({form,base}){
+function AdminEvaluationCard({form,base,busy,onDelete}){
  const url=base+'/'+form._id;
  return <article className="ev-card ev-admin-card">
    <header className="ev-admin-card-heading">
-     <span>{form.allCourses?'All Courses':courseName(form.course)}</span>
-     <span className="ev-status" data-state={form.effectiveStatus}>{form.effectiveStatus}</span>
+     <span className="ev-card-course"><TeachingIcon name={form.allCourses?'graduate':'layers'} size={19}/>{form.allCourses?'All Courses':courseName(form.course)||'Telesom Academy'}</span>
+     <span className="ev-status" data-state={form.effectiveStatus}><TeachingIcon name={form.effectiveStatus==='draft'?'edit':form.effectiveStatus==='published'?'check':'clock'} size={14}/>{form.effectiveStatus}</span>
    </header>
    <h3>{form.title}</h3>
    {form.description&&<p>{form.description}</p>}
    <dl className="ev-admin-card-counts">
-     <div><dt>Eligible</dt><dd>{form.eligibleCount}</dd></div>
-     <div><dt>Assigned</dt><dd>{form.assignedCount}</dd></div>
-     <div><dt>Submitted</dt><dd>{form.responseCount}</dd></div>
+     <div><TeachingIcon name="users" size={18}/><dt>Eligible</dt><dd>{form.eligibleCount}</dd></div>
+     <div><TeachingIcon name="profile" size={18}/><dt>Assigned</dt><dd>{form.assignedCount}</dd></div>
+     <div><TeachingIcon name="clipboard" size={18}/><dt>Submitted</dt><dd>{form.responseCount}</dd></div>
    </dl>
-   <p>{form.deadline?`Deadline · ${date(form.deadline)} (Africa/Nairobi)`:'No deadline'}</p>
+   <p className="ev-card-deadline"><TeachingIcon name="calendar" size={16}/>{form.deadline?`Deadline · ${date(form.deadline)} (Africa/Nairobi)`:'No deadline'}</p>
    <div className="ev-card-links">
-     <Link className="btn btn-primary" to={url+'?view=report'}>View Results</Link>
-     <Link className="btn" to={url}>Edit Form</Link>
+     <Link className="btn btn-primary" to={url+'?view=report'}><TeachingIcon name="chart" size={16}/>View Results</Link>
+     <Link className="btn" to={url}><TeachingIcon name="edit" size={16}/>Edit Form</Link>
+     <button type="button" className="ev-delete" disabled={busy}
+       aria-label={'Delete '+form.title} onClick={()=>onDelete(form)}><TeachingIcon name="trash" size={16}/>Delete</button>
    </div>
  </article>;
 }
@@ -200,6 +221,7 @@ export default function Evaluations({admin=false}){
    };
  },[]);
  const [params,setParams]=useSearchParams();
+ const [creating,setCreating]=useState(false);
  const selectedResponse=admin?params.get('response'):null;
  const reportRequested=admin&&(params.get('view')==='report'||!!selectedResponse);
  const base=admin?'/admin/evaluations':'/student/evaluations';
@@ -211,6 +233,36 @@ export default function Evaluations({admin=false}){
  useEffect(()=>{setForm(null);setStudents([]);setEligible(0);setStudentPage(1);setReport(null);setPreview(false);setNotice('');load();},[id,page,admin,selectedResponse,reportRequested]);
  useEffect(()=>{if(!admin||(!form?.course&&!form?.allCourses))return;let current=true;api.get('/evaluations/eligible/'+(form.allCourses?'all':form.course?._id||form.course),{params:{page:studentPage}}).then(({data})=>{if(current){setStudents(data.students);setEligible(data.total);}}).catch(e=>{if(current)setError(message(e));});return()=>{current=false;};},[admin,form?.course,form?.allCourses,studentPage]);
  async function run(fn){setBusy(true);setError('');setNotice('');try{await fn();}catch(e){setError(message(e));}finally{setBusy(false);}}
+ function openCreate(){
+   return run(async()=>{
+     const {data}=await api.get('/evaluations/courses');
+     setCourses(data.courses);
+     setCreating(true);
+   });
+ }
+ function createEvaluation(scope){
+   return run(async()=>{
+     const allCourses=scope==='all';
+     const course=courses.find(item=>item._id===scope);
+     if(!allCourses&&!course)throw new Error('Select an existing course.');
+     const {data}=await api.post('/evaluations',{...courseFormContent(course),allCourses,course:course?._id??null});
+     setCreating(false);
+     navigate(base+'/'+data.form._id);
+   });
+ }
+ function deleteEvaluation(target){
+   if(busy||!window.confirm(`Permanently delete “${target.title}” and all its responses?`))return;
+   return run(async()=>{
+     await api.delete('/evaluations/'+target._id);
+     if(id){
+       navigate(base);
+       return;
+     }
+     if(page>1&&forms.length===1)setPage(page-1);
+     else await load();
+     setNotice('Evaluation deleted.');
+   });
+ }
  const addField=()=>{const field={key:key(),type:'short',title:'Untitled question',description:'',required:false,options:[],max:5};setForm(f=>({...f,questions:[...f.questions,field]}));setEditField(field.key);setPreview(false);setReport(null);};
  const generateForm=()=>{
    if(form.questions.length&&!window.confirm('Replace the current questions with the course evaluation template?'))return;
@@ -281,8 +333,8 @@ export default function Evaluations({admin=false}){
  const submitted=!!response?.submittedAt;
  const open=form?.effectiveStatus==='published';
  const canEdit=form?.allowEdit&&(open||form?.allowClosedEdit)&&form?.status!=='draft';
- return <div className={`evaluations ${!admin&&!id?'ev-student-list':''}`}><div className="ev-actions"><h2>Evaluation Forms</h2>{id&&<Link to={base}>All evaluations</Link>}</div>{error&&<div className="ev-error" role="alert">{error} <button onClick={load}>Reload</button></div>}{notice&&<p className="ev-notice" role="status">{notice}</p>}{loading?<p>Loading evaluations…</p>:!id?<><div className={admin?"ev-grid ev-admin-grid":"ev-grid"}>{forms.map(f=>admin?<AdminEvaluationCard key={f._id} form={f} base={base}/>:<StudentEvaluationCard key={f._id} form={f} base={base}/>)}</div>{!forms.length&&<p>No evaluation forms available.</p>}{(admin||total>50)&&<Pager page={page} total={total} onChange={setPage}/>}</>:form&&<>
- {admin&&<div className="ev-actions ev-toolbar"><div className="ev-tool-group"><button className="btn btn-primary" disabled={busy} onClick={generateForm}>Generate Form</button><button disabled={busy} onClick={addField}>Add Field</button><button onClick={()=>{setPreview(false);setReport(null);}}>Edit Form</button><button disabled={busy} onClick={()=>run(save)}>Save Changes</button><button onClick={()=>setPreview(!preview)}>{preview?'Back to builder':'Preview'}</button></div><div className="ev-tool-group"><button className="ev-publish" disabled={busy} onClick={()=>run(async()=>{if(!(form.assignAll?eligible:form.students.length))throw new Error('Assign at least one enrolled student before publishing.');await save(false);await action('publish');})}>Publish</button></div><details ref={moreActions} className="ev-more"><summary>More actions</summary><div className="ev-more-panel"><button disabled={busy} onClick={()=>run(()=>action('unpublish'))}>Unpublish</button><button disabled={busy} onClick={()=>run(()=>action('close'))}>Close</button><button disabled={busy} onClick={()=>setParams({view:'report'})}>Responses & reports</button><button className="ev-delete" disabled={busy} onClick={()=>{if(window.confirm('Delete this evaluation and all its responses permanently?'))run(async()=>{await api.delete('/evaluations/'+id);navigate(base);});}}>Delete</button></div></details></div>}
+ return <div className={`evaluations ${!id?(admin?'ev-admin-list':'ev-student-list'):''}`}><div className="ev-actions"><h2>Evaluation Forms</h2>{id?<Link to={base}>All evaluations</Link>:admin&&<button type="button" disabled={loading||busy||creating} onClick={openCreate}>New Evaluation Form</button>}</div>{error&&<div className="ev-error" role="alert">{error} <button onClick={load}>Reload</button></div>}{notice&&(admin&&!id?<div className="ev-list-notice"><span role="status"><TeachingIcon name="check" size={21}/>{notice}</span><button type="button" aria-label="Dismiss notification" onClick={()=>setNotice('')}>×</button></div>:<p className="ev-notice" role="status">{notice}</p>)}{loading?<p>Loading evaluations…</p>:!id?<>{admin&&creating&&<CreateEvaluationForm courses={courses} busy={busy} onCreate={createEvaluation} onCancel={()=>setCreating(false)}/>}<div className={admin?"ev-grid ev-admin-grid":"ev-grid"}>{forms.map(f=>admin?<AdminEvaluationCard key={f._id} form={f} base={base} busy={busy} onDelete={deleteEvaluation}/>:<StudentEvaluationCard key={f._id} form={f} base={base}/>)}</div>{!forms.length&&<p>No evaluation forms available.</p>}{(admin||total>50)&&<Pager page={page} total={total} onChange={setPage}/>}</>:form&&<>
+ {admin&&<div className="ev-actions ev-toolbar"><div className="ev-tool-group"><button className="btn btn-primary" disabled={busy} onClick={generateForm}>Generate Form</button><button disabled={busy} onClick={addField}>Add Field</button><button onClick={()=>{setPreview(false);setReport(null);}}>Edit Form</button><button disabled={busy} onClick={()=>run(save)}>Save Changes</button><button onClick={()=>setPreview(!preview)}>{preview?'Back to builder':'Preview'}</button></div><div className="ev-tool-group"><button className="ev-publish" disabled={busy} onClick={()=>run(async()=>{if(!(form.assignAll?eligible:form.students.length))throw new Error('Assign at least one enrolled student before publishing.');await save(false);await action('publish');})}>Publish</button></div><details ref={moreActions} className="ev-more"><summary>More actions</summary><div className="ev-more-panel"><button disabled={busy} onClick={()=>run(()=>action('unpublish'))}>Unpublish</button><button disabled={busy} onClick={()=>run(()=>action('close'))}>Close</button><button disabled={busy} onClick={()=>setParams({view:'report'})}>Responses & reports</button><button className="ev-delete" disabled={busy} onClick={()=>deleteEvaluation(form)}>Delete</button></div></details></div>}
  {admin&&!preview&&!report?<div className="ev-builder"><section className="ev-card ev-settings"><div className="ev-section-title"><div><span className="ev-eyebrow">FORM BUILDER</span><h3>Form details & settings</h3><p>Customize your evaluation and choose who can respond.</p></div><span className="ev-status">{form.effectiveStatus||form.status}</span></div><label>Title<input maxLength={200} value={form.title} onChange={e=>patch('title',e.target.value)}/></label><label>Description<textarea value={form.description||''} onChange={e=>patch('description',e.target.value)}/></label><fieldset className="ev-course-scope"><legend>Course selection</legend><div className="ev-scope-options"><label className="ev-check"><input type="radio" name="course-scope" checked={!!form.allCourses} disabled={assignmentLocked} onChange={()=>selectCourse(null,true)}/>All Courses</label><label className="ev-check"><input type="radio" name="course-scope" checked={!form.allCourses} disabled={assignmentLocked||!courses.length} onChange={()=>selectCourse(courses[0]._id,false)}/>Specific Course</label></div>{!form.allCourses&&<label>Choose a course<select disabled={assignmentLocked} value={form.course?._id||form.course||''} onChange={e=>selectCourse(e.target.value,false)}>{courses.map(c=><option key={c._id} value={c._id}>{c.name||c.title}</option>)}</select></label>}</fieldset><p>{eligible} enrolled students · {form.assignAll?eligible:form.students.length} selected · {form.responseCount} submitted</p><label className="ev-check"><input disabled={assignmentLocked} type="checkbox" checked={!!form.assignAll} onChange={e=>patch('assignAll',e.target.checked)}/>Assign all enrolled students</label><div className="ev-students">{students.map(s=><label className="ev-check" key={s._id}><input type="checkbox" disabled={assignmentLocked||form.assignAll} checked={!!form.assignAll||form.students.includes(s._id)} onChange={e=>patch('students',e.target.checked?[...form.students,s._id]:form.students.filter(id=>id!==s._id))}/>{s.studentId} · {s.user?.name}</label>)}</div><Pager page={studentPage} total={eligible} onChange={setStudentPage}/><label>Closing deadline (Africa/Nairobi)<input type="datetime-local" value={localDate(form.deadline)} onChange={e=>patch('deadline',e.target.value?new Date(e.target.value+':00+03:00').toISOString():null)}/></label><label>Response limit (empty for unlimited)<input type="number" min="1" step="1" value={form.responseLimit||''} onChange={e=>patch('responseLimit',e.target.value?Number(e.target.value):null)}/></label>{[['allowEdit','Allow students to edit submitted responses'],['allowClosedEdit','Explicitly allow response edits after closing'],['reminders','Enable reminder notices within 24 hours of the deadline']].map(([field,label])=><label key={field} className="ev-check"><input type="checkbox" checked={!!form[field]} onChange={e=>patch(field,e.target.checked)}/>{label}</label>)}<p>Status: {form.effectiveStatus||form.status} · {assignmentLocked?'You can edit questions and add fields. Existing submitted answers must remain valid; course and assignments are locked.':'Drag questions to reorder or use the arrow buttons.'}</p></section>
  <section className="ev-fields"><div className="ev-fields-heading"><div><span className="ev-eyebrow">COURSE FEEDBACK</span><h3>Questions</h3></div><span className="ev-status">{form.questions.length} fields</span></div>{form.questions.map((q,i)=><section className="ev-card" key={q.key} draggable={!locked} onDragStart={()=>setDrag(i)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(!locked&&drag!==null){reorder(drag,i);setDrag(null);}}}><div className="ev-actions"><strong>Question {i+1}</strong><button onClick={()=>setEditField(editField===q.key?null:q.key)}>{editField===q.key?'Done':'Edit'}</button><button disabled={locked||i===0} onClick={()=>reorder(i,i-1)}>↑</button><button disabled={locked||i===form.questions.length-1} onClick={()=>reorder(i,i+1)}>↓</button><button disabled={locked} onClick={()=>patch('questions',form.questions.filter((_,j)=>i!==j))}>Delete question</button></div>{editField!==q.key?<div className="ev-field-summary"><h3>{q.title}</h3><p>{types[q.type]} · {q.required?'Required':'Optional'}</p>{q.type==='grid'&&<p>{q.rows?.length||0} criteria · {q.options?.length||0} choices</p>}</div>:<><label>Question type<select disabled={locked} value={q.type} onChange={e=>setForm(f=>({...f,questions:f.questions.map((item,j)=>j===i?{...item,type:e.target.value,...(e.target.value==='grid'?{rows:item.rows?.length?item.rows:['New criterion'],options:item.options?.length?item.options:['Strongly disagree','Disagree','Neutral','Agree','Strongly agree']}: {})}:item)}))}>{Object.entries(types).map(([t,label])=><option key={t} value={t}>{label}</option>)}</select></label><label>{q.type==='section'?'Section heading':'Question title'}<input disabled={locked} value={q.title} onChange={e=>question(i,'title',e.target.value)}/></label><label>Description<textarea disabled={locked} value={q.description||''} onChange={e=>question(i,'description',e.target.value)}/></label>{['choice','checkbox','dropdown'].includes(q.type)&&<label>Answer options (one per line)<textarea value={(q.options||[]).join('\n')} onChange={e=>question(i,'options',e.target.value.split('\n'))}/></label>}{q.type==='grid'&&<div className="ev-grid-editor"><p>Students choose one rating for each statement.</p><GridList title="Statements" hint="What should students rate?" items={q.rows||[]} onChange={items=>question(i,'rows',items)} addLabel="Add statement"/><GridList title="Rating choices" hint="Which ratings can students choose from?" items={q.options||[]} onChange={items=>question(i,'options',items)} addLabel="Add rating"/></div>}{['scale','rating'].includes(q.type)&&<label>Maximum<select disabled={locked} value={q.max||5} onChange={e=>question(i,'max',Number(e.target.value))}><option value={5}>5</option><option value={10}>10</option></select></label>}{q.type!=='section'&&<label className="ev-check"><input disabled={locked} type="checkbox" checked={!!q.required} onChange={e=>question(i,'required',e.target.checked)}/>{q.type==='grid'?'Require a rating for every statement':'Required'}</label>}</>}</section>)}<div className="ev-actions"><button disabled={busy} onClick={addField}>Add Field</button><button disabled={locked} onClick={()=>patch('questions',[...form.questions,{key:key(),type:'section',title:'New section',description:'',required:false,options:[],max:5}])}>Add section</button></div></section></div>:report?<section className="ev-card"><div className="ev-actions"><h3>Response report</h3><button onClick={()=>{setReport(null);if(reportRequested)setParams({});}}>Back to builder</button><button className="btn btn-primary" disabled={busy} onClick={()=>run(exportPdf)}>Export PDF</button><button disabled={busy} onClick={()=>run(exportCsv)}>Export CSV</button></div><p>{report.assigned} assigned · {report.submitted} submitted · {report.pendingCount} pending · {report.completion}% complete</p><p>Response limit: {report.form.responseLimit||'Unlimited'} · Opened: {date(report.form.openedAt)} · Deadline: {date(report.form.deadline)} · Closed: {date(report.form.closedAt)}</p><label>Search students or answers<input value={search} onChange={e=>setSearch(e.target.value)}/></label><button onClick={()=>run(async()=>{setReportPage(1);await getReport(1);})}>Filter responses</button>{report.stats.map(q=><div className="ev-question" key={q.key}><h4>{q.title}</h4>{Object.entries(q.counts).map(([option,count])=><div className="ev-bar" key={option}><span>{option}</span><progress max={Math.max(1,report.submitted)} value={count}/><span>{count}</span></div>)}</div>)}<h3>Individual submissions</h3>{report.responses.map(r=><details key={r._id} open={selectedResponse===r._id||undefined}><summary>{r.student?.studentId} · {r.student?.user?.name} · {date(r.submittedAt)}{r.editedAt?' · Edited '+date(r.editedAt):''}</summary>{report.form.questions.filter(q=>q.type!=='section').map(q=><p key={q.key}><strong>{q.title}: </strong>{answerText(r.answers[q.key])??'No answer'}</p>)}</details>)}<h3>Students who have not submitted ({report.pendingCount})</h3>{report.pending.map(s=><p key={s._id}>{s.studentId} · {s.user?.name}</p>)}<Pager page={reportPage} total={Math.max(report.total,report.pendingCount)} onChange={p=>run(async()=>{setReportPage(p);await getReport(p);})}/></section>:<section className="ev-card"><h2>{form.title}{preview?' — Preview':''}</h2><p>{form.allCourses?'All Courses':form.course?.name||form.course?.title}</p><p>{form.description}</p><p>Deadline: {date(form.deadline)} (Africa/Nairobi) · Status: {form.effectiveStatus||form.status}</p>{submitted&&<p className="ev-notice">You have already submitted this evaluation. {response.editedAt?'Edited':'Submitted'}: {date(response.editedAt||response.submittedAt)}</p>}{submitted&&canEdit&&!editing&&<button onClick={()=>setEditing(true)}>Edit My Response</button>}{!admin&&!submitted&&!open&&<p>This evaluation is closed or expired.</p>}<form onSubmit={e=>{e.preventDefault();if(preview){setNotice('Preview validation complete. No response was submitted.');return;}run(async()=>{const {data}=await api.put(`/evaluations/${id}/response`,{answers,submit:true});setResponse(data.response);setEditing(false);setNotice('Your evaluation response has been submitted.');});}}>{form.questions.map(q=><Answer key={q.key} q={q} value={answers[q.key]} disabled={!preview&&(submitted?!editing:!open)} onChange={value=>setAnswers(a=>({...a,[q.key]:value}))}/>)}<p>{form.questions.filter(q=>q.type!=='section'&&answers[q.key]!=null&&answers[q.key]!==''&&(!Array.isArray(answers[q.key])||answers[q.key].length)).length} of {form.questions.filter(q=>q.type!=='section').length} answered</p>{(preview||(!submitted&&open)||editing)&&<div className="ev-actions"><button className="btn btn-primary" disabled={busy} type="submit">{preview?'Test preview':editing?'Save edited response':'Submit Evaluation'}</button>{!preview&&!submitted&&<button disabled={busy} type="button" onClick={()=>run(async()=>{const {data}=await api.put(`/evaluations/${id}/response`,{answers,submit:false});setResponse(data.response);setNotice('Progress saved. You can continue later.');})}>Save progress</button>}</div>}</form></section>}
  </>}</div>;
