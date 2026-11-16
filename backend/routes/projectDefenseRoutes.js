@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const Defense = require('../models/ProjectDefense');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const Exam = require('../models/Exam');
+const Quiz = require('../models/Quiz');
+const User = require('../models/User');
 const {asyncHandler,pick} = require('../controllers/resourceController');
 const {fail} = require('../services/evaluationRules');
 
@@ -74,6 +77,16 @@ router.get('/courses/:course/cohorts',asyncHandler(async(req,res)=>{
   res.json({cohorts:[...cohorts.values()].sort((a,b)=>b.academicYear.localeCompare(a.academicYear)||a.name.localeCompare(b.name))});
 }));
 
+router.get('/assessments',asyncHandler(async(req,res)=>{
+  const teachers=await User.distinct('_id',{role:'teacher'});
+  const filter={createdBy:{$in:teachers}};
+  const [exams,quizzes]=await Promise.all([Exam,Quiz].map(Model=>
+    Model.find(filter).select('title course').populate('course','name title').sort({title:1,_id:1}).lean()));
+  const assessments=[...exams.map(exam=>({...exam,type:'exam'})),...quizzes.map(quiz=>({...quiz,type:'quiz'}))]
+    .filter(assessment=>assessment.course);
+  res.json({assessments});
+}));
+
 router.get('/:id',asyncHandler(async(req,res)=>{
   const record=await Defense.findById(req.params.id);
   if(!record)fail('Defense evaluation not found.',404);
@@ -89,6 +102,22 @@ async function save(req,res){
   if(!record.isNew&&req.body.__v!==record.__v)fail('This evaluation has changed. Reopen it before editing.',409);
 
   const {course,students,ratings={},notes={}}=req.body;
+  const {assessment,assessmentType}=req.body;
+  if(assessment||assessmentType){
+    const Model=assessmentType==='exam'?Exam:assessmentType==='quiz'?Quiz:null;
+    if(!Model||!mongoose.isObjectIdOrHexString(assessment))fail('Choose a valid exam or quiz.');
+    if(String(record.assessment)!==assessment||record.assessmentType!==assessmentType||String(record.course)!==course){
+      const selected=await Model.findById(assessment).select('course createdBy title').lean();
+      if(!selected||String(selected.course)!==course||!await User.exists({_id:selected.createdBy,role:'teacher'})){
+        fail('Choose a teacher-created exam or quiz for this course.');
+      }
+      record.set({assessment,assessmentType,assessmentTitle:selected.title});
+    }
+  }else if(record.isNew){
+    fail('Choose a teacher-created exam or quiz.');
+  }else if(record.assessment&&String(record.course)!==course){
+    fail('Choose an exam or quiz for the new course.');
+  }
   if(!mongoose.isObjectIdOrHexString(course))fail('Choose an existing course.');
   const configured=await Course.findById(course).select('batch academicYear').lean();
   if(!configured)fail('Choose an existing course.');
@@ -131,10 +160,16 @@ async function save(req,res){
   record.set({...pick(req.body,fields),course,students:studentIds,ratings,notes,
     ratingOptions:[...ratingOptions].sort((a,b)=>a-b)});
   if(req.body.finalize===true){
-    if(!record.evaluatorName||!record.projectTitle||!record.cohort||!record.defenseDate||!studentIds.length||
-       !record.outcome||criteria.some(key=>!ratings[key])){
-      fail('Enter the evaluator name, select at least one student, and complete the project details, all ratings, and the outcome before finalizing.');
-    }
+    const missingRatings=criteria.filter(key=>ratings[key]===undefined).length;
+    const missing=[
+      !record.evaluatorName&&'evaluator name',
+      !studentIds.length&&'at least one student',
+      !record.projectTitle&&'project title',
+      !record.cohort&&'training cohort',
+      !record.defenseDate&&'defense date',
+      missingRatings>0&&`${missingRatings} remaining ${missingRatings===1?'rating':'ratings'}`,
+    ].filter(Boolean);
+    if(missing.length)fail(`Complete the following before finalizing: ${missing.join(', ')}.`);
     record.status='finalized';
   }
   await saveVersion(record);
@@ -150,7 +185,7 @@ router.patch('/:id/marks',asyncHandler(async(req,res)=>{
   if(record.status!=='finalized')fail('Save draft marks from the evaluation form.',409);
   const {ratings}=req.body;
   validateRatings(ratings,record.ratingOptions);
-  if(criteria.some(key=>!ratings[key]))fail('Rate every criterion before saving marks.');
+  if(criteria.some(key=>ratings[key]===undefined))fail('Rate every criterion before saving finalized marks.');
   record.ratings=ratings;
   await saveVersion(record);
   res.json({record});

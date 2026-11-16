@@ -61,6 +61,31 @@
 .defense-professional td,.defense-professional th:not(:first-child) { text-align:center; padding-inline:5px; }
 .defense-page .defense-outcomes { margin-bottom:16px; }
 .defense-print { display:none; }
+.defense-scoring-bar {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-block:8px;
+  padding:8px 10px;
+  background:var(--brand-green-soft);
+  border:1px solid var(--brand-green-border);
+  border-left:3px solid var(--brand-gold);
+  border-radius:8px;
+}
+.defense-scoring-bar strong { color:var(--brand-green-deep); }
+.defense-scoring-bar p { margin:0; color:#385844; }
+.defense-scoring-bar button { margin-left:auto; flex-shrink:0; }
+.defense-footer { margin-top:8px; padding:8px 10px; border:1px solid var(--brand-green-border); border-radius:8px; background:#fff; }
+.defense-footer > .ev-actions { margin:0; justify-content:flex-end; }
+.defense-footer > :is(.ev-error,.ev-notice) { margin:0 0 8px; }
+@media screen {
+  .defense-scoring.is-collapsed { display:none; }
+}
+@media(max-width:480px) {
+  .defense-scoring-bar { flex-wrap:wrap; }
+  .defense-scoring-bar button { max-width:100%; }
+}
+.defense-save-error { white-space:pre-line; }
 @media(max-width:780px) {
   .defense-details { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
