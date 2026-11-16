@@ -167,6 +167,8 @@ router.patch('/outlines/:id/lessons/:lessonId',authorizeRoles('teacher'),asyncHa
   const lesson=await Lesson.findOne({_id:id(req.params.lessonId),outline:outline._id,contract:outline.contract});
   if(!lesson)fail('Lesson not found.',404);
   const updates=pick(req.body,['title','description','plannedDate']);
+  // An unchanged null date on a chapter lesson must not run the query-level required validator.
+  if (updates.plannedDate === lesson.plannedDate) delete updates.plannedDate;
   if(updates.plannedDate!==undefined&&updates.plannedDate!==lesson.plannedDate){
     if(lesson.status==='completed')fail('Reverse completion before changing the lesson schedule.');
     const contract=await contractService.loadContract(outline.contract);

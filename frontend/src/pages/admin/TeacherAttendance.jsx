@@ -54,7 +54,7 @@ export default function TeacherAttendance() {
     try {
       await api.post('/academy/makeup-classes',{...payload,attendance:absence.attendance._id});
       setAbsence(null);
-      setNotice('Makeup class scheduled.');
+      setNotice('');
       refresh(value=>value+1);
     } catch(error) {
       setError(errorMessage(error));
@@ -103,10 +103,7 @@ export default function TeacherAttendance() {
 
       <section className="teacher-attendance-panel" aria-labelledby="teacher-register-title">
         <div className="teacher-attendance-toolbar">
-          <div>
-            <h2 id="teacher-register-title">Daily register</h2>
-            <p>Scheduled teaching days appear first.</p>
-          </div>
+          <h2 id="teacher-register-title">Daily register</h2>
           <label className="teacher-attendance-date">
             Attendance date
             <input className="form-control" type="date" max={nairobiToday()} value={date} disabled={busy}

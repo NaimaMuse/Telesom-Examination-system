@@ -14,8 +14,8 @@ const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let 
   const otherUser=await models.User.create({name:'Other Teacher',email:'other@workspace.test',role:'teacher',password});
   const teacher=await models.Teacher.create({user:teacherUser._id,teacherId:'WORK-1'});
   const other=await models.Teacher.create({user:otherUser._id,teacherId:'WORK-2'});
-  const course=await models.Course.create({title:'Networking',description:'Existing course description',courseCode:'NET',academicYear:'2026',semester:'S1',credits:3});
-  const foreign=await models.Course.create({title:'Other course',courseCode:'OTHER',academicYear:'2026'});
+  const course=await models.Course.create({title:'Networking',description:'Existing course description',courseCode:'NET',academicYear:'2026',semester:'S1',credits:3,durationWeeks:16});
+  const foreign=await models.Course.create({title:'Other course',courseCode:'OTHER',academicYear:'2026',durationWeeks:16});
   await models.CourseTeacher.create([{teacher:teacher._id,course:course._id,academicYear:'2026',semester:'S1'},{teacher:other._id,course:foreign._id,academicYear:'2026'}]);
   const students=[];
   for(const [i,batch] of ['Batch A','Batch B'].entries()){
@@ -47,7 +47,13 @@ const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let 
   result=await request('POST','/academy/outlines',{contract:contract._id,title:'Existing outline',description:'Topics'});assert.strictEqual(result.status,201);const outline=result.body.outline;
   const pdf=Buffer.from('%PDF-1.4\nExisting course document\n%%EOF');
   let body=new FormData();body.append('file',new Blob([pdf],{type:'application/pdf'}),'outline.pdf');assert.strictEqual((await request('PUT','/academy/outlines/'+outline._id+'/document',body)).status,200);
-  const lessons=[];for(let i=0;i<2;i++){result=await request('POST','/academy/outlines/'+outline._id+'/lessons',{title:'Lesson '+i,plannedDate:today});assert.strictEqual(result.status,201);lessons.push(result.body.lesson);}
+  const lessons=[];for(let i=0;i<2;i++){result=await request('POST','/academy/outlines/'+outline._id+'/lessons',{title:'Lesson '+i,...(i ? {plannedDate:today} : {})});assert.strictEqual(result.status,201);lessons.push(result.body.lesson);}
+  const unscheduledLessonPath='/academy/outlines/'+outline._id+'/lessons/'+lessons[0]._id;
+  const renamedLesson=await request('PATCH',unscheduledLessonPath,{title:'Renamed lesson',plannedDate:null});
+  assert.strictEqual(renamedLesson.status,200);
+  assert.strictEqual(renamedLesson.body.lesson.title,'Renamed lesson');
+  assert.strictEqual(renamedLesson.body.lesson.plannedDate,null);
+  assert.strictEqual((await request('PATCH',unscheduledLessonPath,{plannedDate:today})).status,200);
   const complete=lesson=>request('PUT','/teacher-contracts/'+contract._id+'/lessons/'+lesson._id+'/status',{status:'completed'});
   await Promise.all(lessons.map(complete));
   result=await request('GET','/teacher/my-course'+query);assert.strictEqual(result.body.contract.completedTeachingDays,1);assert.strictEqual(result.body.contract.remainingContractDays,29);assert.strictEqual(result.body.lessonProgress.percentage,100);
@@ -102,6 +108,14 @@ const dbName='telesom_mycourse_test_'+crypto.randomBytes(6).toString('hex');let 
   await models.Enrollment.updateOne({student:students[0].student._id},{$unset:{batch:1}});
   const legacyRoster=(await request('GET','/teacher/my-course'+query)).body;
   assert.deepStrictEqual(legacyRoster.students.map(student=>student.studentId),[students[0].student.studentId]);
+  const cohortQuiz = await models.Quiz.findOne({quizCode:'QA'});
+  const legacyGradebook = await request('GET','/teacher/results/quiz/'+cohortQuiz._id);
+  assert.strictEqual(legacyGradebook.status,200);
+  assert(legacyGradebook.body.students.some(student=>student._id===String(students[0].student._id)));
+  assert(!legacyGradebook.body.students.some(student=>student._id===String(students[1].student._id)));
+  assert.strictEqual((await request('PUT','/teacher/results/quiz/'+cohortQuiz._id,{
+    results:[{studentId:students[0].student._id,marksObtained:12}],
+  })).status,200);
   assert(!legacyRoster.cohorts.some(cohort=>cohort.batch===''),'Legacy enrollment belongs to the configured batch');
   assert.deepStrictEqual((await request('GET','/teacher/my-course'+otherQuery)).body.students.map(student=>student.studentId),[students[1].student.studentId]);
   assert.strictEqual((await request('GET','/teacher/my-course?'+new URLSearchParams({...scope,batch:''}))).body.scope.batch,'Batch A');

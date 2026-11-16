@@ -1,11 +1,12 @@
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import './teacher.css';
 
 const assessmentKey = (assessment) => `${assessment.type}:${assessment._id}`;
+const STUDENTS_PER_PAGE = 10;
 
 export default function TeacherResults({scope,onEditingChange}) {
   const scopeIdentity=JSON.stringify(scope||{});
@@ -15,6 +16,8 @@ export default function TeacherResults({scope,onEditingChange}) {
   const [assessment, setAssessment] = useState(null);
   const [students, setStudents] = useState([]);
   const [search, setSearch] = usePageSearch();
+  const [page, setPage] = useState(1);
+  const swipeStart = useRef(null);
   const [loadingAssessments, setLoadingAssessments] = useState(true);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -58,6 +61,38 @@ export default function TeacherResults({scope,onEditingChange}) {
     [student.name, student.studentId, student.email]
       .some((value) => String(value || '').toLowerCase().includes(search.toLowerCase()))
   ));
+  const pageCount = Math.max(1, Math.ceil(visibleStudents.length / STUDENTS_PER_PAGE));
+  const currentPage = Math.min(page, pageCount);
+  const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE;
+  const pageStudents = visibleStudents.slice(startIndex, startIndex + STUDENTS_PER_PAGE);
+
+  useEffect(() => { setPage(1); }, [selectedKey, scopeIdentity, search]);
+  useEffect(() => { setPage(previous => Math.min(previous, pageCount)); }, [pageCount]);
+
+  function changePage(nextPage) {
+    setPage(Math.max(1, Math.min(pageCount, nextPage)));
+  }
+
+  const swipeHandlers = {
+    onTouchStart(event) {
+      const {scrollWidth, clientWidth} = event.currentTarget;
+      const touch = event.touches[0];
+      swipeStart.current = event.touches.length === 1 && scrollWidth <= clientWidth
+        ? {x: touch.clientX, y: touch.clientY} : null;
+    },
+    onTouchEnd(event) {
+      const start = swipeStart.current;
+      swipeStart.current = null;
+      if (!start || event.touches.length) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        changePage(currentPage + (dx < 0 ? 1 : -1));
+      }
+    },
+    onTouchCancel() { swipeStart.current = null; },
+  };
   const enteredCount = students.filter((student) => student.marksObtained !== '').length;
   const markedStudents = students.filter(student => String(student.marksObtained).trim() !== '');
   const passedCount = students.filter((student) => (
@@ -176,10 +211,8 @@ export default function TeacherResults({scope,onEditingChange}) {
       {assessment && !loadingRoster && students.length > 0 && <section className="results-import" aria-labelledby="results-import-title">
         <div className="results-import-main">
           <div>
-            <span className="results-kicker">GRADEBOOK IMPORT</span>
             <h2 id="results-import-title">Upload Excel results</h2>
-            <p>Use <strong>Name</strong> and <strong>Result</strong>. Blank results are skipped.</p>
-            <p>Add <strong>Email</strong> if students share a name.</p>
+            <p>Use <strong>Name</strong> and <strong>Result</strong>. Add <strong>Email</strong> for duplicate names. Blank results are skipped.</p>
           </div>
           <div className="results-import-picker">
             <input id="results-excel" className="visually-hidden" type="file" accept=".xlsx,.xls,.csv" disabled={importing || saving} onChange={importResults}/>
@@ -210,7 +243,7 @@ export default function TeacherResults({scope,onEditingChange}) {
             <option value="">{loadingAssessments ? 'Loading assessments...' : 'Select an assessment'}</option>
             {assessments.map((item) => (
               <option key={assessmentKey(item)} value={assessmentKey(item)}>
-                {item.assessmentType|| (item.type === 'quiz' ? 'Quiz' : 'Exam')} · {item.title} · {item.totalMarks} marks
+                {item.title}
               </option>
             ))}
           </select>
@@ -228,11 +261,7 @@ export default function TeacherResults({scope,onEditingChange}) {
 
       <section className="card results-table-card">
         <div className="card-header results-card-header">
-          <div>
-            <span className="results-kicker">CLASS GRADEBOOK</span>
-            <h2 className="card-title">{assessment?.title || 'Student marks'}</h2>
-            <p>{assessment ? `${students.length} enrolled students · Maximum ${assessment.totalMarks} marks` : 'Choose an assessment to load its enrolled students.'}</p>
-          </div>
+          <h2 className="card-title">{assessment?.title || 'Student marks'}</h2>
           <div className="search-input-wrap results-search">
             <span aria-hidden="true">⌕</span>
             <input
@@ -262,7 +291,7 @@ export default function TeacherResults({scope,onEditingChange}) {
             <Link to="/teacher/exams" className="btn btn-secondary">Review assessment settings</Link></div>
         ) : (
           <form onSubmit={saveResults}>
-            <div className="table-responsive">
+            <div className="table-responsive" {...swipeHandlers}>
               <table className="data-table results-table">
                 <thead>
                   <tr>
@@ -276,7 +305,7 @@ export default function TeacherResults({scope,onEditingChange}) {
                 <tbody>
                   {visibleStudents.length === 0 ? (
                     <tr><td className="results-no-matches" colSpan="4">No students match “{search}”.</td></tr>
-                  ) : visibleStudents.map((student) => {
+                  ) : pageStudents.map((student) => {
                     const mark = student.marksObtained === '' ? null : Number(student.marksObtained);
                     const passed = mark !== null && mark >= (assessment?.passingMarks ?? 0);
                     return (
@@ -314,6 +343,14 @@ export default function TeacherResults({scope,onEditingChange}) {
                 </tbody>
               </table>
             </div>
+            {pageCount > 1 && <nav className="results-pagination" aria-label="Student record pages" {...swipeHandlers}>
+              <span aria-live="polite">{startIndex + 1}–{startIndex + pageStudents.length} of {visibleStudents.length} students</span>
+              <div>
+                <button type="button" className="btn btn-secondary" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)}>Previous</button>
+                <span>Page {currentPage} of {pageCount}</span>
+                <button type="button" className="btn btn-secondary" disabled={currentPage === pageCount} onClick={() => changePage(currentPage + 1)}>Next</button>
+              </div>
+            </nav>}
             <div className="results-footer">
               <span>{dirty ? 'Unsaved marks. Live updates resume after saving.' : `${enteredCount} students with marks. Leave non-participants blank.`}</span>{dirty && <button type="button" className="btn btn-secondary" disabled={saving} onClick={()=>{setLoadingRoster(true);setDirty(false);}}>Discard changes</button>}
               <button type="submit" className="btn btn-primary" disabled={importing || saving || !markedStudents.length}>

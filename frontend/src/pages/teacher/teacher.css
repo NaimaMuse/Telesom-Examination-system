@@ -1154,10 +1154,32 @@
 .assessment-switcher button.active { background: var(--primary-dark); color: #fff; box-shadow: 0 1px 3px rgba(20,83,45,0.2); }
 .assessment-switch-count { font-size: 0.65rem; opacity: 0.75; }
 .assessment-list-content { min-height: 250px; }
-.assessments-table { min-width: 760px; }
+.assessment-table-wrap { min-width: 0; }
+.assessments-table { min-width: 0; table-layout: fixed; }
+.teacher-assessments-page .assessments-table :is(th, td) {
+  padding: .4rem clamp(.25rem, .65vw, .65rem);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.assessments-table th:nth-child(1) { width: 22%; }
+.assessments-table th:nth-child(2) { width: 16%; }
+.assessments-table th:nth-child(3) { width: 11%; }
+.assessments-table th:nth-child(4) { width: 11%; }
+.assessments-table th:nth-child(5) { width: 8%; }
+.assessments-table th:nth-child(6) { width: 12%; }
+.assessments-table th:nth-child(7) { width: 10%; }
+.assessments-table .assessment-status { max-width: 100%; white-space: normal; }
+.assessments-table .assessment-row-actions { flex-wrap: wrap; }
+.assessments-table .assessment-type-mark { width: 28px; height: 28px; flex-basis: 28px; }
+.assessments-table .assessment-icon-button { width: 26px; height: 26px; }
+@media (max-width: 700px) {
+  .assessments-table .assessment-type-mark { display: none; }
+  .assessments-table .assessment-status, .assessments-table .assessment-course-code { padding-inline: .15rem; }
+  .assessments-table .assessment-icon-button { width: min(100%, 26px); }
+}
 .assessments-table th { padding: 0.75rem 0.85rem; background: #fff; color: var(--text-muted); font-size: 0.64rem; text-transform: uppercase; }
 .assessments-table td { padding: 0.8rem 0.85rem; color: var(--text-secondary); font-size: 0.75rem; }
-.assessment-title-cell { display: flex; align-items: center; gap: 0.65rem; min-width: 200px; }
+.assessment-title-cell { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
 .assessment-title-cell > span:last-child { display: flex; flex-direction: column; min-width: 0; gap: 0.18rem; }
 .assessment-title-cell strong { overflow: hidden; color: var(--primary-deep); font-size: 0.77rem; text-overflow: ellipsis; white-space: nowrap; }
 .assessment-title-cell small { color: var(--text-muted); font-size: 0.64rem; }
@@ -1250,17 +1272,29 @@
 .results-summary-item strong small { color: var(--text-muted); font-size: 0.7rem; font-weight: 600; }
 .results-summary-item > div > span { color: var(--text-muted); font-size: 0.66rem; }
 .teacher-results-page .results-table-card { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-sm); }
-.teacher-results-page .results-card-header { align-items: center; padding: 0.9rem 1rem; border-bottom: 1px solid var(--border-soft); background: #fbfdfb; }
-.teacher-results-page .results-card-header .results-kicker { margin-bottom: 0.18rem; font-size: 0.56rem; }
-.teacher-results-page .results-card-header .card-title { color: var(--primary-deep); font-size: 0.95rem; }
-.teacher-results-page .results-card-header p { color: var(--text-muted); font-size: 0.72rem; }
+.teacher-results-page .results-card-header { align-items: center; padding: .45rem .85rem; border-bottom: 1px solid var(--border-soft); background: #fbfdfb; }
+.teacher-results-page .results-card-header .card-title { color: var(--primary-deep); font-size: 1.15rem; }
 .teacher-results-page .results-search { max-width: 250px; border-color: var(--border); border-radius: 5px; }
 .teacher-results-page .results-search input { font-size: 0.75rem; }
 .teacher-results-page .results-table { min-width: 820px; }
 .teacher-results-page .results-table th { padding: 0.68rem 0.8rem; background: #fff; color: var(--text-muted); font-size: 0.62rem; text-transform: uppercase; }
-.teacher-results-page .results-table td { padding: 0.68rem 0.8rem; color: var(--text-secondary); font-size: 0.74rem; }
+.teacher-results-page .results-table td { padding: .3rem .8rem; color: var(--text-secondary); font-size: .74rem; line-height: 1.25; }
 .teacher-results-page .results-table tbody tr:hover { background: #f8fcf9; }
-.teacher-results-page .results-mark-input { width: 100px; min-height: 36px; font-weight: 700; }
+.results-pagination, .results-pagination > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.results-pagination {
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  font-size: .75rem;
+  touch-action: pan-y pinch-zoom;
+}
+.results-pagination .btn { padding: 4px 8px; font-size: inherit; }
+.teacher-results-page .results-mark-input { width: 100px; min-height: 28px; padding-block: 2px; font-weight: 700; }
 .teacher-results-page .results-remarks-input { min-width: 155px; min-height: 36px; }
 .teacher-results-page .results-state { min-height: 250px; }
 .teacher-results-page .results-state-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--primary-light); font-size: 1.35rem; }
@@ -1541,20 +1575,20 @@
 .teacher-home-contract-grid .weekly-preview-slots { padding: 10px; gap: 5px; }
 
 .teacher-results-page .results-import {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   border: 1px solid #d6e6db;
   border-left: 3px solid #d7982f;
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 6px 10px;
   background: #fff;
   color: #193c2c;
   font-size: 12px;
 }
-.results-import-main { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.teacher-results-page .results-import h2 { margin: 4px 0; font-size: 16px; color: #005b35; }
-.teacher-results-page .results-import p { margin: 2px 0; font-size: 12px; color: #4a6355; }
-.results-import-picker { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.results-import-picker label { padding: 7px 12px; border-radius: 7px; background: #005b35; color: white; cursor: pointer; font-weight: 700; }
+.results-import-main { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.teacher-results-page .results-import h2 { margin: 0; font-size: 14px; line-height: 1.25; color: #005b35; }
+.teacher-results-page .results-import p { margin: 2px 0 0; font-size: 11px; line-height: 1.35; color: #4a6355; }
+.results-import-picker { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.results-import-picker label { padding: 5px 10px; border-radius: 7px; background: #005b35; color: white; cursor: pointer; font-weight: 700; }
 .results-import-picker input:disabled + label { opacity: .6; cursor: default; }
 .results-import-picker input:focus-visible + label { outline: 2px solid #d7982f; outline-offset: 2px; }
 .results-import-picker span { color: #526a5c; font-size: 11px; }

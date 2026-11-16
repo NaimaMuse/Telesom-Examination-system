@@ -4,15 +4,26 @@ const Enrollment = require('../models/Enrollment');
 const Attendance = require('../models/Attendance');
 const { withCourseLock } = require('../services/gradebookIntegrityService');
 const { getAttendanceSession, canMarkAttendance, requireScheduledAttendance } = require('../services/attendanceScheduleService');
+const { enrollmentBatch } = require('../services/batchService');
 const statuses = ['present','absent','late','excused'];
 const fail = message => { throw Object.assign(new Error(message),{statusCode:400}); };
 function day(value){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))fail('Choose a valid date.');const date=new Date(value+'T00:00:00.000Z');if(Number.isNaN(date.getTime())||date.toISOString().slice(0,10)!==value)fail('Choose a valid date.');return date;}
 const nextDay=date=>new Date(date.getTime()+86400000);
 async function roster(course,batch=''){
-  if(!mongoose.isValidObjectId(course)||!await Course.exists({_id:course}))fail('Choose a valid course.');
+  if(!mongoose.isValidObjectId(course))fail('Choose a valid course.');
+  const courseRecord = await Course.findById(course).select('academicYear batch').lean();
+  if (!courseRecord) fail('Choose a valid course.');
   const enrollments=await Enrollment.find({course,status:'enrolled'}).populate({path:'student',populate:{path:'user',select:'name email'}}).lean();
   const rows=new Map();
-  for(const enrollment of enrollments){const student=enrollment.student;if(!student)continue;const year=student.academicYear?.trim()||enrollment.academicYear?.trim()||'';const key=String(student._id);if(!rows.has(key))rows.set(key,{_id:student._id,name:student.user?.name||'Student',studentId:student.studentId,batches:[]});if(year&&!rows.get(key).batches.includes(year))rows.get(key).batches.push(year);}
+  for (const enrollment of enrollments) {
+    const student = enrollment.student;
+    if (!student) continue;
+    const cohort = enrollmentBatch({ ...enrollment, course: courseRecord });
+    const key = String(student._id);
+    if (!rows.has(key)) rows.set(key, { _id: student._id, name: student.user?.name || 'Student', studentId: student.studentId, batches: [] });
+    const row = rows.get(key);
+    if (cohort && !row.batches.includes(cohort)) row.batches.push(cohort);
+  }
   const all=[...rows.values()];return {batches:[...new Set(all.flatMap(s=>s.batches))].sort(),students:batch?all.filter(s=>s.batches.includes(batch)):all};
 }
 exports.getRegister=async(req,res,next)=>{try{

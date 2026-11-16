@@ -32,6 +32,22 @@
 .dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel > .ao-table-wrap thead th { background:#104f30; color:#fff4ce; padding:14px 17px; font-size:11px; font-weight:650; text-transform:none; letter-spacing:.1px; border-top:2px solid #d5a73f; border-bottom:1px solid #d5a73f; border-right:1px solid #ffffff16; }
 .dash-shell .dash-content .course-catalog-panel tbody td,
 .dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel > .ao-table-wrap tbody td { padding:14px 17px; border-bottom:1px solid #e8eee7; font-size:11px; }
+.dash-shell .dash-content .attendance-register .ao-filters {
+  border-top-color: #d5a73f;
+  padding: 8px 12px;
+  gap: 8px;
+}
+.dash-shell .dash-content .attendance-register .ao-filters :is(select, input[type="date"]) {
+  height: 27px;
+  padding-inline: 7px;
+  margin-top: 4px;
+}
+.attendance-register .attendance-filters > label:first-child { max-width: 24rem; }
+.attendance-register .attendance-filters > label:nth-child(2) { max-width: 11rem; }
+.attendance-register .attendance-date-tools > label { max-width: 11rem; }
+.dash-shell .dash-content .attendance-register .ao-list-heading { padding: 7px 12px; }
+.dash-shell .dash-content .attendance-register .ao-panel > .ao-table-wrap thead th { padding: 7px 12px; }
+.dash-shell .dash-content .attendance-register .ao-panel > .ao-table-wrap tbody td { padding: 3px 12px; }
 .dash-shell .dash-content .course-catalog-panel tbody tr:nth-child(even),
 .dash-shell .dash-content :is(.exam-mgmt-container,.marks-overview,.attendance-register) .ao-panel > .ao-table-wrap tbody tr:nth-child(even) { background:#f9fbf7; }
 .dash-shell .dash-content .course-catalog-panel tbody tr:hover,

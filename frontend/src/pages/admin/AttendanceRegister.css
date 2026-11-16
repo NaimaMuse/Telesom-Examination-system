@@ -6,8 +6,24 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 4px 16px;
-  padding: 8px 20px;
+  padding: 5px 12px;
   border-bottom: 1px solid #e1eae4;
   color: #355b44;
-  font-size: 0.875rem;
+  font-size: .75rem;
+}
+
+.attendance-date-tools {
+  grid-column: span 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 6px;
+}
+.attendance-date-tools > input[type="file"][hidden] { display: none; }
+.attendance-date-tools > label { flex: 1 1 7rem; }
+.attendance-register .attendance-upload {
+  min-height: 28px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: .65rem;
 }

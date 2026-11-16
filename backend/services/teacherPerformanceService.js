@@ -6,10 +6,17 @@ const Quiz = require('../models/Quiz');
 const ExamResult = require('../models/ExamResult');
 const QuizResult = require('../models/QuizResult');
 const { gradeFor, round } = require('./gradebookIntegrityService');
+const { enrollmentBatch: courseEnrollmentBatch } = require('./batchService');
 
-const enrollmentBatch = enrollment => String(enrollment.batch || enrollment.student?.batch || enrollment.student?.academicYear || '').trim() || String(enrollment.academicYear || '').trim();
+const enrollmentBatch = (enrollment, course) => courseEnrollmentBatch({ ...enrollment, course }) ||
+  String(enrollment.student?.batch || enrollment.student?.academicYear || '').trim() || String(enrollment.academicYear || '').trim();
 
-const primaryEnrollment=(enrollments,student,course)=>{const rows=enrollments.filter(e=>String(e.student?._id)===String(student));return rows.find(e=>course.academicYear&&e.academicYear===course.academicYear)||[...rows].sort((a,b)=>String(b.academicYear||'').localeCompare(String(a.academicYear||''),undefined,{numeric:true}))[0];};
+function primaryEnrollment(enrollments, student, course) {
+  const rows = enrollments.filter(e => String(e.student?._id) === String(student));
+  const row = rows.find(e => course.academicYear && e.academicYear === course.academicYear) ||
+    rows.sort((a,b) => String(b.academicYear || '').localeCompare(String(a.academicYear || ''), undefined, {numeric:true}))[0];
+  return row && { ...row, batch: courseEnrollmentBatch({ ...row, course }) };
+}
 
 // Course totals always use earned marks / 100; assessment percentages are separate.
 const calculatePerformance = ({ course, assessments, enrollments, results, attendance }) => {
@@ -24,7 +31,7 @@ const calculatePerformance = ({ course, assessments, enrollments, results, atten
   for (const enrollment of enrollments) {
     const student = enrollment.student;
     if (!student?._id) continue;
-    const batch = enrollmentBatch(enrollment);
+    const batch = enrollmentBatch(enrollment, course);
     const previous = students.get(String(student._id));
     if (previous) { if (batch && !previous.batches.includes(batch)) previous.batches.push(batch); continue; }
     students.set(String(student._id), { _id: student._id, student: student.user?.name || 'Student record unavailable', studentId: student.studentId || '—', courseId: course._id, course: course.courseCode || course.title || course.name, courseName: course.title || course.name || course.courseCode, batches: batch ? [batch] : [], totalMarks: 0, gradedAssessments: 0, expectedAssessments: valid.length, gradedMaximum: 0, invalidScores: 0 });
@@ -96,9 +103,9 @@ const getPerformance = async (req) => {
     Exam.find({ course: course._id }).lean(), Quiz.find({ course: course._id }).lean(),
     Enrollment.find({ course: course._id, status: 'enrolled' }).populate({ path: 'student', populate: { path: 'user', select: 'name email' } }).lean(),
   ]);
-  const batches = [...new Set(enrollments.map(enrollmentBatch).filter(Boolean))].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  const batches = [...new Set(enrollments.map(e => enrollmentBatch(e, course)).filter(Boolean))].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
   const selectedBatch = String(req.query.batch || '').trim();
-  const cohortEnrollments = selectedBatch ? enrollments.filter(e => enrollmentBatch(e) === selectedBatch) : enrollments;
+  const cohortEnrollments = selectedBatch ? enrollments.filter(e => enrollmentBatch(e, course) === selectedBatch) : enrollments;
   const studentIds = cohortEnrollments.map(e => e.student?._id).filter(Boolean);
   const [examResults, quizResults] = await Promise.all([
     ExamResult.find({ exam: { $in: exams.map(e => e._id) }, student: { $in: studentIds } }).lean(),

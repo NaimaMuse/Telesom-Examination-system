@@ -9,6 +9,7 @@ const Quiz = require('../models/Quiz');
 const ExamResult = require('../models/ExamResult');
 const QuizResult = require('../models/QuizResult');
 const mongoose = require('mongoose');
+const { enrollmentBatch } = require('../services/batchService');
 
 const getTeacherAssignment = async (userId) => {
   const teacher = await Teacher.findOne({ user: userId }).lean();
@@ -300,10 +301,14 @@ const getTeacherAssessments = async (req, res, next) => {
       Quiz.find(assessmentFilter).sort({ quizDate: -1 }).lean(),
     ]);
 
+    const courseCodes = new Map(assignments.filter(a => a.course).map(a => [String(a.course._id), a.course.courseCode]));
     const assessments = [
       ...exams.map((exam) => ({
         _id: exam._id,
         title: exam.title,
+        courseCode: courseCodes.get(String(exam.course)),
+        academicYear: exam.academicYear,
+        batch: exam.batch || '',
         type: 'exam',
         assessmentType:exam.type,
         date: exam.examDate,
@@ -314,6 +319,9 @@ const getTeacherAssessments = async (req, res, next) => {
       ...quizzes.map((quiz) => ({
         _id: quiz._id,
         title: quiz.title,
+        courseCode: courseCodes.get(String(quiz.course)),
+        academicYear: quiz.academicYear,
+        batch: quiz.batch || '',
         type: 'quiz',
         date: quiz.quizDate,
         totalMarks: quiz.totalMarks,
@@ -339,7 +347,18 @@ const assignmentForAssessment = async (req, assignments) => {
 const assessmentEnrollmentFilter=async(req,assessment,assignment)=>{
   if(req.query.courseId){const service=require('../services/teacherCourseWorkspaceService');const context=await service.resolveScope(req.user,req.query);if(!context.selected||!require('../services/academicProgressService').assessmentApplies(assessment,context.selected))throw Object.assign(new Error('Assessment does not belong to this course and cohort.'),{statusCode:403});return service.enrollmentFilter(context.selected);}
   // Standalone gradebook follows current course enrollments; legacy exam years may use a different label.
-  return {course:assessment.course,status:'enrolled',...(assessment.batch?{batch:assessment.batch}:{})};
+  const filter = { course: assessment.course, status: 'enrolled' };
+  if (!assessment.batch) return filter;
+  const course = assignment.course;
+  const configuredBatch = enrollmentBatch({ course, academicYear: course.academicYear });
+  if (assessment.batch !== configuredBatch) return { ...filter, batch: assessment.batch };
+  return {
+    ...filter,
+    $or: [
+      { batch: assessment.batch },
+      { academicYear: course.academicYear, batch: { $in: ['', null] } },
+    ],
+  };
 };
 
 const getTeacherAssessmentResults = async (req, res, next) => {

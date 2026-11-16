@@ -92,7 +92,7 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
               ))}
             </div>
             {selectedCourse && <WeeklySchedulePreview schedule={selectedCourse.teachingSchedule || []} title="Assigned course schedule" />}
-            <p className="teacher-password-hint">{initial?._id ? 'Leave the password field blank to keep the current password.' : 'The teacher signs in with the password you set.'}</p>
+            {!initial?._id && <p className="teacher-password-hint">The teacher signs in with the password you set.</p>}
             {initial?._id && <section className="teacher-edit-contract"><h3>Teaching contract</h3>
               {contractsLoading?<p>Loading contracts…</p>:contractLoadError?<p role="alert">{contractLoadError}</p>:!teacherContracts.length?<p>No saved contract found. Create one in Teaching &amp; Outlines.</p>:<>
               <label className="form-label" htmlFor="teacher-edit-contract">Course / Year / Cohort</label><select id="teacher-edit-contract" className="form-control" value={form.editContractId||''} onChange={event=>chooseContract(teacherContracts.find(contract=>contract._id===event.target.value))}>{teacherContracts.map(contract=><option key={contract._id} value={contract._id}>{contract.course?.title||contract.course?.name} · {contract.academicYear} / {contract.cohort} · {contract.contractStatus}</option>)}</select>

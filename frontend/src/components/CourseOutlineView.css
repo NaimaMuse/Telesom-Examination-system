@@ -31,13 +31,17 @@
 .outline-visibility { font-size: 10px; font-weight: 650; padding: 5px 9px; border-radius: 6px; background: #f8f2e6; color: var(--brand-gold); white-space: nowrap; }
 .outline-visibility.published { background: var(--brand-green-tint); color: var(--brand-green-active); }
 .outline-description { padding: 0 20px 12px; font-size: 12px; }
-.outline-card-actions { padding: 0 20px 18px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.outline-options { position: relative; margin-left: auto; }
-.outline-options summary { padding: 9px 10px; color: var(--text-muted, #6B7280); cursor: pointer; list-style: none; font-size: 11px; font-weight: 650; }
+.outline-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.outline-card-actions > * { white-space: nowrap; }
+.outline-options { position: relative; }
+.outline-options summary { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border: 1px solid #e7ca85; border-radius: 7px; background: #fff8e8; color: var(--brand-green-deep); cursor: pointer; list-style: none; font-size: 11px; font-weight: 650; }
 .outline-options summary::-webkit-details-marker { display: none; }
-.outline-options-menu { position: absolute; right: 0; top: 100%; width: 230px; padding: 6px; background: #fff; border: 1px solid var(--brand-green-soft); border-radius: 10px; box-shadow: 0 8px 28px color-mix(in srgb, var(--brand-green-deep) 13%, transparent); z-index: 5; }
-.outline-options-menu button, .outline-options-menu label { display: block; width: 100%; padding: 10px; text-align: left; font: inherit; font-size: 12px; border: 0; border-radius: 6px; background: transparent; color: var(--brand-green-deep); cursor: pointer; position: relative; }
-.outline-options-menu button:hover, .outline-options-menu label:hover { background: var(--brand-green-tint); }
+.outline-options[open] summary { background: #fff0ca; }
+.outline-options-menu { position: absolute; right: 0; top: calc(100% + 4px); width: min(190px, calc(100vw - 48px)); padding: 4px; background: #fff; border: 1px solid var(--brand-green-border); border-top: 2px solid var(--brand-gold); border-radius: 9px; box-shadow: 0 8px 24px #164f2426; z-index: 5; }
+.outline-options-menu button { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 29px; padding: 4px 7px; text-align: left; font: inherit; font-size: 11px; border: 0; border-radius: 5px; background: transparent; color: var(--brand-green-deep); cursor: pointer; }
+.outline-options-menu button:hover:not(:disabled) { background: var(--brand-green-tint); }
+.outline-options-menu button:disabled { opacity: .5; cursor: default; }
+.outline-options-menu :is(svg, .outline-option-arrow) { flex: 0 0 15px; text-align: center; }
 .outline-options-menu input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
 .outline-options-menu label:focus-within { outline: 2px solid var(--brand-green); }
 .outline-list-label { display: flex; justify-content: space-between; align-items: center; background: var(--brand-green-tint); padding: 11px 20px; border-block: 1px solid var(--brand-green-soft); }
@@ -88,8 +92,6 @@
   .outline-search { max-width: none; }
   .outline-card-heading { flex-wrap: wrap; padding: 16px 14px 12px; }
   .outline-card-actions, .outline-description { padding-left: 14px; padding-right: 14px; }
-  .outline-options { margin-left: 0; }
-  .outline-options-menu { left: 0; right: auto; }
   .outline-lesson { padding: 14px; gap: 10px; }
   .outline-list-label { padding-inline: 14px; }
   .teacher-course-page .course-outline-integrated { padding: 14px; }
@@ -136,8 +138,8 @@
 .lesson-progress small { font-size: 10px; color: var(--text-muted, #6B7280); }
 .outline-lesson-list { border-left: 3px solid var(--brand-green-soft); margin-left: 20px; }
 @media(max-width:600px) { .lesson-progress { min-width: 85px; grid-template-columns: 55px auto; }.lesson-progress progress { width: 55px; }.chapter-progress { margin-inline: 14px; }.outline-lesson-list { margin-left: 10px; } }
-.outline-options-menu .outline-delete-chapter { color: #b53f3f; border-top: 1px solid #f1e4e4; margin-top: 4px; }
-.outline-options-menu .outline-delete-chapter:hover { background: #fff0f0; }
+.outline-options-menu .outline-delete-chapter { color: #a83232; background: #fff5f4; margin-top: 3px; }
+.outline-options-menu .outline-delete-chapter:hover:not(:disabled) { background: #ffe9e6; }
 .outline-lesson-status.in-progress { background: var(--brand-gold-soft); color: var(--brand-gold); }
 .outline-lesson-actions { flex-wrap: wrap; }
 .outline-lesson-actions select { border: 1px solid var(--brand-green-border); border-radius: 6px; padding: 6px; background: #fff; color: var(--brand-green-active); font: inherit; font-size: 11px; }
@@ -173,7 +175,6 @@
 .outline-chevron { flex-shrink: 0; color: var(--text-muted, #6B7280); transition: transform .2s ease; }
 .outline-chevron.is-open { transform: rotate(180deg); }
 .outline-chapter-body[hidden] { display: none; }
-.outline-chapter-visibility { display: flex; justify-content: flex-end; padding: 15px 20px 10px; }
 @media(max-width:600px) { .outline-chapter-toggle { padding: 15px 12px; gap: 10px; }.outline-toggle-title { font-size: 14px; }.outline-chapter-number { width: 34px; height: 36px; }.outline-toggle-percent { font-size: 10px; padding: 5px; } }
 
 /* Refined chapter accordion and lesson hierarchy. */
@@ -190,9 +191,12 @@
 .outline-toggle-percent::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fff; }
 .outline-toggle-percent > span { position: relative; font-size: 11px; font-weight: 700; }
 .outline-chevron { box-sizing: content-box; background: var(--brand-green-tint); border: 1px solid var(--brand-green-soft); padding: 7px; border-radius: 9px; width: 16px; height: 16px; color: var(--brand-green-active); }
-.outline-chapter-visibility { padding: 16px 23px 10px; }
 .chapter-progress { margin-inline: 23px; }
-.outline-card-actions { padding: 0 23px 19px; }
+.outline-card-actions { padding: 8px 23px; }
+.outline-studio .outline-card-actions > .outline-add-lesson { min-height: 28px; padding: 4px 8px; font-size: .72rem; }
+@media (max-width: 440px) {
+  .outline-card-actions { flex-wrap: wrap; }
+}
 .outline-card-actions > .btn-primary { background: var(--brand-green-active); border-color: var(--brand-green-active); }
 .outline-card-actions > .btn-primary:hover { background: var(--brand-green-active); }
 .outline-lesson-list { margin: 0 18px 18px; border: 1px solid var(--brand-green-soft); border-radius: 11px; }

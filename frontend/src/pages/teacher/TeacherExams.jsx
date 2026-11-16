@@ -509,7 +509,7 @@ export default function TeacherExams({scope,onEditingChange,onChange}) {
               </button>
             </div>
           ) : (
-            <div className="table-responsive">
+            <div className="assessment-table-wrap">
               <table className="data-table assessments-table">
                 <thead>
                   <tr>

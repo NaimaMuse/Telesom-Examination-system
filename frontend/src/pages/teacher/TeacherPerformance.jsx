@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../../services/api';
 import './TeacherPerformance.css';
 
+const STUDENTS_PER_PAGE = 10;
+
 function gradeColor(g) { return g?.startsWith('A') ? 'grade-A' : g?.startsWith('B') ? 'grade-B' : g?.startsWith('C') ? 'grade-C' : g?.startsWith('D') ? 'grade-D' : 'grade-F'; }
 
 
@@ -55,6 +57,8 @@ export default function TeacherPerformance() {
   const [assessmentId, setAssessmentId] = useState('');
   const [revision, setRevision] = useState(0);
   const [cohort, setCohort] = useState('');
+  const [page, setPage] = useState(1);
+  const swipeStart = useRef(null);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [showReport, setShowReport] = useState(false);
   const closeReport = useCallback(() => setShowReport(false), []);
@@ -89,6 +93,38 @@ export default function TeacherPerformance() {
   }, [courseId, assessmentId, search, revision, cohort]);
 
   const summary = report?.summary, allocation = report?.allocation, students = report?.students || [];
+  const pageCount = Math.max(1, Math.ceil(students.length / STUDENTS_PER_PAGE));
+  const currentPage = Math.min(page, pageCount);
+  const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE;
+  const pageStudents = students.slice(startIndex, startIndex + STUDENTS_PER_PAGE);
+
+  useEffect(() => { setPage(1); }, [courseId, cohort, assessmentId, search]);
+  useEffect(() => { setPage(previous => Math.min(previous, pageCount)); }, [pageCount]);
+
+  function changePage(nextPage) {
+    setPage(Math.max(1, Math.min(pageCount, nextPage)));
+  }
+
+  function startSwipe(event) {
+    const { scrollWidth, clientWidth } = event.currentTarget;
+    swipeStart.current = event.touches.length === 1 && scrollWidth <= clientWidth
+      ? { x: event.touches[0].clientX, y: event.touches[0].clientY }
+      : null;
+  }
+
+  function finishSwipe(event) {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start || event.touches.length) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      changePage(currentPage + (dx < 0 ? 1 : -1));
+    }
+  }
+
+  const swipeHandlers = { onTouchStart: startSwipe, onTouchEnd: finishSwipe, onTouchCancel: () => { swipeStart.current = null; } };
   const rankedStudents=students.filter(student=>student.hasMarks&&Number.isFinite(student.totalMarks)).slice().sort((a,b)=>b.totalMarks-a.totalMarks||String(a.student).localeCompare(String(b.student)));
   const highestStudent=rankedStudents[0];
   const lowestStudent=rankedStudents.length?rankedStudents.slice().sort((a,b)=>a.totalMarks-b.totalMarks||String(a.student).localeCompare(String(b.student)))[0]:null;
@@ -115,13 +151,23 @@ export default function TeacherPerformance() {
       </div>
       {!loading && allocation && (allocation.allocatedMarks > 100 || !!allocation.invalidAssessmentCount) && <div role="status" className="performance-alert">{allocation.allocatedMarks > 100 ? 'Allocations exceed 100 marks. Update assessment maxima to finalize results.' : ''}{!!allocation.invalidAssessmentCount && ' ' + allocation.invalidAssessmentCount + ' invalid assessments excluded.'}</div>}
       <div className="performance-list-heading"><div><h2>Student records <span>{loading ? '…' : students.length}</span></h2><p>{hasAssessmentFilter ? 'Showing students with saved marks for the selected assessments.' : 'Total marks combine all saved course results.'}</p></div>{!loading && allocation && <div className="performance-allocation"><span><strong>100</strong> course marks</span><span><strong>{allocation.allocatedMarks}</strong> allocated</span><span><strong>{allocation.remainingMarks}</strong> remaining</span><span className="performance-threshold">Pass mark: {allocation.passingThreshold == null ? 'Not set' : allocation.passingThreshold + '/100'}</span></div>}</div>
-      {loading ? <div className="performance-empty" role="status"><div className="spinner" /><p>Loading student records…</p></div> : !students.length ? <div className="performance-empty"><span className="performance-empty-symbol">⌕</span><h3>{error ? 'Records unavailable' : 'No students found'}</h3><p>{error ? 'Retry to load the latest records.' : 'Try another course, cohort or assessment.'}</p></div> : <div className="performance-table-wrap"><table className="performance-table"><thead><tr><th>Student</th><th>Student ID</th><th>Course</th><th>Year / Cohort</th><th>Course total</th>{hasAssessmentFilter && <th>{filteredMarksLabel}</th>}<th><span className="performance-sr-only">Actions</span></th></tr></thead><tbody>{students.map(student => <tr key={student._id}>
+      {loading ? <div className="performance-empty" role="status"><div className="spinner" /><p>Loading student records…</p></div> : !students.length ? <div className="performance-empty"><span className="performance-empty-symbol">⌕</span><h3>{error ? 'Records unavailable' : 'No students found'}</h3><p>{error ? 'Retry to load the latest records.' : 'Try another course, cohort or assessment.'}</p></div> : <>
+      <div className="performance-table-wrap" {...swipeHandlers}><table className="performance-table performance-records-table"><thead><tr><th>Student</th><th>Student ID</th><th>Course</th><th>Year / Cohort</th><th>Course total</th>{hasAssessmentFilter && <th>{filteredMarksLabel}</th>}<th><span className="performance-sr-only">Actions</span></th></tr></thead><tbody>{pageStudents.map(student => <tr key={student._id}>
         <td><div className="performance-student"><span className="performance-avatar" aria-hidden="true">{student.student?.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('')}</span><strong>{student.student}</strong></div></td><td><span className="performance-id">{student.studentId}</span></td>
         <td><div className="performance-course-name">{student.courseName || student.course}</div><small className="performance-muted">{report?.course?.courseCode}</small></td><td>{student.cohorts?.join(', ') || '—'}</td>
         <td><div className="performance-score"><strong>{student.hasMarks ? student.totalMarks : '—'}<span>/100</span></strong><div className="performance-progress"><span style={{ width: Math.max(0, Math.min(100, student.totalMarks || 0)) + '%' }} /></div><small>{student.status}</small></div></td>
         {hasAssessmentFilter && <td><strong>{student.filteredMarks}<span className="performance-muted">/{student.filteredMaximum}</span></strong></td>}
         <td><button type="button" className="performance-view" aria-label={'View results for ' + student.student} onClick={() => setSelectedStudentId(String(student._id))}>View <span aria-hidden="true">↗</span></button></td>
-      </tr>)}</tbody></table></div>}
+      </tr>)}</tbody></table></div>
+      {pageCount > 1 && <nav className="performance-record-pages" aria-label="Student record pages" {...swipeHandlers}>
+        <span aria-live="polite">{startIndex + 1}–{startIndex + pageStudents.length} of {students.length} students</span>
+        <div>
+          <button type="button" className="performance-button" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)}>Previous</button>
+          <span>Page {currentPage} of {pageCount}</span>
+          <button type="button" className="performance-button" disabled={currentPage === pageCount} onClick={() => changePage(currentPage + 1)}>Next</button>
+        </div>
+      </nav>}
+      </>}
     </section>
     {showReport && <StudentPerformanceReport courseId={courseId || report?.course?._id} cohort={cohort} onClose={closeReport} />}
     {selectedStudent && <StudentResultsModal student={selectedStudent} onClose={closeDetails} />}

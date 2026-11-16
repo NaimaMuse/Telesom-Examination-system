@@ -31,4 +31,6 @@ assert.strictEqual(filtered.students.length, 1);
 assert.strictEqual(filtered.students[0]._id, 's2');
 assert.strictEqual(enrollmentBatch({ academicYear: '2026', student: { academicYear: '2025' } }), '2025');
 assert.strictEqual(enrollmentBatch({ academicYear: '2026', student: {} }), '2026');
+assert.strictEqual(enrollmentBatch({ academicYear: '2026', student: { academicYear: '2026' } }, { academicYear: '2026', batch: 'cohort 6' }), 'cohort 6');
+assert.strictEqual(enrollmentBatch({ academicYear: '2026', batch: 'cohort 7' }, { academicYear: '2026', batch: 'cohort 6' }), 'cohort 7');
 console.log('Performance student record tests passed: one row per student, full course totals, participant-only assessment filters, popup details and batch identity.');

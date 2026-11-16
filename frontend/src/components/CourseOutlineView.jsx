@@ -44,12 +44,26 @@ export default function CourseOutlineView({rows, role, busy, loading, error, has
         return <section className="outline-card" key={outline._id}>
           <header className={`outline-accordion-heading ${open?'is-open':''}`}><h3><button type="button" className="outline-chapter-toggle" aria-expanded={open} aria-controls={`chapter-body-${outline._id}`} onClick={()=>setExpanded(current=>({...current,[outline._id]:!current[outline._id]}))}><span className="outline-chapter-number">{String(outline.chapterNumber).padStart(2,'0')}</span><span className="outline-toggle-copy"><span className="outline-toggle-title">Chapter {outline.chapterNumber}: {outline.title}</span><span className="outline-toggle-meta">{outline.lessons.length} lessons · {done} completed</span></span><span className="outline-toggle-percent" style={{'--chapter-progress':`${outline.progress||0}%`}}><span>{outline.progress||0}%</span></span><svg className={`outline-chevron ${open?'is-open':''}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h3></header>
           <div id={`chapter-body-${outline._id}`} className="outline-chapter-body" hidden={!open}>
-          <div className="outline-chapter-visibility"><span className={`outline-visibility ${outline.published?'published':''}`}>{outline.published?'Visible to students':'Draft · Staff only'}</span></div>
           <div className="outline-card-actions">
-            {teacher && <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onAddLesson(outline)}>＋ Add lesson</button>}
+            <span className={`outline-visibility ${outline.published?'published':''}`}>{outline.published?'Visible to students':'Draft · Staff only'}</span>
+            {teacher && <button type="button" className="btn btn-primary outline-add-lesson" disabled={busy} onClick={() => onAddLesson(outline)}>＋ Add lesson</button>}
             {teacher && <details className="outline-options"><summary>Manage chapter <span aria-hidden="true">⌄</span></summary><div className="outline-options-menu">
-              <button type="button" disabled={busy} onClick={event => {event.currentTarget.closest('details').open = false; onEdit(outline);}}>Edit chapter</button><button type="button" disabled={busy||outline.chapterNumber===1} onClick={()=>onMoveChapter(outline,'up')}>↑ Move chapter up</button><button type="button" disabled={busy} onClick={()=>onMoveChapter(outline,'down')}>↓ Move chapter down</button><button type="button" className="outline-delete-chapter" disabled={busy} onClick={event=>{event.currentTarget.closest('details').open=false;onDelete(outline);}}>Delete chapter</button>
-              <button type="button" disabled={busy} onClick={event => {event.currentTarget.closest('details').open=false; onPublish(outline);}}>{outline.published ? 'Hide from students' : 'Publish to students'}</button>
+              <button type="button" disabled={busy} onClick={event => {event.currentTarget.closest('details').open = false; onEdit(outline);}}>
+                <TeachingIcon name="edit" size={15}/> Edit chapter
+              </button>
+              <button type="button" disabled={busy || outline.chapterNumber === 1} onClick={() => onMoveChapter(outline,'up')}>
+                <span className="outline-option-arrow" aria-hidden="true">↑</span> Move chapter up
+              </button>
+              <button type="button" disabled={busy} onClick={() => onMoveChapter(outline,'down')}>
+                <span className="outline-option-arrow" aria-hidden="true">↓</span> Move chapter down
+              </button>
+              <button type="button" disabled={busy} onClick={event => {event.currentTarget.closest('details').open=false; onPublish(outline);}}>
+                <TeachingIcon name={outline.published ? 'eyeOff' : 'eye'} size={15}/>
+                {outline.published ? 'Hide from students' : 'Publish to students'}
+              </button>
+              <button type="button" className="outline-delete-chapter" disabled={busy} onClick={event => {event.currentTarget.closest('details').open=false; onDelete(outline);}}>
+                <TeachingIcon name="trash" size={15}/> Delete chapter
+              </button>
             </div></details>}
           </div>
           <div className="outline-lesson-list">
