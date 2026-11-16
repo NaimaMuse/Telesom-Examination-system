@@ -1,4 +1,4 @@
-import TeachingIcon from '../../components/TeachingIcon';
+ import TeachingIcon from '../../components/TeachingIcon';
 import './AdminDashboard.css';
 import {Link} from 'react-router-dom';
 import {usePageSearch,matchesPageSearch} from '../../context/PageSearchContext';
