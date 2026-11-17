@@ -1,7 +1,7 @@
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ChangePasswordModal from '../../components/ChangePasswordModal';
 import api from '../../services/api';
@@ -12,11 +12,10 @@ export default function StudentProfile() {
   const [editing, setEditing] = useState(false);
   const [params, setParams] = useSearchParams();
   const resetPassword = params.get('reset') === 'password' && !user?.mustChangePassword;
-  const setResetPassword = open => {
+  const closeResetPassword = () => {
     setParams(current => {
       const next = new URLSearchParams(current);
-      if (open) next.set('reset', 'password');
-      else next.delete('reset');
+      next.delete('reset');
       return next;
     }, {replace:true});
   };
@@ -74,20 +73,17 @@ export default function StudentProfile() {
         <div className="page-header-left"><h1>My Profile</h1><p>Manage your student account</p></div>
         {!editing && <div style={{display:'flex', gap:'0.75rem', flexWrap:'wrap'}}>
           {!user?.mustChangePassword && (
-            <button type="button" className="btn btn-secondary" onClick={() => {
-              setPasswordReset(false);
-              setResetPassword(true);
-            }}>Forgot password?</button>
+            <Link className="btn btn-secondary" to="/student/forgot-password">Reset password</Link>
           )}
           <button type="button" className="btn btn-primary" onClick={()=>setEditing(true)}>✏️ Edit Profile</button>
         </div>}
       </div>
 
       {saved && <div role="status" style={{ background:'#d1fae5',color:'#065f46',padding:'0.75rem 1.25rem',borderRadius:'var(--radius-sm)',marginBottom:'1rem',fontWeight:600,fontSize:'0.875rem' }}>✅ Profile updated.</div>}
-      {passwordReset && <p className="card card-body" role="status">Portal password reset successfully.</p>}
+      {passwordReset && <p className="card card-body" role="status">Portal password updated. You can sign in with your registered email and new password.</p>}
       {resetPassword && (
-        <ChangePasswordModal onClose={() => setResetPassword(false)} onSuccess={() => {
-          setResetPassword(false);
+        <ChangePasswordModal onClose={closeResetPassword} onSuccess={() => {
+          closeResetPassword();
           setPasswordReset(true);
         }}/>
       )}

@@ -26,14 +26,14 @@ async function sessionUser(user, studentProfile) {
   };
 }
 
-async function completeLogin(req, res, user, student, googleVerified = false) {
+async function completeLogin(req, res, user, student, {googleVerified = false, studentPasswordVerified = false} = {}) {
   const lastLogin = new Date();
   await User.findByIdAndUpdate(user._id, {lastLogin});
   const safeUser = await sessionUser(user, student);
   req.auditActor = user._id;
   safeUser.lastLogin = lastLogin;
-  const browser = googleVerified || req.headers?.origin || req.headers?.['x-session-mode'] === 'cookie';
-  if (browser) await startSession(req, res, user, {googleVerified});
+  const browser = googleVerified || studentPasswordVerified || req.headers?.origin || req.headers?.['x-session-mode'] === 'cookie';
+  if (browser) await startSession(req, res, user, {googleVerified, studentPasswordVerified});
   res.status(200).json({success:true,user:safeUser,...(browser ? {} : {token:generateToken(user._id,user.authVersion || 0)})});
 }
 
@@ -49,16 +49,21 @@ const login = asyncHandler(async (req, res) => {
   if (!password) fail(400, 'Password is required for email login');
 
   const user = await User.findOne({email:normalizedEmail}).select('+password');
-  const eligible = user?.isActive && ['admin', 'teacher'].includes(user.role) &&
-    (!role || role === user.role);
+  const studentLogin = role === 'student';
+  const eligible = user?.isActive && (studentLogin
+    ? user.role === 'student' && user.studentPasswordSet === true
+    : ['admin', 'teacher'].includes(user.role) && (!role || role === user.role));
   const isMatch = await verifyPassword(password, (eligible && user.password) || dummyHash);
   if (!eligible || !isMatch) fail(401, 'Invalid credentials');
+  const student = studentLogin ? await activeStudent(user) : null;
+  if (studentLogin && !student) fail(401, 'Invalid credentials');
 
   if (isLegacyHash(user.password)) {
     await User.updateOne({_id:user._id,password:user.password},{$set:{password:await hashPassword(password)}});
   }
-  await completeLogin(req, res, user, null);
+  await completeLogin(req, res, user, student, {studentPasswordVerified:studentLogin});
 });
+
 
 const nonceCookie = () => process.env.NODE_ENV === 'production' ? '__Host-telesom_google' : 'telesom_google';
 const nonceOptions = () => ({httpOnly:true,secure:process.env.NODE_ENV === 'production',sameSite:'strict',path:'/'});
@@ -88,7 +93,7 @@ const googleLogin = asyncHandler(async (req, res) => {
   const student = user ? await activeStudent(user) : null;
   if (!student) fail(401, 'Use the Google account registered by your administrator.');
   res.clearCookie(nonceCookie(), nonceOptions());
-  await completeLogin(req, res, user, student, true);
+  await completeLogin(req, res, user, student, {googleVerified:true});
 });
 
 // Accounts can only be provisioned by the administrator.
@@ -96,7 +101,7 @@ const register = (req, res) => res.status(403).json({ success: false, message: '
 const currentSession = asyncHandler(async (req,res) => {
   const student = req.user.role === 'student' ? await activeStudent(req.user) : null;
   if (req.user.role === 'student' && !student) fail(403, 'Student account is inactive.');
-  if (student && !req.googleVerified) {
+  if (student && !req.googleVerified && !(req.studentPasswordVerified && req.user.studentPasswordSet)) {
     fail(401, 'Sign in with your registered Google account.');
   }
   res.json({success:true,user:await sessionUser(req.user,student)});

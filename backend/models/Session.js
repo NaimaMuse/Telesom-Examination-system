@@ -5,6 +5,7 @@ const schema = new mongoose.Schema({
   user: {type:mongoose.Schema.Types.ObjectId, required:true, index:true},
   authVersion: {type:Number, required:true},
   googleVerified: {type:Boolean, default:false},
+  studentPasswordVerified: {type:Boolean, default:false},
   expiresAt: {type:Date, required:true, expires:0},
 });
 

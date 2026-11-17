@@ -36,19 +36,18 @@ export default function LoginPage({ staff = false, recovery = false }) {
   const signInWithGoogle = useCallback(credential => signIn({credential}), [signIn]);
   const submit = event => {
     event.preventDefault();
-    signIn({email:email.trim().toLowerCase(),password});
+    signIn({email:email.trim().toLowerCase(),password,...(!staff ? {role:'student'} : {})});
   };
 
   return (
-    <main className={`auth-page-wrapper portal-login${staff ? ' staff-login' : ''}`}>
+    <main className={`auth-page-wrapper portal-login${staff ? ' staff-login' : !recovery ? ' student-login' : ''}`}>
       <div className="auth-centered-container">
-        <section className="auth-card" aria-label={staff && !recovery ? 'Staff sign in' : undefined}
-          aria-labelledby={!staff || recovery ? 'login-title' : undefined}>
+        <section className="auth-card" aria-labelledby="login-title">
           <header className="auth-card-header">
-            <div className="header-brand-wrap"><TelesomLogo size={staff ? 'md' : 'sm'} /></div>
+            <div className="header-brand-wrap"><TelesomLogo size={staff || !recovery ? 'md' : 'sm'} /></div>
+            {staff && !recovery && <h1 id="login-title">Staff sign in</h1>}
             {!staff && !recovery && <>
               <h1 id="login-title">Student sign in</h1>
-              <p>Use the Google account registered by your administrator.</p>
             </>}
             {recovery && <h1 id="login-title">{staff ? 'Staff password help' : 'Reset student password'}</h1>}
             {studentRecovery && <p>Use your registered Google account to reset your portal password.</p>}
@@ -62,14 +61,18 @@ export default function LoginPage({ staff = false, recovery = false }) {
                 Reset a student password
               </Link>
             </div>
-          ) : !staff ? (
+          ) : studentRecovery ? (
             <div className="auth-form" aria-busy={loading}>
               <GoogleSignIn onCredential={signInWithGoogle} busy={loading} />
               {loading && <p className="google-sign-in-message" role="status">Signing in…</p>}
-              {!recovery && <Link className="portal-forgot-password student-forgot-password" to="/student/forgot-password">Forgot password?</Link>}
             </div>
           ) : (
-            <form className="auth-form" onSubmit={submit} aria-label="Staff sign in" aria-busy={loading}>
+            <>
+            {!staff && <div className="student-google-option">
+              <p>First time? Sign in with Google.</p>
+              <GoogleSignIn onCredential={signInWithGoogle} busy={loading} />
+            </div>}
+            <form className="auth-form" onSubmit={submit} aria-label={staff ? 'Staff sign in' : 'Student password sign in'} aria-busy={loading}>
               <div className="form-field-group">
                 <label htmlFor="login-username">Email</label>
                 <div className="input-with-icon">
@@ -110,11 +113,12 @@ export default function LoginPage({ staff = false, recovery = false }) {
                   </button>
                 </div>
               </div>
-              <Link className="portal-forgot-password" to="/staff/forgot-password">Forgot password?</Link>
+              <Link className="portal-forgot-password" to={staff ? '/staff/forgot-password' : '/student/forgot-password'}>Forgot password?</Link>
               <button type="submit" className="btn-auth-primary green-btn" disabled={loading}>
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
             </form>
+            </>
           )}
 
           <footer className="auth-card-footer">

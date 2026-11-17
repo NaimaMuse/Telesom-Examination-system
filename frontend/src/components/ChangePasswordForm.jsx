@@ -62,7 +62,7 @@ export default function ChangePasswordForm({ onSuccess, onClose, onSignOut, requ
         {(isStudent || user?.mustChangePassword) && (
           <p className="password-dialog-intro">
             {isStudent
-              ? 'Set a password for your Telesom Academy account. Use your registered Google account each time you sign in.'
+              ? 'Use your registered email and this password the next time you sign in.'
               : 'Choose your own password to replace the temporary one.'}
           </p>
         )}

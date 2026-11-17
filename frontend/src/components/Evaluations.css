@@ -428,3 +428,13 @@
 .ev-list-notice [role="status"] { display: flex; align-items: center; gap: 8px; font-weight: 700; }
 .ev-list-notice svg { color: var(--brand-green-active); }
 .evaluations .ev-list-notice button { background: transparent; border-color: transparent; color: inherit; font-size: 18px; }
+.ev-list-notice.ev-success-toast {
+  position: fixed;
+  inset: calc(env(safe-area-inset-top, 0px) + 16px) 16px auto auto;
+  z-index: 1200;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 5px 8px 5px 10px;
+  font-size: .82rem;
+  box-shadow: 0 6px 18px #164f2426;
+}

@@ -19,6 +19,7 @@ async function protect(req, res, next) {
       authVersion = session?.authVersion;
       req.browserSession = true;
       req.googleVerified = session?.googleVerified === true;
+      req.studentPasswordVerified = session?.studentPasswordVerified === true;
     } else {
       if (!authorization?.startsWith('Bearer ')) return deny(res,next,401,'Not authorized, no token provided or invalid format');
       const secret = process.env.JWT_SECRET;
@@ -37,7 +38,8 @@ async function protect(req, res, next) {
     if (!user) return deny(res,next,401,'Session expired. Please sign in again.');
     if (!user.isActive) return deny(res,next,403,'Account is inactive, please contact administrator');
     if ((authVersion || 0) !== (user.authVersion || 0)) return deny(res,next,401,'Session expired. Please sign in again.');
-    if (user.role === 'student' && req.browserSession && !req.googleVerified) {
+    if (user.role === 'student' && req.browserSession && !req.googleVerified &&
+        !(req.studentPasswordVerified && user.studentPasswordSet)) {
       return deny(res,next,401,'Sign in with your registered Google account.');
     }
 

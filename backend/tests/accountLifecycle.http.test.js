@@ -90,6 +90,7 @@ let server;
  assert.strictEqual((await request('POST','/auth/login',{studentId:'UNKNOWN',role:'student'})).status,401);
  const studentUserId=student.body.data.user._id;
  const studentPassword='Student-portal-password!';
+ assert.strictEqual((await request('POST','/auth/login',{email:studentEmail,password:studentPassword,role:'student'})).status,401);
  const legacyToken=generateToken(studentUserId);
  assert.strictEqual((await request('PUT','/auth/student/password',{newPassword:studentPassword},legacyToken)).status,403);
  assert.strictEqual((await request('POST','/auth/login',{email:studentEmail,password:studentPassword})).status,401);
@@ -130,8 +131,17 @@ let server;
  assert.strictEqual(restored.status,200);
  assert.strictEqual((await restored.json()).user.mustChangePassword,false);
  assert.strictEqual((await fetch(base+'/auth/session',{headers:{Cookie:googleSession,Origin:origin}})).status,401);
- const studentLogin=await request('POST','/auth/login',{email:studentEmail,password:studentPassword,role:'student'});
- assert.strictEqual(studentLogin.status,401);
+ const studentLogin=await fetch(base+'/auth/login',{
+  method:'POST',headers:browserHeaders,body:JSON.stringify({email:studentEmail,password:studentPassword,role:'student'}),
+ });
+ assert.strictEqual(studentLogin.status,200);
+ assert.strictEqual((await studentLogin.json()).token,undefined);
+ const passwordSession=studentLogin.headers.get('set-cookie').split(';')[0];
+ assert.strictEqual((await fetch(base+'/auth/session',{headers:{Cookie:passwordSession,Origin:origin}})).status,200);
+ assert.strictEqual((await fetch(base+'/profile',{headers:{Cookie:passwordSession,Origin:origin}})).status,200);
+ assert.strictEqual((await fetch(base+'/auth/student/password',{
+  method:'PUT',headers:{...browserHeaders,Cookie:passwordSession},body:JSON.stringify({newPassword:'Replacement-password!'}),
+ })).status,403);
  const studentRequest=(method,path,body)=>fetch(base+path,{
   method,headers:{...browserHeaders,Cookie:newSession},body:body?JSON.stringify(body):undefined,
  });
@@ -150,6 +160,9 @@ let server;
  const resetHash=(await User.findById(studentUserId).select('+password')).password;
  assert.strictEqual(await verifyPassword(replacement,resetHash),true);
  assert.strictEqual(await verifyPassword(studentPassword,resetHash),false);
+ assert.strictEqual((await fetch(base+'/auth/session',{headers:{Cookie:passwordSession,Origin:origin}})).status,401);
+ assert.strictEqual((await request('POST','/auth/login',{email:studentEmail,password:studentPassword,role:'student'})).status,401);
+ assert.strictEqual((await request('POST','/auth/login',{email:studentEmail,password:replacement,role:'student'})).status,200);
  assert.strictEqual((await request('POST','/auth/login',{email:studentEmail,password:replacement})).status,401);
  assert.strictEqual((await studentRequest('POST','/users/teachers',{name:'Blocked',email:'blocked@test.example'})).status,403);
  assert.strictEqual((await studentRequest('PUT','/auth/password',{currentPassword:'anything',newPassword:'Something-new!'})).status,403);

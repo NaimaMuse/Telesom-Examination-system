@@ -14,7 +14,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
  const {app}=require('../server'),token=require('../utils/generateToken');server=app.listen(0);await new Promise(r=>server.on('listening',r));const base=`http://127.0.0.1:${server.address().port}/api`;
  const admin=await User.create({name:'Admin Test',email:'admin@eval.test',role:'admin',password:'hashed-test-password'});
  const users=[],students=[];for(let i=0;i<4;i++){const u=await User.create({name:'Student '+i,email:`student${i}@eval.test`,role:'student'});users.push(u);students.push(await Student.create({user:u._id,studentId:'EVAL-'+i,gender:'female'}));}
- const course=await Course.create({name:'Evaluation Course'});for(const s of students.slice(0,3))await Enrollment.create({student:s._id,course:course._id,academicYear:'2026'});
+ const course=await Course.create({name:'Evaluation Course',durationWeeks:16});for(const s of students.slice(0,3))await Enrollment.create({student:s._id,course:course._id,academicYear:'2026'});
  async function req(method,p,body,user=admin){const r=await fetch(base+p,{method,headers:{Authorization:'Bearer '+token(user._id),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};}
  function ok(r,status=200){assert.equal(r.status,status,JSON.stringify(r.data));return r.data;}
  const eligible=ok(await req('GET','/evaluations/eligible/'+course._id));assert.equal(eligible.total,3);
@@ -45,7 +45,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
  await assert.rejects(()=>Response.create({form:f._id,student:students[winner]._id,answers:{}}),e=>e.code===11000);
  const copy=ok(await req('POST',`/evaluations/${f._id}/duplicate`)).form;assert.equal(copy.responseCount,0);assert.equal(copy.status,'draft');
  ok(await req('DELETE','/evaluations/'+copy._id));assert.equal(await Form.countDocuments({_id:copy._id}),0);
- const secondCourse=await Course.create({name:'Second Evaluation Course'});
+ const secondCourse=await Course.create({name:'Second Evaluation Course',durationWeeks:16});
  await Enrollment.create({student:students[0]._id,course:secondCourse._id,academicYear:'2026'});
  await Enrollment.create({student:students[3]._id,course:secondCourse._id,academicYear:'2026'});
  assert.equal(ok(await req('GET','/evaluations/eligible/all')).total,4);
