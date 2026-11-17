@@ -27,6 +27,11 @@ const studentSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    profilePicture: {
+      type: String,
+      default: '',
+      select: false,
+    },
     address: {
       type: String,
       trim: true,

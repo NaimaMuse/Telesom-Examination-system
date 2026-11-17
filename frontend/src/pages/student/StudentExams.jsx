@@ -2,12 +2,14 @@ import {AssessmentProgress} from '../../components/AcademyWorkspace';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import TeachingIcon from '../../components/TeachingIcon';
+import StudentQuizzes from './StudentQuizzes';
 import './StudentExams.css';
 
 
 function gradeColor(g){ return g==='A'?'grade-A':g==='B'?'grade-B':g==='C'?'grade-C':g==='D'?'grade-D':'grade-F'; }
 
-export default function StudentExams() {
+export default function StudentResults() {
   const [search] = usePageSearch();
   const [error, setError] = useState('');
   const [results, setResults] = useState([]);
@@ -54,17 +56,21 @@ export default function StudentExams() {
     : 0;
 
   return (
-    <section className="student-results" aria-labelledby="student-results-title">
-      <header className="student-results-heading">
-        <div><h1 id="student-results-title">Exams &amp; Results</h1><p>Review your published marks and grades.</p></div>
-        {!loading && results.length > 0 && <div className="student-results-average"><span>Average score</span><strong>{avg}%</strong></div>}
-      </header>
+    <section className="certificates-panel student-achievement-panel student-results" aria-label="Exam and quiz results">
+      <div className="student-results-body">
       {error && <p className="academy-error" role="alert">{error}</p>}
       <section className="student-results-list" aria-labelledby="published-results-title">
-        <header><h2 id="published-results-title">My Results</h2><span>{visibleResults.length}</span></header>
+        <header>
+          <h3 id="published-results-title">Exam Results</h3>
+          {!loading && <span className="student-results-count">{visibleResults.length}</span>}
+          {!loading && results.length > 0 && <div className="student-results-average">Average score <strong>{avg}%</strong></div>}
+        </header>
         {loading ? <div className="spinner-wrap" role="status" aria-label="Loading results"><div className="spinner"/></div>
           : visibleResults.length === 0 ? (
-            <div className="empty-state"><h3>{search ? 'No matching results' : 'No published results yet'}</h3><p>{search ? 'Try another course, assessment or grade.' : 'Your marks will appear here once published.'}</p></div>
+            <div className="student-results-empty">
+              <span className="certificates-icon"><TeachingIcon name="file" size={20}/></span>
+              <div><h4>{search ? 'No matching results' : 'No published results yet'}</h4><p>{search ? 'Try another course, assessment or grade.' : 'Your marks will appear here once published.'}</p></div>
+            </div>
           ) : (
             <ul>{visibleResults.map(result => (
               <li key={result._id}>
@@ -80,7 +86,9 @@ export default function StudentExams() {
             ))}</ul>
           )}
       </section>
+      <StudentQuizzes resultsOnly />
       <AssessmentProgress courseMarksOnly />
+      </div>
     </section>
   );
 }

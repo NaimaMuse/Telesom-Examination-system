@@ -1,6 +1,8 @@
 import {useState} from 'react';
-import {Link} from 'react-router-dom';
+import {Link, useSearchParams} from 'react-router-dom';
 import TeachingIcon from '../../components/TeachingIcon';
+import {CourseOutlines} from '../../components/AcademyWorkspace';
+import StudentNotes from './StudentNotes';
 import {usePageSearch, matchesPageSearch} from '../../context/PageSearchContext';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import api from '../../services/api';
@@ -31,7 +33,6 @@ function CourseCard({course, nextClass}) {
     <div className="student-course-info">
       <div className="student-course-title">
         <h3>{course.name}</h3>
-        {course.code && <span className="student-course-list-code">{course.code}</span>}
         {course.credits != null && <span>{course.credits} {Number(course.credits) === 1 ? 'credit' : 'credits'}</span>}
       </div>
       {course.description && <p>{course.description}</p>}
@@ -51,14 +52,42 @@ function CourseCard({course, nextClass}) {
   </article>;
 }
 
+const courseSections = [
+  {id:'courses', icon:'grid', label:'My Courses'},
+  {id:'outline', icon:'book', label:'Course Outline'},
+  {id:'notes', icon:'file', label:'Study Notes'},
+];
+
 export default function StudentCourses() {
+  const [params] = useSearchParams();
+  const active = courseSections.find(section => section.id === params.get('tab')) || courseSections[0];
+
+  return <section className="student-courses-page" aria-label="Course workspace">
+    <div className="student-courses-body">
+    <nav className="student-learning-nav" aria-label="Course sections">
+      {courseSections.map(({id, icon, label}) => <Link
+        key={id}
+        to={{search: id === 'courses' ? '' : '?tab=' + id}}
+        aria-current={active.id === id ? 'page' : undefined}
+      >
+        <TeachingIcon name={icon} size={16}/>
+        <span>{label}</span>
+      </Link>)}
+    </nav>
+    {active.id === 'courses' && <EnrolledCourses/>}
+    {active.id === 'outline' && <CourseOutlines role="student"/>}
+    {active.id === 'notes' && <div className="student-notes-page"><StudentNotes/></div>}
+    </div>
+  </section>;
+}
+
+function EnrolledCourses() {
   const [search] = usePageSearch();
   const [error, setError] = useState('');
   const [courses, setCourses] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [makeupClasses, setMakeupClasses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('grid');
 
   useAutoRefresh(async ({signal, isCurrent}) => {
     const [courseResult, makeupResult] = await Promise.allSettled([
@@ -87,11 +116,7 @@ export default function StudentCourses() {
     ['teacher', courses.filter(course => course.teacher && course.teacher !== 'Not assigned').length, 'Courses with instructors'],
   ];
 
-  return <section className="student-courses-page" aria-labelledby="student-courses-title">
-    <header className="student-courses-banner">
-      <h1 id="student-courses-title">My Courses</h1>
-      <p>Find your enrolled courses, instructors, and classroom schedules.</p>
-    </header>
+  return <>
     {error && <div className="card card-body" role="alert">{error}</div>}
     {loading ? <div className="spinner-wrap" role="status" aria-label="Loading courses"><div className="spinner"/></div> : <>
       <dl className="student-course-stats" aria-label="Course summary">
@@ -102,21 +127,17 @@ export default function StudentCourses() {
       </dl>
       <div className="student-course-toolbar">
         <h2>Enrolled Courses ({visibleCourses.length})</h2>
-        <div role="group" aria-label="Course layout">
-          {['grid','list'].map(option => <button type="button" key={option}
-            aria-pressed={view === option} onClick={() => setView(option)}>
-            <TeachingIcon name={option} size={15}/> {option}
-          </button>)}
-        </div>
       </div>
-      {visibleCourses.length ? <div className={'student-courses-grid view-' + view}>
+      {visibleCourses.length ? <div className="student-courses-grid view-grid">
         {visibleCourses.map(course => <CourseCard key={course._id} course={course}
           nextClass={upcoming.find(item => item.courseId === course._id)}/>)}
       </div> : <div className="student-courses-empty">
-        <TeachingIcon name="book" size={30}/>
-        <h3>{search ? 'No matching courses' : 'No courses enrolled'}</h3>
-        <p>{search ? 'Try another course name, teacher or semester.' : 'Contact the admin to enroll in courses.'}</p>
+        <span aria-hidden="true"><TeachingIcon name="book" size={20}/></span>
+        <div>
+          <h3>{search ? 'No matching courses' : 'No courses enrolled'}</h3>
+          <p>{search ? 'Try another course name, teacher or semester.' : 'Contact the admin to enroll in courses.'}</p>
+        </div>
       </div>}
     </>}
-  </section>;
+  </>;
 }

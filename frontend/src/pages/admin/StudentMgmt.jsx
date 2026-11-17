@@ -403,6 +403,7 @@ export default function StudentMgmt() {
   const [editTarget, setEditTarget] = useState(null);
   const [viewStudentId, setViewStudentId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting]     = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -577,6 +578,7 @@ export default function StudentMgmt() {
         if (!Array.isArray(data.data)) throw new Error('Could not verify existing students.');
         pages = data.pagination?.pages ?? 1;
         for (const record of data.data) {
+          if (record.status === 'dropped' && record.user?.isActive === false) continue;
           rememberStudent(normalizeName(record.user?.name || record.name), normalizeEmail(record.user?.email || record.email));
         }
       }
@@ -646,11 +648,12 @@ export default function StudentMgmt() {
 
   const handleDelete = async () => {
     setDeleting(true);
+    setDeleteError('');
     try {
       await api.delete(`/students/${deleteTarget._id}`);
-      await fetchStudents();
-    } catch {
-      setStudents(prev => prev.filter(s => s._id !== deleteTarget._id));
+      await Promise.all([fetchStudents(), fetchEnrollments()]);
+    } catch (error) {
+      setDeleteError(error.response?.data?.message || 'Could not delete the student. Please try again.');
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -659,6 +662,7 @@ export default function StudentMgmt() {
 
   return (
     <>
+      {deleteError && <div className="student-form-error" role="alert">{deleteError}</div>}
       {createdStudentLogin && <div className="card card-body" role="status" style={{marginBottom:16,display:'flex',gap:12,alignItems:'center',justifyContent:'space-between'}}><div><strong>{createdStudentLogin.name}: account created</strong><p>Student ID: <strong>{createdStudentLogin.studentId}</strong>. {createdStudentLogin.email ? `Sign in with the Google account for ${createdStudentLogin.email}.` : 'Add the student’s Google account email to enable sign-in.'}</p></div><button type="button" className="btn btn-sm btn-secondary" aria-label="Dismiss student sign-in details" onClick={()=>setCreatedStudentLogin(null)}>×</button></div>}
       <div className="page-header student-management-header">
         <div className="student-management-actions">
@@ -787,7 +791,7 @@ export default function StudentMgmt() {
       )}
       {deleteTarget && (
         <ConfirmModal
-          message={`Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`}
+          message={`Delete "${deleteTarget.name}"? This disables their login and frees their email for a new registration. Academic records are kept.`}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
           loading={deleting}

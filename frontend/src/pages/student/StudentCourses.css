@@ -1,54 +1,74 @@
+.dash-content.student-courses-content { padding-top: 0; padding-inline: 0; }
+
 .student-courses-page {
-  max-width: 1120px;
-  margin-inline: auto;
   color: var(--text-primary);
   container-type: inline-size;
 }
-.student-courses-banner { margin-bottom: 14px; }
-.student-courses-banner h1 { margin: 0 0 4px; font-size: 1.4rem; color: var(--brand-green-deep); }
-.student-courses-banner h1::after { content: ''; display: block; width: 32px; height: 2px; margin-top: 3px; border-radius: 3px; background: var(--brand-gold); }
-.student-courses-banner p { margin: 0; color: var(--text-secondary); font-size: 0.85rem; }
+.student-courses-body {
+  container-type: inline-size;
+}
+.student-learning-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--brand-green-border);
+  background: #fff;
+}
+.student-learning-nav > a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 5px 8px;
+  border-bottom: 2px solid transparent;
+  color: var(--brand-green-deep);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.student-learning-nav > a:hover { background: var(--brand-green-tint); }
+.student-learning-nav > a[aria-current="page"] {
+  background: var(--brand-gold-tint);
+  border-bottom-color: var(--brand-gold);
+}
+.student-learning-nav > a:focus-visible { outline: 2px solid var(--brand-green-deep); outline-offset: -3px; }
+.student-learning-nav svg { flex: 0 0 auto; }
+@container (max-width: 540px) {
+  .student-learning-nav > a { flex-direction: column; gap: 3px; min-height: 44px; padding-inline: 2px; line-height: 1.2; text-align: center; }
+}
 
 .student-course-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0 0 13px;
+  gap: 1px;
+  margin: 0 0 10px;
+  border-block: 1px solid var(--brand-green-border);
+  overflow: hidden;
+  background: var(--brand-green-border);
 }
 .student-course-stats > div {
+  --stat-accent: #176544;
+  --stat-tint: #e5f5eb;
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 8px;
-  border: 1px solid var(--brand-green-border);
-  border-radius: 10px;
-  color: var(--brand-green-deep);
-  background: var(--brand-green-tint);
+  padding: 8px clamp(10px, 2cqw, 22px);
+  border-top: 2px solid var(--stat-accent);
+  color: var(--stat-accent);
+  background: var(--stat-tint);
 }
-.student-course-stats > div:nth-child(even) { border-color: var(--brand-gold-border); background: var(--brand-gold-tint); }
+.student-course-stats > div:nth-child(2) { --stat-accent: #855205; --stat-tint: #fff2d9; }
+.student-course-stats > div:nth-child(3) { --stat-accent: #225d8b; --stat-tint: #e8f3fd; }
+.student-course-stats > div:nth-child(4) { --stat-accent: #694195; --stat-tint: #f2eafa; }
 .student-course-stats > div > div { display: flex; flex-direction: column-reverse; }
 .student-course-stats svg { flex-shrink: 0; }
-.student-course-stats dt { font-size: 0.75rem; line-height: 1.3; }
+.student-course-stats dt { color: var(--text-primary); font-size: 0.75rem; line-height: 1.3; }
 .student-course-stats dd { margin: 0 0 1px; font-size: 1rem; font-weight: 800; line-height: 1.15; }
 
-.student-course-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.student-course-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; padding-inline: clamp(10px, 2cqw, 22px); }
 .student-course-toolbar h2 { margin: 0; color: var(--brand-green-deep); font-size: 0.98rem; }
-.student-course-toolbar [role="group"] { display: flex; gap: 4px; }
-.student-course-toolbar button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
-  border: 1px solid var(--brand-green-border);
-  border-radius: 7px;
-  background: white;
-  color: var(--brand-green-deep);
-  font: inherit;
-  font-size: 0.8rem;
-  text-transform: capitalize;
-  cursor: pointer;
-}
-.student-course-toolbar button[aria-pressed="true"] { background: var(--brand-gold-tint); border-color: var(--brand-gold); font-weight: 700; }
 
 .student-courses-grid { display: grid; gap: 8px; }
 .student-courses-tile {
@@ -88,12 +108,10 @@
 .student-course-next time, .student-course-next strong { color: var(--brand-green-deep); font-weight: 800; }
 .student-course-next a { display: inline-flex; align-items: center; gap: 5px; margin-top: 3px; padding: 4px 7px; border-radius: 6px; background: var(--brand-green-deep); color: white; text-decoration: none; font-weight: 700; }
 .student-course-next a:hover { background: var(--brand-green); }
-.view-list .student-courses-tile { grid-template-columns: minmax(0, 1fr) minmax(130px, 21%); }
-.view-list .student-course-cover { display: none; }
-.student-course-list-code { display: none; }
-.view-list .student-course-list-code { display: inline; background: var(--brand-gold-tint); }
-.student-courses-empty { padding: 24px 16px; border: 1px solid var(--brand-green-border); border-radius: 12px; background: white; text-align: center; }
-.student-courses-empty svg { color: var(--brand-green-deep); }
+.student-courses-empty { display: flex; align-items: center; gap: 10px; padding: 12px clamp(10px, 2cqw, 22px); border-block: 1px solid var(--brand-green-border); background: white; }
+.student-courses-empty > span { display: grid; flex: 0 0 34px; height: 34px; place-items: center; border-radius: 8px; background: var(--brand-green-tint); color: var(--brand-green-deep); }
+.student-courses-empty h3 { margin: 0 0 2px; font-size: 0.95rem; color: var(--brand-green-deep); }
+.student-courses-empty p { margin: 0; font-size: 0.82rem; color: var(--text-secondary); }
 
 @container (min-width: 750px) {
   .student-courses-grid.view-grid:has(> :nth-child(2)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -102,7 +120,7 @@
 }
 @container (max-width: 620px) {
   .student-course-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .student-courses-tile, .view-list .student-courses-tile { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .student-courses-tile { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .student-course-cover { min-height: 72px; }
   .student-course-next { border-left: 0; border-top: 1px solid var(--brand-green-border); padding: 8px 0 0; }
 }

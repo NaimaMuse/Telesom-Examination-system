@@ -1,0 +1,63 @@
+.student-page-banner {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  width: min(calc(100% - 28px), 1500px);
+  min-height: 78px;
+  margin: 10px auto 0;
+  padding: 12px clamp(16px, 2.2vw, 30px);
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(105deg, #034332, #075e47 68%, #08734d);
+  color: #fff;
+}
+
+.student-page-banner::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 0 auto;
+  width: min(34%, 290px);
+  background: url('/certificates-graduation.webp') no-repeat right -8px center / auto 145%;
+  mask-image: linear-gradient(to right, transparent, #000 28%);
+  content: '';
+}
+
+.student-page-banner-copy {
+  max-width: min(72%, 820px);
+}
+
+.student-page-banner h1 {
+  margin: 0;
+  color: inherit;
+  font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.student-page-banner p {
+  margin: 5px 0 0;
+  color: #e9f7f1;
+  font-size: clamp(0.82rem, 1.25vw, 0.96rem);
+  line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+  .student-page-banner {
+    width: calc(100% - 24px);
+    min-height: 72px;
+    margin-top: 8px;
+    padding: 11px 15px;
+  }
+
+  .student-page-banner::after {
+    width: 28%;
+    background-size: auto 100%;
+    opacity: 0.65;
+  }
+
+  .student-page-banner-copy {
+    max-width: 82%;
+  }
+}

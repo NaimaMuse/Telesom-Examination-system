@@ -1,0 +1,454 @@
+.student-dashboard-main:has(.student-home) {
+  height: calc(100dvh - var(--topbar-h) - 88px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.student-dashboard-main:has(.student-home) > .dash-content {
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 14px;
+  background: transparent;
+}
+
+.student-home {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  width: min(100%, 1500px);
+  height: 100%;
+  margin: 0 auto;
+  color: #123d2a;
+  font-size: 12px;
+}
+
+.student-home-alert {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  max-width: min(320px, 55%);
+  padding: 6px 10px;
+  border: 1px solid #e8c66c;
+  border-radius: 7px;
+  background: #fff9e8;
+  color: #654c12;
+}
+
+.student-home-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.student-home-stats > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 7px 12px;
+  border: 1px solid #cfe3d7;
+  border-left: 3px solid #078347;
+  border-radius: 10px;
+  background: linear-gradient(110deg, #f0f8f2, #fff);
+}
+
+.student-home-stats > div:nth-child(even) {
+  border-left-color: #e0a318;
+  background: linear-gradient(110deg, #fff8e6, #fff);
+}
+
+.student-home-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 8px;
+  background: #e6f5eb;
+  color: #078347;
+}
+
+.student-home-stats dt {
+  order: 2;
+  color: #183e2d;
+  font-size: 12px;
+}
+
+.student-home-stats dd {
+  order: 1;
+  margin: 0 0 1px;
+  color: #064e31;
+  font-size: 22px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.student-home-stats > div > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.student-calendar-layout {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.student-class-calendar,
+.student-course-duration,
+.student-home-panel {
+  min-width: 0;
+  border: 1px solid #d5e8dc;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 3px 10px #0e4a2810;
+}
+
+.student-class-calendar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.student-calendar-header,
+.student-home-panel > header {
+  min-height: 43px;
+  padding: 6px 10px;
+  border-bottom: 2px solid #e0ae35;
+  background: #005035;
+  color: #fff;
+}
+
+.student-calendar-title h2,
+.student-home-panel > header h2,
+.student-calendar-title p {
+  color: inherit;
+}
+
+.student-calendar-title h2,
+.student-home-panel > header h2 {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.student-calendar-title p {
+  color: #e0f3e8;
+  font-size: 11px;
+}
+
+.student-calendar-controls {
+  gap: 6px;
+}
+
+.student-calendar-controls strong {
+  color: #fff;
+  font-size: 12px;
+}
+
+.student-calendar-grid {
+  flex: 1;
+  grid-template-rows: 25px repeat(6, minmax(0, 1fr));
+}
+
+.student-calendar-grid.view-week {
+  grid-template-rows: 25px minmax(0, 1fr);
+}
+
+.student-calendar-grid.view-day {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.student-calendar-grid > button {
+  min-height: 0;
+}
+
+.student-calendar-legend {
+  min-height: 28px;
+  font-size: 11px;
+}
+
+.student-calendar-sidebar {
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.student-home-panel {
+  overflow: hidden;
+}
+
+.student-home-panel > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-home-panel > header > svg {
+  flex: 0 0 auto;
+  color: #f2bd48;
+}
+
+.student-home-panel > header a {
+  margin-left: auto;
+  color: #f4ce68;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.student-home-course {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+}
+
+.student-home-course > div {
+  min-width: 0;
+}
+
+.student-home-course strong,
+.student-home-course small,
+.student-home-next strong,
+.student-home-next small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.student-home-course strong,
+.student-home-next strong {
+  color: #152b20;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.student-home-course small,
+.student-home-next small {
+  margin-top: 3px;
+  color: #53665b;
+  font-size: 11px;
+}
+
+.student-home-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.student-home-progress progress {
+  width: 100%;
+  height: 9px;
+  accent-color: #078347;
+}
+
+.student-home-progress strong {
+  color: #005035;
+  font-size: 13px;
+}
+
+.student-home-empty {
+  padding: 12px;
+  color: #53665b;
+}
+
+.student-home-bottom {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.student-home-next {
+  padding: 10px;
+}
+
+.student-home-assessments,
+.student-home-announcements {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.student-home-assessments li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 43px;
+  padding: 6px 9px;
+  border-bottom: 1px solid #e6eee8;
+}
+
+.student-home-assessments li > div {
+  min-width: 0;
+}
+
+.student-home-assessments li strong,
+.student-home-assessments li small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-home-assessments li strong {
+  font-size: 11px;
+}
+
+.student-home-assessments li small,
+.student-home-assessments li time {
+  color: #53665b;
+  font-size: 10px;
+}
+
+.student-home-assessments li > span {
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: #e2f5e8;
+  color: #17653a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.student-home-assessments li > span:has(+ time) {
+  background: #fff0dc;
+  color: #774b13;
+}
+
+.student-home-announcements {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+}
+
+.student-home-announcements li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  overflow: hidden;
+  color: #1d3025;
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.student-home-announcements li::before {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #0b9b4d;
+  content: '';
+}
+
+@media (max-height: 700px) and (min-width: 781px) {
+  .student-dashboard-main:has(.student-home) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .student-dashboard-main:has(.student-home) > .dash-content {
+    overflow: visible;
+  }
+
+  .student-home {
+    height: auto;
+  }
+
+  .student-calendar-grid {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 780px) {
+  .student-dashboard-main:has(.student-home) {
+    height: calc(100dvh - var(--topbar-h) - 80px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .student-dashboard-main:has(.student-home) > .dash-content {
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .student-home {
+    height: auto;
+  }
+
+  .student-calendar-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .student-calendar-sidebar {
+    grid-template-rows: auto auto;
+  }
+
+  .student-home-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .student-calendar-grid {
+    grid-template-rows: 25px repeat(6, minmax(34px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .student-dashboard-main:has(.student-home) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .student-dashboard-main:has(.student-home) > .dash-content {
+    overflow: visible;
+  }
+
+  .student-home-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .student-home-stats > div {
+    gap: 8px;
+    padding: 6px 8px;
+  }
+
+  .student-calendar-header {
+    align-items: flex-start;
+  }
+
+  .student-calendar-controls {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-height: 700px) and (max-width: 780px) and (min-width: 521px) {
+  .student-dashboard-main:has(.student-home) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .student-dashboard-main:has(.student-home) > .dash-content {
+    overflow: visible;
+  }
+
+  .student-home {
+    height: auto;
+  }
+
+  .student-calendar-grid {
+    min-height: 220px;
+  }
+}

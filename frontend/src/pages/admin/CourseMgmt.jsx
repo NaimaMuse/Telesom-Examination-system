@@ -177,11 +177,11 @@ function CourseModal({ initial, onSave, onClose }) {
   );
 }
 
-function ConfirmModal({ course, onConfirm, onCancel, loading }) {
+function ConfirmModal({ course, error, onConfirm, onCancel, loading }) {
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <section className="modal-box" role="dialog" aria-modal="true" aria-labelledby="delete-course-title" onClick={(event) => event.stopPropagation()} style={{ maxWidth: 390 }}>
-        <div className="modal-body confirm-content"><div className="confirm-icon">!</div><h3 id="delete-course-title">Remove course?</h3><p>This will remove <strong>{course.name || course.title}</strong> from the course catalog.</p></div>
+        <div className="modal-body confirm-content"><div className="confirm-icon">!</div><h3 id="delete-course-title">Remove course?</h3><p>This will remove <strong>{course.name || course.title}</strong> from the course catalog.</p>{error && <p className="course-page-error" role="alert">{error}</p>}</div>
         <footer className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button><button type="button" className="btn btn-danger" onClick={onConfirm} disabled={loading}>{loading ? 'Removing…' : 'Remove course'}</button></footer>
       </section>
     </div>
@@ -200,6 +200,7 @@ export default function CourseMgmt() {
   const [editTarget, setEditTarget] = useState(null);
   const [viewCourse, setViewCourse] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
 
   const fetchCourses = useCallback(async (background = false, context = {}) => {
@@ -258,12 +259,13 @@ export default function CourseMgmt() {
 
   const deleteCourse = async () => {
     setDeleting(true);
+    setDeleteError('');
     try {
       await api.delete(`/courses/${deleteTarget._id}`);
       await fetchCourses();
       setDeleteTarget(null);
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Course could not be removed.');
+      setDeleteError(requestError.response?.data?.message || 'Course could not be removed.');
     } finally {
       setDeleting(false);
     }
@@ -322,7 +324,7 @@ export default function CourseMgmt() {
 
       {showModal && <CourseModal initial={editTarget} onSave={saveCourse} onClose={() => { setShowModal(false); setEditTarget(null); }} />}
       {viewCourse && <CourseDetails course={viewCourse} onClose={() => setViewCourse(null)} />}
-      {deleteTarget && <ConfirmModal course={deleteTarget} onConfirm={deleteCourse} onCancel={() => setDeleteTarget(null)} loading={deleting} />}
+      {deleteTarget && <ConfirmModal course={deleteTarget} error={deleteError} onConfirm={deleteCourse} onCancel={() => { setDeleteTarget(null); setDeleteError(''); }} loading={deleting} />}
     </div>
   );
 }

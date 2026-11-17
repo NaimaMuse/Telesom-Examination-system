@@ -1,4 +1,6 @@
 const express = require('express');
+const multer = require('multer');
+const sharp = require('sharp');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
 const { asyncHandler } = require('../controllers/resourceController');
@@ -117,6 +119,42 @@ router.get('/materials/:id/file',asyncHandler(async(req,res)=>{
 }));
 const { pick } = require('../controllers/resourceController');
 const User = require('../models/User');
+const pictureUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024, files: 1, fields: 0, parts: 2 },
+}).single('file');
+const pictureFormats = { 'image/jpeg': 'jpeg', 'image/png': 'png', 'image/webp': 'webp' };
+const invalidPicture = () => Object.assign(new Error('Choose a valid JPG, PNG or WebP image up to 2 MB.'), { statusCode: 400 });
+
+router.put('/profile-picture', (req, res, next) => {
+  pictureUpload(req, res, error => {
+    if (!(error instanceof multer.MulterError)) return next(error);
+    next(Object.assign(invalidPicture(), { statusCode: error.code === 'LIMIT_FILE_SIZE' ? 413 : 400 }));
+  });
+}, asyncHandler(async (req, res) => {
+  const format = pictureFormats[req.file?.mimetype];
+  if (!format || !req.file?.buffer) throw invalidPicture();
+  let picture;
+  try {
+    const image = sharp(req.file.buffer, { limitInputPixels: 16_000_000 });
+    const metadata = await image.metadata();
+    if (metadata.format !== format) throw invalidPicture();
+    const scaled = await image.autoOrient()
+      .resize(320, 320, { fit: 'cover', withoutEnlargement: true })
+      .webp({ quality: 82 }).toBuffer();
+    picture = 'data:image/webp;base64,' + scaled.toString('base64');
+  } catch {
+    throw invalidPicture();
+  }
+  await req.student.updateOne({ $set: { profilePicture: picture } });
+  res.json({ picture });
+}));
+
+router.delete('/profile-picture', asyncHandler(async (req, res) => {
+  await req.student.updateOne({ $unset: { profilePicture: 1 } });
+  res.json({ picture: '' });
+}));
+
 router.put('/profile', asyncHandler(async (req, res) => {
   const updates = pick(req.body, ['name']);
   const user = await User.findById(req.user._id);

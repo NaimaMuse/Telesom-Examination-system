@@ -12,7 +12,7 @@ const getOwnerFilter = (req) => {
 };
 
 const listNotes = asyncHandler(async (req, res) => {
-  const filters = getOwnerFilter(req);
+  const filters = { ...getOwnerFilter(req), archivedAt: null };
   for (const field of ['course', 'student', 'isPinned']) {
     if (req.query && req.query[field] !== undefined) {
       filters[field] = req.query[field];
@@ -36,6 +36,7 @@ const getNoteById = asyncHandler(async (req, res) => {
   }
   const note = await Note.findOne({
     _id: req.params.id,
+    archivedAt: null,
     ...getOwnerFilter(req),
   })
     .populate('createdBy', 'name email')
@@ -66,7 +67,7 @@ const updateNote = asyncHandler(async (req, res) => {
     throw new Error('Invalid note ID');
   }
   const note = await Note.findOneAndUpdate(
-    { _id: req.params.id, ...getOwnerFilter(req) },
+    { _id: req.params.id, archivedAt: null, ...getOwnerFilter(req) },
     pick(req.body, ['title', 'content', 'course', 'student', 'isPinned']),
     { new: true, runValidators: true }
   );

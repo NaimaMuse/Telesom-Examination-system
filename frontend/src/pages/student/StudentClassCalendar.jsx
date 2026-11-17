@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import TeachingIcon from '../../components/TeachingIcon';
-import {studentClassesOnDate, contractDurationLabel, makeupClassesByDate, teachingDateKey} from '../teacher/teachingSchedule.mjs';
+import {studentClassesOnDate, makeupClassesByDate, teachingDateKey} from '../teacher/teachingSchedule.mjs';
 import './StudentClassDates.css';
 
 const weekdays = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -11,30 +11,30 @@ const formatCourseDate = key => formatDate(new Date(key + 'T12:00:00Z'), {day:'n
 
 function StudentCourseDuration({schedules}) {
   const contracts = schedules.filter(schedule => schedule.startDate);
+  const [contractId, setContractId] = useState('');
+  const contract = contracts.find(item => item._id === contractId) || contracts[0];
   return <section className="student-course-duration" aria-labelledby="student-duration-title">
     <header className="student-calendar-header">
-      <div className="student-calendar-title"><TeachingIcon name="book" size={23}/><div>
+      <div className="student-calendar-title"><TeachingIcon name="calendar" size={21}/><div>
         <h2 id="student-duration-title">Course Duration</h2>
         <p>Your course dates and days left</p>
       </div></div>
     </header>
-    {contracts.length ? <ul>{contracts.map(contract => {
-      const unit = contract.dayBasis === 'calendar' ? 'calendar' : 'teaching';
-      const remaining = contract.remainingContractDays;
-      return <li key={contract._id}>
-        <h3>{contract.course.name}</h3>
-        <p>{[contract.cohort, contract.academicYear].filter(Boolean).join(' · ')}</p>
-        <p>{formatCourseDate(contract.startDate)}{contract.endDate ? ' – ' + formatCourseDate(contract.endDate) : ''}</p>
-        <dl>
-          <div><dt>Course length</dt><dd>{contractDurationLabel(contract)}</dd></div>
-          <div><dt>Days left</dt><dd>{remaining} {unit} {remaining === 1 ? 'day' : 'days'}</dd></div>
-        </dl>
-      </li>;
-    })}</ul> : <p className="student-duration-empty">Course dates will appear here once a teaching contract is assigned.</p>}
+    <div className="student-duration-body">
+      {contracts.length > 1 && <select aria-label="Course duration" value={contract?._id} onChange={event => setContractId(event.target.value)}>
+        {contracts.map(item => <option key={item._id} value={item._id}>{item.course.name}{item.cohort ? ' · ' + item.cohort : ''}</option>)}
+      </select>}
+      {contracts.length === 1 && <strong>{contract.course.name}</strong>}
+      <dl>
+        <div><dt>Start Date</dt><dd>{contract?.startDate ? formatCourseDate(contract.startDate) : '—'}</dd></div>
+        <div><dt>End Date</dt><dd>{contract?.endDate ? formatCourseDate(contract.endDate) : '—'}</dd></div>
+        <div><dt>Days Left</dt><dd>{contract?.remainingContractDays ?? '—'}</dd></div>
+      </dl>
+    </div>
   </section>;
 }
 
-export default function StudentClassCalendar({schedules, makeupClasses}) {
+export default function StudentClassCalendar({schedules, makeupClasses, sidebar}) {
   const today = teachingDateKey();
   const [selected, setSelected] = useState(today);
   const [view, setView] = useState('month');
@@ -89,8 +89,11 @@ export default function StudentClassCalendar({schedules, makeupClasses}) {
         </button>;
       })}
     </div>
-    <div className="student-calendar-legend"><span><i/> Class day</span><button type="button" onClick={()=>setSelected(today)}>Today</button></div>
+    <div className="student-calendar-legend"><span><i/> Class day</span><button type="button" onClick={()=>setSelected(today)}>Today: {formatDate(new Date(today + 'T12:00:00Z'), {weekday:'short', day:'numeric', month:'short', year:'numeric'})}</button></div>
   </section>
-  <StudentCourseDuration schedules={schedules}/>
+  <div className="student-calendar-sidebar">
+    {sidebar}
+    <StudentCourseDuration schedules={schedules}/>
+  </div>
   </div>;
 }

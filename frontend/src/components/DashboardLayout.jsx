@@ -9,6 +9,7 @@ import {AcademyReports,CohortManagement,CourseOutlines,MakeupClasses} from './Ac
 import TeacherContracts from './TeacherContracts';
 import NotificationBell from './NotificationBell';
 import TelesomLogo from './TelesomLogo';
+import StudentPageHeader from './StudentPageHeader';
 import { useState, useEffect } from 'react';
 import { NavLink, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -39,8 +40,7 @@ import TeacherResults    from '../pages/teacher/TeacherResults';
 // ─── Student Pages ──────────────────────────────────────────────
 import StudentDashboard  from '../pages/student/StudentDashboard';
 import StudentCourses    from '../pages/student/StudentCourses';
-import StudentExams      from '../pages/student/StudentExams';
-import StudentQuizzes    from '../pages/student/StudentQuizzes';
+import { StudentAssessments, StudentAwards } from '../pages/student/StudentAcademicPages';
 import StudentNotes      from '../pages/student/StudentNotes';
 import StudentAttendance from '../pages/student/StudentAttendance';
 import StudentProfile    from '../pages/student/StudentProfile';
@@ -121,13 +121,9 @@ const NAV = {
       section: 'Academics',
       items: [
         { to: '/student/courses',   label: 'My Courses',      icon: 'book' },
-        { to: '/student/certificates', label: 'Certificates', icon: 'graduate' },
+        { to: '/student/results', label: 'Results & Certificates', icon: 'graduate' },
+        { to: '/student/assessments', label: 'Exams & Quizzes', icon: 'chart' },
         { to: '/student/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
-        { to: '/student/exams',     label: 'Exams & Results', icon: 'chart' },
-        { to: '/student/quizzes',   label: 'Quizzes',         icon: 'clipboard' },
-        { to: '/student/makeup', label: 'Makeup Classes', icon: 'reschedule' },
-        { to: '/student/outlines', label: 'Course Outlines', icon: 'book' },
-        { to: '/student/notes',     label: 'Study Notes',     icon: 'file' },
         { to: '/student/attendance',label: 'Attendance',      icon: 'calendar' },
       ],
     },
@@ -196,12 +192,13 @@ const ROLE_ROUTES = {
       <Route path="evaluations" element={<Evaluations />} />
       <Route path="evaluations/:id" element={<Evaluations />} />
       <Route path="courses"     element={<StudentCourses />} />
-      <Route path="certificates" element={<Certificates key="student-certificates" />} />
-      <Route path="exams"       element={<StudentExams />} />
-      <Route path="quizzes"     element={<StudentQuizzes />} />
+      <Route path="results"     element={<StudentAwards />} />
+      <Route path="assessments" element={<StudentAssessments />} />
+      <Route path="certificates" element={<Navigate to="/student/results?tab=certificates" replace />} />
+      <Route path="exams"       element={<Navigate to="/student/results" replace />} />
+      <Route path="quizzes"     element={<Navigate to="/student/assessments?tab=quizzes" replace />} />
       <Route path="notes"       element={<StudentNotes />} />
       <Route path="attendance"  element={<StudentAttendance />} />
-      <Route path="makeup" element={<MakeupClasses role="student" />} />
       <Route path="outlines" element={<CourseOutlines role="student" />} />
       <Route path="profile"     element={<StudentProfile />} />
       <Route path="*"           element={<Navigate to="/student" replace />} />
@@ -213,7 +210,7 @@ const PAGE_META = {
   '/admin/evaluations': {title:'Evaluation Forms',hint:'Manage evaluations and review student feedback.'},
   '/admin/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/admin/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
-  '/student/evaluations': {title:'Evaluation Forms',hint:'Complete your assigned course evaluations.'},
+  '/student/evaluations': {title:'Evaluation Forms',hint:'Share feedback on your courses and learning experience.'},
   '/teacher/my-course/outline': {title:'Course Planner',hint:'Plan lessons, organize topics and track teaching progress.'},
   '/admin/reports': {title:'Reports Center',hint:'Filtered academy reports and exports.'},
   '/admin/cohorts': {title:'Years & Cohorts',hint:'Organize enrollments by academic year and cohort.'},
@@ -221,7 +218,7 @@ const PAGE_META = {
   '/admin/makeup': {title:'Makeup Classes',hint:'Schedule replacements for missed lessons.'},
   '/teacher/outlines': {title:'Teaching & Outlines',hint:'Your contract and course plan in one workspace.'},
   '/teacher/makeup': {title:'Makeup Classes',hint:'Your assigned replacement lessons.'},
-  '/student/outlines': {title:'Course Outlines',hint:'Published lessons and course progress.'},
+  '/student/outlines': {title:'Course Outlines',hint:'Explore published lessons and track your course progress.'},
   '/admin': { title: 'Admin Dashboard', hint: 'Overview of students, courses, exams, and reports.' },
   '/admin/students': { title: 'Student Management', hint: 'Add, edit, and manage student records.' },
   '/admin/internships': { title: 'Internships', hint: 'Record internship students and their placement dates.' },
@@ -241,15 +238,13 @@ const PAGE_META = {
   '/teacher/results': { title: 'Result', hint: 'Enter and review results for your enrolled students.' },
   '/teacher/performance': { title: 'Student Performance', hint: 'Scores, trends, and progress.' },
   '/teacher/profile': { title: 'My Profile', hint: 'Your account and contact details.' },
-  '/student': { title: 'Student Dashboard', hint: 'Courses, marks, and upcoming exams.' },
-  '/student/courses': { title: 'My Courses', hint: 'Enrolled courses and materials.' },
-  '/student/certificates': { title: 'Certificates', hint: 'View certificates awarded to you.' },
-  '/student/makeup': { title: 'Makeup Classes', hint: 'Your scheduled replacement classes.' },
-  '/student/exams': { title: 'Exams & Results', hint: 'Your marks, grades, and academic results.' },
-  '/student/quizzes': { title: 'Quizzes', hint: 'Quiz scores and practice.' },
-  '/student/notes': { title: 'Study Notes', hint: 'Notes shared by your teachers.' },
-  '/student/attendance': { title: 'My Attendance', hint: 'Track your attendance across all courses.' },
-  '/student/profile': { title: 'My Profile', hint: 'Personal info and student ID.' },
+  '/student': { title: 'Student Dashboard', hint: 'See your courses, progress, and upcoming classes at a glance.' },
+  '/student/courses': { title: 'My Courses', hint: 'Find your classes, follow lessons, and download study materials.' },
+  '/student/results': { title: 'Results & Certificates', hint: 'Review your published marks and earned certificates.' },
+  '/student/assessments': { title: 'Exams & Quizzes', hint: 'See upcoming exams and quizzes so you can prepare.' },
+  '/student/notes': { title: 'Study Notes', hint: 'Browse study materials shared by your teachers.' },
+  '/student/attendance': { title: 'My Attendance', hint: 'Review your class attendance and track your progress.' },
+  '/student/profile': { title: 'My Profile', hint: 'Manage your personal information and student account.' },
 };
 
 function getPageMeta(pathname) {
@@ -258,6 +253,32 @@ function getPageMeta(pathname) {
     .filter((p) => p !== `/${pathname.split('/')[1]}` && pathname.startsWith(p))
     .sort((a, b) => b.length - a.length)[0];
   return match ? PAGE_META[match] : { title: 'Dashboard', hint: 'Telesom Academy portal.' };
+}
+
+function getStudentPageMeta(pathname, search) {
+  if (pathname === '/student' || pathname === '/student/evaluations') return null;
+
+  const params = new URLSearchParams(search);
+  const tab = params.get('tab');
+  const page = getPageMeta(pathname);
+
+  if (pathname === '/student/courses') {
+    if (tab === 'outline') return {title:'Course Outline',hint:'Follow published lessons and track your course progress.',variant:'courses'};
+    if (tab === 'notes') return {title:'Study Notes',hint:'Browse and download study materials shared by your teachers.',variant:'notes'};
+    return {...page,variant:'courses'};
+  }
+  if (pathname === '/student/assessments') {
+    if (tab === 'quizzes') return {title:'Quizzes',hint:'Review your upcoming quizzes and prepare for each assessment.',variant:'assessments'};
+    return {...page,variant:'assessments'};
+  }
+  if (pathname === '/student/results') {
+    if (tab === 'certificates') return {title:'My Certificates',hint:'View and download certificates you have earned.',variant:'results'};
+    return {...page,variant:'results'};
+  }
+  if (pathname.startsWith('/student/evaluations/')) {
+    return {title:'Course Evaluation',hint:'Share your feedback on your learning experience.',variant:'evaluations'};
+  }
+  return {...page,variant:'default'};
 }
 
 function greeting() {
@@ -297,13 +318,13 @@ export default function DashboardLayout({ role }) {
   const navSections = NAV[role] || [];
   const userRole = role.toUpperCase();
   const pageMeta = getPageMeta(location.pathname);
+  const studentPageMeta = role === 'student' ? getStudentPageMeta(location.pathname, location.search) : null;
   const firstName = user?.name?.split(' ')[0] || 'User';
   const isStudentCoursesPage = role === 'student' && location.pathname === '/student/courses';
-  const isStudentExamsPage = role === 'student' && location.pathname === '/student/exams';
-  const isStudentQuizzesPage = role === 'student' && location.pathname === '/student/quizzes';
+  const isStudentAssessmentPage = role === 'student' && ['/student/assessments', '/student/results'].includes(location.pathname);
   const isStudentNotesPage = role === 'student' && location.pathname === '/student/notes';
   const isStudentAttendancePage = role === 'student' && location.pathname === '/student/attendance';
-  const isStudentAcademicPage = isStudentCoursesPage || isStudentExamsPage || isStudentQuizzesPage || isStudentNotesPage || isStudentAttendancePage;
+  const isStudentAcademicPage = isStudentCoursesPage || isStudentAssessmentPage || isStudentNotesPage || isStudentAttendancePage;
   const isTeacherMyCoursePage = role === 'teacher' && location.pathname === '/teacher/my-course';
   const isTeacherExamsPage = role === 'teacher' && location.pathname === '/teacher/exams';
   const showGreetingInTopbar = isStudentAcademicPage;
@@ -392,13 +413,15 @@ export default function DashboardLayout({ role }) {
       </aside>
 
       {/* ── Main ── */}
-      <div className="dash-main">
+      <div className={role === 'student' ? 'dash-main student-dashboard-main' : 'dash-main'}>
         <DashboardContentFrame active={role === 'teacher'}>
         {/* Top Bar */}
         <AcademyHeader role={role} user={user} avatar={role==='teacher' ? teacherAvatar : user?.profilePicture || ''} onToggleMenu={()=>setSidebarOpen(previous=>!previous)} onLogout={handleLogout} search={search} onSearch={setSearch} pageTitle={pageMeta.title} onNotificationNavigate={()=>setDataVersion(value=>value+1)} />
 
+        {studentPageMeta && <StudentPageHeader {...studentPageMeta}/>}
+
         {/* Page content */}
-        <main className={`dash-content ${isStudentCoursesPage ? 'student-courses-content' : ''} ${isStudentExamsPage ? 'student-exams-content' : ''} ${isStudentQuizzesPage ? 'student-quizzes-content' : ''} ${isStudentNotesPage ? 'student-notes-content' : ''} ${isStudentAttendancePage ? 'student-attendance-content' : ''} ${role === 'teacher' && location.pathname === '/teacher' ? 'teacher-home-content dashboard-content' : ''}`}>
+        <main className={`dash-content ${isStudentCoursesPage ? 'student-courses-content' : ''} ${isStudentNotesPage ? 'student-notes-content' : ''} ${isStudentAttendancePage ? 'student-attendance-content' : ''} ${role === 'teacher' && location.pathname === '/teacher' ? 'teacher-home-content dashboard-content' : ''}`}>
           <PageSearchContext.Provider key={`${user?._id || user?.id || 'anonymous'}:${dataVersion}`} value={[search, setSearch]}>{ROLE_ROUTES[role]}</PageSearchContext.Provider>
         </main>
         </DashboardContentFrame>
