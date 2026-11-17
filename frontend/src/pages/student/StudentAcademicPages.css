@@ -1,0 +1,94 @@
+.student-academic-page { max-width: 1040px; margin-inline: auto; }
+.dash-content:has(> .student-academic-page .student-achievement-panel) { display: grid; }
+.student-academic-page:has(> .student-achievement-panel, > .certificates-page > .student-achievement-panel) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+}
+.student-academic-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid #cfe3d7;
+  border-radius: 10px;
+  background: #fff;
+}
+.student-academic-tabs a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 5px;
+  border-bottom: 2px solid transparent;
+  border-radius: 6px;
+  color: #124d33;
+  text-align: center;
+  text-decoration: none;
+  font-size: .85rem;
+  font-weight: 700;
+}
+.student-academic-tabs a:hover { background: #eef8f1; }
+.student-academic-tabs a[aria-current="page"] { border-bottom-color: #d7982f; background: #fff4dd; }
+.student-academic-tabs a:focus-visible { outline: 2px solid #005b35; outline-offset: -2px; }
+.student-academic-tabs svg { flex: none; }
+.student-academic-status { margin: 0; padding: 12px 14px; }
+
+.student-assessment-schedule {
+  overflow: hidden;
+  border: 1px solid #cfe3d7;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 6px 16px #164e3110;
+}
+.student-assessment-schedule > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #dcebe2;
+  background: #edf7f0;
+  color: #14583d;
+}
+.student-assessment-schedule > header h2 { margin: 0; color: inherit; font-size: .95rem; }
+.student-assessment-schedule ul { display: grid; gap: 7px; margin: 0; padding: 10px; list-style: none; }
+.student-assessment-schedule li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e0ece5;
+  border-radius: 9px;
+  background: #fbfdfb;
+}
+.student-assessment-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 8px;
+  background: #e3f2e9;
+  color: #126143;
+}
+.student-assessment-icon.is-quiz { background: #fff1d6; color: #83580e; }
+.student-assessment-details h3 { margin: 0; color: #122f24; font-size: .92rem; overflow-wrap: anywhere; }
+.student-assessment-details p { margin: 2px 0 0; color: #466555; font-size: .8rem; overflow-wrap: anywhere; }
+.student-assessment-schedule time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #edf5ef;
+  color: #164b32;
+  font-size: .8rem;
+  font-weight: 650;
+}
+.student-assessment-schedule > .academy-error { margin: 10px; }
+@media (max-width: 520px) {
+  .student-assessment-schedule li { grid-template-columns: auto minmax(0, 1fr); gap: 6px 9px; }
+  .student-assessment-schedule time { grid-column: 2; justify-self: start; }
+}

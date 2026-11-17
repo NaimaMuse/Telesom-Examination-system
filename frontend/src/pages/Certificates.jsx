@@ -342,15 +342,13 @@ function CertificateHistory({ admin = false, headingRef }) {
     return () => controller.abort();
   }, [page]);
 
-  return <section className={admin ? 'certificates-panel certificates-history' : 'certificates-panel'} aria-labelledby="issued-certificates">
-      {admin
-        ? <header className="certificates-history-header">
+  return <section className={admin ? 'certificates-panel certificates-history' : 'certificates-panel student-achievement-panel'} aria-label={admin ? undefined : 'My Certificates'} aria-labelledby={admin ? 'issued-certificates' : undefined}>
+      {admin && <header className="certificates-history-header">
           <h2 id="issued-certificates" ref={headingRef} tabIndex={-1}><TeachingIcon name="certificate" size={25} /> Issued Certificates</h2>
           {!loading && !historyError && <span className="certificates-count">
             <TeachingIcon name="list" size={17} />{total ?? certificates.length} {(total ?? certificates.length) === 1 ? 'certificate' : 'certificates'}{total === null && pages > 1 ? ' on this page' : ''}
           </span>}
-        </header>
-        : <h2 id="issued-certificates">My certificates</h2>}
+        </header>}
       {loading ? <p role="status">Loading certificates…</p> : historyError
         ? <p role="alert" className="certificates-error">{historyError}</p>
         : !certificates.length ? <p>No certificates have been issued yet.</p>
@@ -359,10 +357,18 @@ function CertificateHistory({ admin = false, headingRef }) {
         </ul>
         : <ul className="certificates-list">
           {certificates.map(cert => <li key={cert._id}>
-            <div><strong>{cert.courseTitle}</strong>
-              <small>{cert.certificateNo} · {dateFormat.format(new Date(cert.awardedAt))} · {cert.creditHours} hours</small>
+            <span className="certificates-icon"><TeachingIcon name="graduate" size={22} /></span>
+            <div className="certificates-student-course">
+              <h3>{cert.courseTitle}</h3>
+              <span className="certificates-student-number"><TeachingIcon name="file" size={14} />{cert.certificateNo}</span>
             </div>
-            <ViewPdf id={cert._id} />
+            <div className="certificates-student-footer">
+              <div className="certificates-student-meta">
+                <span><TeachingIcon name="calendar" size={16} /><time dateTime={cert.awardedAt}>{dateFormat.format(new Date(cert.awardedAt))}</time></span>
+                <span><TeachingIcon name="clock" size={14} />{cert.creditHours} hours</span>
+              </div>
+              <ViewPdf id={cert._id} />
+            </div>
           </li>)}
         </ul>}
       {pages > 1 && <div className="certificates-actions" aria-label="Certificate pages">

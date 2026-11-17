@@ -52,13 +52,20 @@ const deactivateStudent = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Student not found');
   }
-  if (student.user) {
-    await User.findByIdAndUpdate(student.user, { isActive: false });
-  }
   student.status = 'dropped';
-  student.droppedAt = new Date();
+  student.droppedAt ||= new Date();
   await require('../models/Enrollment').updateMany({student:student._id,status:'enrolled'},{$set:{status:'dropped',droppedAt:student.droppedAt}});
   await student.save();
+  if (student.user) {
+    await User.updateOne(
+      { _id: student.user, role: 'student' },
+      {
+        $set: { isActive: false, studentPasswordSet: false },
+        $unset: { email: 1, password: 1 },
+        $inc: { authVersion: 1 },
+      }
+    );
+  }
   return res.status(200).json({
     success: true,
     message: 'Student account deactivated',

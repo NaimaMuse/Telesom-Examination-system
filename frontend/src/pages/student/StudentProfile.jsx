@@ -1,14 +1,20 @@
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ChangePasswordModal from '../../components/ChangePasswordModal';
+import TeachingIcon from '../../components/TeachingIcon';
 import api from '../../services/api';
+import './StudentProfile.css';
 
 export default function StudentProfile() {
   const [search] = usePageSearch();
   const { user, updateUser } = useAuth();
+  const photoInput = useRef(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const [photoNotice, setPhotoNotice] = useState('');
   const [editing, setEditing] = useState(false);
   const [params, setParams] = useSearchParams();
   const resetPassword = params.get('reset') === 'password' && !user?.mustChangePassword;
@@ -46,7 +52,33 @@ export default function StudentProfile() {
     finally { if (isCurrent()) setLoading(false); }
   }, { enabled: !editing && !saving && (!resetPassword || !profile) });
 
-  const initials = (user?.name||'S').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const initials = (user?.name?.trim() || 'Student').split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+
+  async function savePhoto(file) {
+    setPhotoNotice('');
+    setPhotoError('');
+    if (file && (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024)) {
+      setPhotoError('Choose a JPG, PNG or WebP image up to 2 MB.');
+      return;
+    }
+    setPhotoBusy(true);
+    try {
+      let response;
+      if (file) {
+        const body = new FormData();
+        body.append('file', file);
+        response = await api.put('/student/profile-picture', body, {headers: {'Content-Type':'multipart/form-data'}});
+      } else {
+        response = await api.delete('/student/profile-picture');
+      }
+      updateUser({profilePicture: response.data.picture});
+      setPhotoNotice(file ? 'Profile photo updated.' : 'Profile photo removed.');
+    } catch (err) {
+      setPhotoError(err.response?.data?.message || 'Could not update your profile photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   const handleSave = async(e) => {
     e.preventDefault();
@@ -67,19 +99,18 @@ export default function StudentProfile() {
   if (!profile) return <div role="alert">{error}</div>;
 
   return (
-    <>
+    <section className="student-profile-page" aria-label="My profile">
       {error && <div className="card card-body" role="alert">{error}</div>}
-      <div className="page-header">
-        <div className="page-header-left"><h1>My Profile</h1><p>Manage your student account</p></div>
-        {!editing && <div style={{display:'flex', gap:'0.75rem', flexWrap:'wrap'}}>
+      <header className="student-profile-heading">
+        <div className="student-profile-actions">
           {!user?.mustChangePassword && (
             <Link className="btn btn-secondary" to="/student/forgot-password">Reset password</Link>
           )}
-          <button type="button" className="btn btn-primary" onClick={()=>setEditing(true)}>✏️ Edit Profile</button>
-        </div>}
-      </div>
+          {!editing && <button type="button" className="btn btn-primary" onClick={()=>setEditing(true)}><TeachingIcon name="edit" size={15}/> Edit profile</button>}
+        </div>
+      </header>
 
-      {saved && <div role="status" style={{ background:'#d1fae5',color:'#065f46',padding:'0.75rem 1.25rem',borderRadius:'var(--radius-sm)',marginBottom:'1rem',fontWeight:600,fontSize:'0.875rem' }}>✅ Profile updated.</div>}
+      {saved && <div className="student-profile-message" role="status">Profile updated.</div>}
       {passwordReset && <p className="card card-body" role="status">Portal password updated. You can sign in with your registered email and new password.</p>}
       {resetPassword && (
         <ChangePasswordModal onClose={closeResetPassword} onSuccess={() => {
@@ -88,17 +119,33 @@ export default function StudentProfile() {
         }}/>
       )}
 
-      <div className="profile-header" style={{marginBottom:'1.5rem'}}>
-        <div className="profile-avatar-lg">{initials}</div>
-        <div className="profile-header-info">
+      <div className="student-profile-identity">
+        <div className="student-profile-avatar">
+          {user?.profilePicture ? <img src={user.profilePicture} alt="Your profile photo"/> : initials}
+        </div>
+        <div className="student-profile-name">
           <h2>{user?.name || 'Student'}</h2>
-          <p>🎓 Student {user?.studentId ? `· ID: ${user.studentId}` : ''}</p>
-          <p>{user?.email}</p>
-          {user?.program && <p>📚 {user.program} {user.year ? `· ${user.year}` : ''}</p>}
+          <p>Student{user?.studentId ? ` · ${user.studentId}` : ''}</p>
+        </div>
+        <div className="student-profile-photo">
+          <input ref={photoInput} type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={event => {
+            const file = event.currentTarget.files[0];
+            event.currentTarget.value = '';
+            if (file) savePhoto(file);
+          }}/>
+          <div className="student-profile-actions">
+            <button type="button" className="btn btn-secondary" aria-describedby="student-photo-hint" disabled={photoBusy} onClick={() => photoInput.current?.click()}>
+              {photoBusy ? 'Updating…' : user?.profilePicture ? 'Change photo' : 'Upload photo'}
+            </button>
+            {user?.profilePicture && <button type="button" className="student-profile-remove" disabled={photoBusy} onClick={() => savePhoto(null)}>Remove</button>}
+          </div>
+          <small id="student-photo-hint">JPG, PNG or WebP · Up to 2 MB</small>
         </div>
       </div>
+      {photoError && <p className="student-profile-message is-error" role="alert">{photoError}</p>}
+      {photoNotice && <p className="student-profile-message" role="status">{photoNotice}</p>}
 
-      <div className="card">
+      <div className="card student-profile-card">
         <div className="card-header"><span className="card-title">Profile Details</span></div>
         <div className="card-body">
           {editing ? (
@@ -117,7 +164,7 @@ export default function StudentProfile() {
               </div>
             </form>
           ) : (
-            <div className="grid-2">
+            <dl className="student-profile-details">
               {[
                 ['Full Name',   form.name],
                 ['Email',       form.email||'Not provided'],
@@ -127,14 +174,14 @@ export default function StudentProfile() {
                 ['Academic Year',form.academicYear||'—'],
               ].filter(([label,val]) => matchesPageSearch(search, label, val)).map(([label, val]) => (
                 <div key={label}>
-                  <div style={{fontSize:'0.75rem',fontWeight:700,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'0.25rem'}}>{label}</div>
-                  <div style={{fontSize:'0.9rem',color:'var(--text-primary)',fontWeight:500}}>{val}</div>
+                  <dt>{label}</dt>
+                  <dd>{val}</dd>
                 </div>
               ))}
-            </div>
+            </dl>
           )}
         </div>
       </div>
-    </>
+    </section>
   );
 }

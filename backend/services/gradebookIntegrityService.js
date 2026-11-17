@@ -74,18 +74,20 @@ const assessmentWrites = (Model, handler, action) => asyncHandler(async (req, re
       const pass = Number(req.body.passingMarks);
       if (!Number.isFinite(pass) || pass < 0 || pass > total) fail('Passing marks must be within the assessment maximum.');
     }
+    if (action === 'remove') {
+      // Keep the assessment available for retry if result cleanup fails.
+      await Result.deleteMany({ [type]: existing._id });
+      return capture(handler, req);
+    }
     const result = await capture(handler, req);
     if (result.status < 400 && existing) {
-      if (action === 'remove') await Result.deleteMany({ [type]: existing._id });
-      else {
-        const updated = await Model.findById(existing._id);
-        if (updated.totalMarks !== existing.totalMarks || updated.passingMarks !== existing.passingMarks) {
-          const scores = await Result.find({ [type]: existing._id }).lean();
-          if (scores.length) await Result.bulkWrite(scores.map(score => {
-            const percentage = round(score.marksObtained / updated.totalMarks * 100);
-            return { updateOne: { filter: { _id: score._id }, update: { $set: { percentage, isPassed: score.marksObtained >= updated.passingMarks, ...(type === 'exam' ? { grade: gradeFor(percentage) } : {}) } } } };
-          }));
-        }
+      const updated = await Model.findById(existing._id);
+      if (updated.totalMarks !== existing.totalMarks || updated.passingMarks !== existing.passingMarks) {
+        const scores = await Result.find({ [type]: existing._id }).lean();
+        if (scores.length) await Result.bulkWrite(scores.map(score => {
+          const percentage = round(score.marksObtained / updated.totalMarks * 100);
+          return { updateOne: { filter: { _id: score._id }, update: { $set: { percentage, isPassed: score.marksObtained >= updated.passingMarks, ...(type === 'exam' ? { grade: gradeFor(percentage) } : {}) } } } };
+        }));
       }
     }
     return result;

@@ -55,6 +55,7 @@ const runTests = async () => {
   };
 
   const origUserFindOne = User.findOne;
+  const origUserUpdateOne = User.updateOne;
   const origStudentFindOne = Student.findOne;
   const origStudentExists = Student.exists;
   const origTeacherFindOne = Teacher.findOne;
@@ -123,7 +124,7 @@ const runTests = async () => {
 
   {
     User.findOne = () =>
-      Promise.resolve({ email: 'amina@student.telesom.com' });
+      Promise.resolve({ email: 'amina@student.telesom.com', role: 'student', isActive: true });
     const { req, res, next, getResult } = createMock({
       name: 'Amina Student',
       email: 'amina@student.telesom.com',
@@ -138,6 +139,36 @@ const runTests = async () => {
       'Student creation rejects duplicate email'
     );
     User.findOne = () => Promise.resolve(null);
+  }
+
+  {
+    const email = 'returning@student.telesom.com';
+    const oldUser = { _id: new mongoose.Types.ObjectId(), email, role: 'student', isActive: false };
+    User.findOne = async () => oldUser;
+    Student.exists = async () => null;
+    const request = () => createMock({ name: 'Returning Student', email });
+    const existing = request();
+    await createStudent(existing.req, existing.res, existing.next);
+    assert(existing.getResult().statusCode === 409, 'An inactive account without a dropped profile keeps its email');
+
+    Student.exists = async query => query.user === oldUser._id && query.status === 'dropped';
+    let released = false;
+    User.updateOne = async (filter, update) => {
+      released = filter._id === oldUser._id && filter.email === email &&
+        filter.isActive === false && update.$unset.email === 1;
+      return { modifiedCount: Number(released) };
+    };
+    const returning = request();
+    await createStudent(returning.req, returning.res, returning.next);
+    const result = returning.getResult();
+    assert(
+      released && result.statusCode === 201 && result.responseBody?.data?.user?.email === email &&
+        result.responseBody?.data?.user?._id !== oldUser._id,
+      'A previously deleted student email can be registered under a new account'
+    );
+    User.findOne = async () => null;
+    Student.exists = async () => null;
+    User.updateOne = origUserUpdateOne;
   }
 
   {

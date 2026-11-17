@@ -147,13 +147,34 @@ const createStudent = async (req, res, next) => {
       return next(new Error('Gender must be male or female'));
     }
 
-    if (normalizedEmail && await User.findOne({ email: normalizedEmail })) {
+    const previousAccount = normalizedEmail && await User.findOne({ email: normalizedEmail });
+    // Older deletions disabled the login but left the email in the unique index.
+    if (previousAccount && !(
+      previousAccount.role === 'student' &&
+      previousAccount.isActive === false &&
+      await Student.exists({ user: previousAccount._id, status: 'dropped' })
+    )) {
       res.status(409);
       return next(new Error('Email is already registered'));
     }
 
     await batchService.validateBatch(req.body.batch, academicYear);
     const normalizedStudentId = await studentIds.nextStudentId();
+
+    if (previousAccount) {
+      const released = await User.updateOne(
+        { _id: previousAccount._id, email: normalizedEmail, role: 'student', isActive: false },
+        {
+          $unset: { email: 1, password: 1 },
+          $set: { studentPasswordSet: false },
+          $inc: { authVersion: 1 },
+        }
+      );
+      if (!released.modifiedCount) {
+        res.status(409);
+        return next(new Error('Email is already registered. Please try again.'));
+      }
+    }
 
     const { user, profile: student } = await createUserWithProfile({
       userData: {

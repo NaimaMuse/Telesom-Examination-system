@@ -10,7 +10,7 @@ const {asyncHandler} = require('./resourceController');
 const dummyHash = '$argon2id$v=19$m=19456,t=2,p=1$x0EoN30zbT3WfLJuIxbAqw$rzEKbDC5C8qLpmc8ui6dlV+qCLtjp5bkS8cwg9nN4Kg';
 
 const activeStudent = async user => {
-  const student = await Student.findOne({user:user._id});
+  const student = await Student.findOne({user:user._id}, '+profilePicture');
   return student && (!student.status || student.status === 'active') ? student : null;
 };
 const fail = (statusCode, message) => { throw Object.assign(new Error(message), {statusCode}); };
@@ -21,7 +21,7 @@ async function sessionUser(user, studentProfile) {
     _id:user._id, name:user.name, email:user.email, role:user.role,
     isActive:user.isActive, lastLogin:user.lastLogin,
     mustChangePassword:user.role === 'student' ? !user.studentPasswordSet : user.role !== 'teacher' && !!user.mustChangePassword,
-    ...(studentProfile ? {studentId:studentProfile.studentId,studentProfileId:studentProfile._id,phone:studentProfile.phone} : {}),
+    ...(studentProfile ? {studentId:studentProfile.studentId,studentProfileId:studentProfile._id,phone:studentProfile.phone,profilePicture:studentProfile.profilePicture || ''} : {}),
     ...(teacher ? {teacherId:teacher.teacherId,teacherProfileId:teacher._id,department:teacher.department,phone:teacher.phone} : {}),
   };
 }
