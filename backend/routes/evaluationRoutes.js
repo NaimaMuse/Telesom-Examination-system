@@ -3,6 +3,8 @@ const {Form,Response,Notice}=require('../models/Evaluation');
 const Student=require('../models/Student'),Enrollment=require('../models/Enrollment'),Course=require('../models/Course');
 const {protect}=require('../middleware/authMiddleware'),{authorizeRoles}=require('../middleware/roleMiddleware'),{asyncHandler}=require('../controllers/resourceController');
 const {fail,state,validateQuestions,validateAnswers}=require('../services/evaluationRules');
+const {enrollmentCohortFilter}=require('../services/batchService');
+const Defense=require('../models/ProjectDefense');
 const router=express.Router();router.use(protect,authorizeRoles('admin','student'));
 const admin=authorizeRoles('admin');
 router.use('/defenses',admin,require('./projectDefenseRoutes'));
@@ -12,15 +14,27 @@ async function student(req){const s=await Student.findOne({user:req.user._id});i
 async function notices(f,event,title,session){if(!f.students.length)return;await Notice.bulkWrite(f.students.map(s=>({updateOne:{filter:{student:s,form:f._id,event},update:{$setOnInsert:{title,message:`${f.title} is available. ${f.deadline?'Deadline: '+new Date(f.deadline).toLocaleString('en-GB',{timeZone:'Africa/Nairobi'})+' (Africa/Nairobi)':''}`}},upsert:true}})),{session});}
 router.get('/courses',admin,asyncHandler(async(req,res)=>res.json({courses:await Course.find({}).select('name title courseCode').sort('name').lean()})));
 router.get('/eligible/:course',admin,asyncHandler(async(req,res)=>{
-  const {cohortName,cohortYear}=req.query;
+  const {cohortName,cohortYear,assessment,assessmentType,defense}=req.query;
   const enrollment={...(req.params.course==='all'?{}:{course:req.params.course}),status:'enrolled'};
   if(cohortName!==undefined||cohortYear!==undefined){
-    if(req.params.course==='all'||typeof cohortName!=='string'||!cohortName.trim()||
+    if(!mongoose.isObjectIdOrHexString(req.params.course)||typeof cohortName!=='string'||!cohortName.trim()||
         typeof cohortYear!=='string'||!cohortYear.trim())fail('Choose a valid course and cohort.');
-    Object.assign(enrollment,{batch:cohortName,academicYear:cohortYear});
+    const course=await Course.findById(req.params.course).select('batch academicYear').lean();
+    if(!course)fail('Choose an existing course.');
+    Object.assign(enrollment,enrollmentCohortFilter(course,cohortYear,cohortName));
   }
   const ids=await Enrollment.distinct('student',enrollment);
   const filter={_id:{$in:ids}};
+  if(assessment!==undefined){
+    if(!mongoose.isObjectIdOrHexString(req.params.course)||!mongoose.isObjectIdOrHexString(assessment)||
+        !['exam','quiz'].includes(assessmentType)||(defense!==undefined&&!mongoose.isObjectIdOrHexString(defense))){
+      fail('Choose a valid defense assessment.');
+    }
+    const assigned=await Defense.distinct('students',{
+      course:req.params.course,assessment,assessmentType,...(defense?{_id:{$ne:defense}}:{}),
+    });
+    filter._id.$nin=assigned;
+  }
   res.json({total:await Student.countDocuments(filter),students:await Student.find(filter).populate('user','name email').sort('studentId').skip(page(req).skip).limit(50)});
 }));
 router.get('/',asyncHandler(async(req,res)=>{const filter=req.user.role==='admin'?{}:{students:(await student(req))._id,status:{$ne:'draft'}};const forms=await Form.find(filter).select('-questions -students').populate('course','name title').sort('-createdAt').skip(page(req).skip).limit(50).lean();for(const f of forms){f.effectiveStatus=state(f);const original=await Form.findById(f._id).select('students');f.assignedCount=original.students.length;if(req.user.role==='admin')f.eligibleCount=(await Enrollment.distinct('student',{...(f.allCourses?{}:{course:f.course?._id}),status:'enrolled'})).length;if(req.user.role==='student')f.response=await Response.findOne({form:f._id,student:(await student(req))._id}).select('submittedAt editedAt');}res.json({forms,total:await Form.countDocuments(filter)});}));

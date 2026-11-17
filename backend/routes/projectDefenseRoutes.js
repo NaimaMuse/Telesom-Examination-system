@@ -8,9 +8,11 @@ const Quiz = require('../models/Quiz');
 const User = require('../models/User');
 const {asyncHandler,pick} = require('../controllers/resourceController');
 const {fail} = require('../services/evaluationRules');
+const {enrollmentCohortFilter} = require('../services/batchService');
 
 const router = express.Router();
 const criteria = ['b1','b2','b3','c1','d1','e1','f1','g1','g2','g3','g4'];
+const rubricSections = ['B','C','D','E','F','G'];
 const fields = ['groupName','projectTitle','cohort','cohortYear','evaluatorName','defenseDate','ratings','notes','wording','outcome','summary','signature','signatureDate'];
 const wordingKeys = new Set(['title','A','B','C','D','E','F','G','I',...criteria,
   ...criteria.filter(key=>!key.startsWith('g')).map(key=>key+'Hint')]);
@@ -22,11 +24,57 @@ function validateRatingOptions(options){
   }
 }
 
-function validateRatings(ratings,options){
+function validateRatings(ratings,options,criteria){
   if(!ratings||typeof ratings!=='object'||Array.isArray(ratings)||
       Object.entries(ratings).some(([key,value])=>!criteria.includes(key)||!options.includes(value))){
     fail('Every rating must use one of the configured rating options.');
   }
+}
+
+function validateNotes(notes,criteria){
+  if(!notes||typeof notes!=='object'||Array.isArray(notes)||
+      Object.entries(notes).some(([key,value])=>!criteria.includes(key)||typeof value!=='string'||value.length>4000)){
+    fail('Evaluation notes must be text attached to a rubric criterion.');
+  }
+}
+
+function validateAdditionalEvaluations(evaluations,options,finalize,criteria){
+  if(!Array.isArray(evaluations))fail('Provide a list of evaluators.');
+  for(const evaluation of evaluations){
+    if(!evaluation||typeof evaluation.name!=='string'||evaluation.name.length>200){
+      fail('Enter a valid evaluator name.');
+    }
+    validateRatings(evaluation.ratings,options,criteria);
+    validateNotes(evaluation.notes,criteria);
+    if(finalize&&(!evaluation.name.trim()||criteria.some(key=>evaluation.ratings[key]===undefined))){
+      fail('Enter a name and complete the rubric for every evaluator before finalizing.');
+    }
+  }
+}
+
+function validateCustomRubric(sections,total){
+  if(!Array.isArray(sections)||!sections.length||sections.length>30)fail('Add between 1 and 30 rubric sections.');
+  const keys=new Set();
+  const validItem=item=>item&&typeof item.key==='string'&&/^[sq][a-f0-9-]{36}$/.test(item.key)&&
+    typeof item.title==='string'&&item.title.trim()&&item.title.length<=500&&
+    Number.isSafeInteger(item.marks)&&item.marks>0;
+  for(const section of sections){
+    if(!validItem(section)||!section.key.startsWith('s')||keys.has(section.key)||
+      !Array.isArray(section.questions)||!section.questions.length||section.questions.length>50){
+      fail('Give each section a title, marks and 1 to 50 questions.');
+    }
+    keys.add(section.key);
+    for(const question of section.questions){
+      if(!validItem(question)||!question.key.startsWith('q')||keys.has(question.key)){
+        fail('Give each question a title and positive whole marks.');
+      }
+      keys.add(question.key);
+    }
+    if(section.questions.reduce((sum,question)=>sum+question.marks,0)!==section.marks){
+      fail('Question marks must add up to their section marks.');
+    }
+  }
+  if(sections.reduce((sum,section)=>sum+section.marks,0)!==total)fail('Section marks must add up to the project total.');
 }
 
 async function saveVersion(record){
@@ -34,6 +82,7 @@ async function saveVersion(record){
     await record.save();
   }catch(error){
     if(error.name==='VersionError')fail('This evaluation has changed. Reopen it before editing.',409);
+    if(error.code===11000&&error.keyPattern?.students)fail('A selected student already belongs to another group for this assessment.',409);
     throw error;
   }
 }
@@ -50,10 +99,18 @@ router.get('/',asyncHandler(async(req,res)=>{
 
 router.get('/recent',asyncHandler(async(req,res)=>{
   const {course}=req.query;
-  if(typeof course!=='string'||!mongoose.isObjectIdOrHexString(course))fail('Choose a valid course.');
-  const records=await Defense.find({course})
-    .select('groupName projectTitle defenseDate status')
+  if(course!==undefined&&(typeof course!=='string'||!mongoose.isObjectIdOrHexString(course)))fail('Choose a valid course.');
+  const records=await Defense.find(course?{course}:{})
+    .select('course groupName projectTitle defenseDate status')
+    .populate('course','name title')
     .sort({updatedAt:-1,_id:-1}).limit(5).lean();
+  res.json({records});
+}));
+
+router.get('/courses/:course/groups',asyncHandler(async(req,res)=>{
+  const {course}=req.params;
+  if(!mongoose.isObjectIdOrHexString(course))fail('Choose a valid course.');
+  const records=await Defense.find({course}).sort({createdAt:1,_id:1}).lean();
   res.json({records});
 }));
 
@@ -81,7 +138,7 @@ router.get('/assessments',asyncHandler(async(req,res)=>{
   const teachers=await User.distinct('_id',{role:'teacher'});
   const filter={createdBy:{$in:teachers}};
   const [exams,quizzes]=await Promise.all([Exam,Quiz].map(Model=>
-    Model.find(filter).select('title course').populate('course','name title').sort({title:1,_id:1}).lean()));
+    Model.find(filter).select('title course totalMarks').populate('course','name title').sort({title:1,_id:1}).lean()));
   const assessments=[...exams.map(exam=>({...exam,type:'exam'})),...quizzes.map(quiz=>({...quiz,type:'quiz'}))]
     .filter(assessment=>assessment.course);
   res.json({assessments});
@@ -107,11 +164,11 @@ async function save(req,res){
     const Model=assessmentType==='exam'?Exam:assessmentType==='quiz'?Quiz:null;
     if(!Model||!mongoose.isObjectIdOrHexString(assessment))fail('Choose a valid exam or quiz.');
     if(String(record.assessment)!==assessment||record.assessmentType!==assessmentType||String(record.course)!==course){
-      const selected=await Model.findById(assessment).select('course createdBy title').lean();
+      const selected=await Model.findById(assessment).select('course createdBy title totalMarks').lean();
       if(!selected||String(selected.course)!==course||!await User.exists({_id:selected.createdBy,role:'teacher'})){
         fail('Choose a teacher-created exam or quiz for this course.');
       }
-      record.set({assessment,assessmentType,assessmentTitle:selected.title});
+      record.set({assessment,assessmentType,assessmentTitle:selected.title,assessmentTotalMarks:selected.totalMarks});
     }
   }else if(record.isNew){
     fail('Choose a teacher-created exam or quiz.');
@@ -126,7 +183,7 @@ async function save(req,res){
   }
   const cohort=req.body.cohort?.trim()??record.cohort;
   const cohortYear=req.body.cohortYear?.trim()??record.cohortYear;
-  const scope=cohortYear?{batch:cohort,academicYear:cohortYear}:{};
+  const scope=cohortYear?enrollmentCohortFilter(configured,cohortYear,cohort):{};
   if(cohortYear&&(!cohort||(
       (configured.batch!==cohort||configured.academicYear!==cohortYear)&&
       !await Enrollment.exists({course,status:'enrolled',...scope})
@@ -136,14 +193,32 @@ async function save(req,res){
   if(studentIds.length){
     const enrolled=await Enrollment.distinct('student',{course,student:{$in:studentIds},status:'enrolled',...scope});
     if(enrolled.length!==studentIds.length)fail('Every selected student must be enrolled in the selected course and cohort.');
+    if(record.assessment&&await Defense.exists({
+      _id:{$ne:record._id},course,assessment:record.assessment,assessmentType:record.assessmentType,
+      students:{$in:studentIds},
+    }))fail('A selected student already belongs to another group for this assessment.',409);
   }
   const ratingOptions=req.body.ratingOptions===undefined?record.ratingOptions:req.body.ratingOptions;
   validateRatingOptions(ratingOptions);
-  validateRatings(ratings,ratingOptions);
-  if(!notes||typeof notes!=='object'||Array.isArray(notes)||
-      Object.entries(notes).some(([key,value])=>!criteria.includes(key)||typeof value!=='string')){
-    fail('Evaluation notes must be text attached to a rubric criterion.');
+  const projectTotalMarks=req.body.projectTotalMarks===undefined?record.projectTotalMarks:req.body.projectTotalMarks;
+  const customRubric=req.body.customRubric===undefined?record.customRubric:req.body.customRubric;
+  if(!Number.isSafeInteger(projectTotalMarks)||projectTotalMarks<1)fail('Enter positive whole marks for the project total.');
+  if(customRubric!==undefined)validateCustomRubric(customRubric,projectTotalMarks);
+  const rubricCriteria=customRubric?customRubric.flatMap(section=>section.questions.map(question=>question.key)):criteria;
+  validateRatings(ratings,ratingOptions,rubricCriteria);
+  const rubricSectionMarks=req.body.rubricSectionMarks===undefined
+    ? Object.fromEntries(record.rubricSectionMarks) : req.body.rubricSectionMarks;
+  if(!customRubric&&(!rubricSectionMarks||typeof rubricSectionMarks!=='object'||Array.isArray(rubricSectionMarks)||
+      Object.keys(rubricSectionMarks).length!==rubricSections.length||
+      rubricSections.some(section=>!Number.isSafeInteger(rubricSectionMarks[section])||rubricSectionMarks[section]<1))){
+    fail('Enter positive whole marks for the project total and every rubric section.');
   }
+  if(!customRubric&&rubricSections.reduce((sum,section)=>sum+rubricSectionMarks[section],0)!==projectTotalMarks){
+    fail('The section marks must add up to the project total.');
+  }
+  validateNotes(notes,rubricCriteria);
+  const additionalEvaluations=req.body.additionalEvaluations??record.toJSON().additionalEvaluations??[];
+  validateAdditionalEvaluations(additionalEvaluations,ratingOptions,req.body.finalize===true,rubricCriteria);
   const {wording}=req.body;
   if(wording!==undefined&&(!wording||typeof wording!=='object'||Array.isArray(wording)||
       Object.entries(wording).some(([key,value])=>!wordingKeys.has(key)||typeof value!=='string'||value.length>500))){
@@ -157,10 +232,11 @@ async function save(req,res){
     if(Number.isNaN(date.getTime())||date.toISOString().slice(0,10)!==value)fail('Enter a valid date.');
   }
   const creating=record.isNew;
-  record.set({...pick(req.body,fields),course,students:studentIds,ratings,notes,
-    ratingOptions:[...ratingOptions].sort((a,b)=>a-b)});
+  record.set({...pick(req.body,fields),course,students:studentIds,ratings,notes,additionalEvaluations,
+    ratingOptions:[...ratingOptions].sort((a,b)=>a-b),projectTotalMarks,rubricSectionMarks,customRubric});
+  if(record.assessment)record.groupAssignmentEnforced=true;
   if(req.body.finalize===true){
-    const missingRatings=criteria.filter(key=>ratings[key]===undefined).length;
+    const missingRatings=rubricCriteria.filter(key=>ratings[key]===undefined).length;
     const missing=[
       !record.evaluatorName&&'evaluator name',
       !studentIds.length&&'at least one student',
@@ -170,6 +246,11 @@ async function save(req,res){
       missingRatings>0&&`${missingRatings} remaining ${missingRatings===1?'rating':'ratings'}`,
     ].filter(Boolean);
     if(missing.length)fail(`Complete the following before finalizing: ${missing.join(', ')}.`);
+    if(record.assessment){
+      const Model=record.assessmentType==='exam'?Exam:Quiz;
+      const assessment=await Model.findById(record.assessment).select('totalMarks').lean();
+      if(assessment?.totalMarks>0)record.assessmentTotalMarks=assessment.totalMarks;
+    }
     record.status='finalized';
   }
   await saveVersion(record);
@@ -177,6 +258,17 @@ async function save(req,res){
 }
 router.post('/',asyncHandler(save));
 router.put('/:id',asyncHandler(save));
+router.delete('/:id',asyncHandler(async(req,res)=>{
+  if(!mongoose.isObjectIdOrHexString(req.params.id))fail('Choose a valid group.');
+  if(!Number.isSafeInteger(req.body?.__v))fail('Reload this group before deleting it.',409);
+  const filter={_id:req.params.id};
+  const result=await Defense.deleteOne({...filter,__v:req.body.__v});
+  if(!result.deletedCount){
+    if(await Defense.exists(filter))fail('This group has changed. Reopen it before deleting.',409);
+    fail('Defense group not found.',404);
+  }
+  res.status(204).end();
+}));
 
 router.patch('/:id/marks',asyncHandler(async(req,res)=>{
   const record=await Defense.findById(req.params.id);
@@ -184,9 +276,18 @@ router.patch('/:id/marks',asyncHandler(async(req,res)=>{
   if(req.body.__v!==record.__v)fail('This evaluation has changed. Reopen it before editing.',409);
   if(record.status!=='finalized')fail('Save draft marks from the evaluation form.',409);
   const {ratings}=req.body;
-  validateRatings(ratings,record.ratingOptions);
-  if(criteria.some(key=>ratings[key]===undefined))fail('Rate every criterion before saving finalized marks.');
-  record.ratings=ratings;
+  const rubricCriteria=record.customRubric
+    ? record.customRubric.flatMap(section=>section.questions.map(question=>question.key)) : criteria;
+  validateRatings(ratings,record.ratingOptions,rubricCriteria);
+  if(rubricCriteria.some(key=>ratings[key]===undefined))fail('Rate every criterion before saving finalized marks.');
+  const evaluatorId=req.body.evaluatorId;
+  if(evaluatorId){
+    const evaluation=record.additionalEvaluations.id(evaluatorId);
+    if(!evaluation)fail('Evaluator not found.',404);
+    evaluation.ratings=ratings;
+  }else{
+    record.ratings=ratings;
+  }
   await saveVersion(record);
   res.json({record});
 }));

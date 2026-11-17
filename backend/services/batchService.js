@@ -10,4 +10,8 @@ function enrollmentBatch(enrollment) {
   const course = enrollment.course;
   return course?.academicYear === enrollment.academicYear ? course?.batch || '' : '';
 }
-module.exports={validateBatch,enrollmentBatch};
+function enrollmentCohortFilter(course, academicYear, batch) {
+  const configuredBatch = enrollmentBatch({course, academicYear});
+  return {academicYear, batch: batch === configuredBatch ? {$in: [batch, '', null]} : batch};
+}
+module.exports={validateBatch,enrollmentBatch,enrollmentCohortFilter};

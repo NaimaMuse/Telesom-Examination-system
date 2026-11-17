@@ -1,5 +1,5 @@
-import {useEffect,useState} from 'react';
-import {Link,useParams,useSearchParams} from 'react-router-dom';
+import {useEffect,useRef,useState} from 'react';
+import {Link,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
 import './ProjectDefenses.css';
@@ -11,7 +11,7 @@ const defaultRatingOptions=[1,2,3,4,5];
 const defenseTitle='Project Presentation & Defense';
 const candidateTitle='Candidate & Process Details';
 const placementTitle='Final Placement & Selection Matrix';
-const rubric=[
+const defaultRubric=[
   ['B','Conception, Problem Statement and Roles',[
     ['b1','What problem does your system solve, and why did you choose this particular problem?','Precise problem statement, genuine motivation, value proposition, and alignment with users.'],
     ['b2','Who are the intended users of your system, and what value does it provide to them?','Defined user personas, core features, intuitive layout, and feature prioritization.'],
@@ -58,7 +58,7 @@ function DefenseSectionTitle({icon,children}){
   </h3>;
 }
 
-function DefenseWordingEditor({wording,ratingOptions,ratings,onApply,onCancel}){
+function DefenseWordingEditor({wording,ratingOptions,usedRatings,customRubric,onApply,onCancel}){
   const [draft,setDraft]=useState(()=>({...wording}));
   const [optionText,setOptionText]=useState(()=>ratingOptions.join(', '));
   const [optionError,setOptionError]=useState('');
@@ -77,7 +77,7 @@ function DefenseWordingEditor({wording,ratingOptions,ratings,onApply,onCancel}){
       setOptionError('Enter distinct positive whole numbers separated by commas.');
       return;
     }
-    const inUse=[...new Set(Object.values(ratings))].filter(value=>!options.includes(value));
+    const inUse=[...new Set(usedRatings)].filter(value=>!options.includes(value));
     if(inUse.length){
       setOptionError('Change the marks using '+inUse.join(', ')+' before removing those options.');
       return;
@@ -93,7 +93,7 @@ function DefenseWordingEditor({wording,ratingOptions,ratings,onApply,onCancel}){
     <p id="defense-rating-options-help">Separate options with commas, for example 1, 2, 3, 4, 5, 6. The highest number is the maximum score.</p>
     {optionError&&<p className="ev-error" role="alert">{optionError}</p>}
     {field('A','Section A title',candidateTitle)}
-    {rubric.map(([section,title,criteria])=><fieldset key={section}>
+    {!customRubric&&defaultRubric.map(([section,title,criteria])=><fieldset key={section}>
       <legend>Section {section} · {title}</legend>
       {field(section,'Section title',title)}
       {criteria.map(([key,label,guidance],index)=><div key={key}>
@@ -116,24 +116,64 @@ function Rating({criterion,value,options,onChange}){
   </label>);
 }
 
-const sectionMarks={B:15,C:20,D:20,E:15,F:10,G:10};
-const totalMarks=Object.values(sectionMarks).reduce((sum,marks)=>sum+marks,0);
+const defaultSectionMarks={B:15,C:20,D:20,E:15,F:10,G:10};
+const defaultProjectTotal=90;
+const readMarks=event=>event.target.value===''?'':event.target.valueAsNumber;
+const validMarks=value=>Number.isSafeInteger(value)&&value>0;
+const marksSum=items=>items.reduce((sum,item)=>sum+Number(item.marks),0);
+const newQuestion=()=>({key:'q'+crypto.randomUUID(),title:'',marks:''});
+
+function CustomRubricEditor({sections,onChange}){
+  const updateSection=(key,update)=>onChange(sections.map(section=>section.key===key?{...section,...update}:section));
+  return <div className="defense-custom-rubric">
+    {sections.map((section,index)=><fieldset className="defense-criterion" key={section.key}>
+      <legend>Section {index+1}</legend>
+      <div className="defense-rubric-fields">
+        <label>Section title<input maxLength={500} value={section.title}
+          onChange={event=>updateSection(section.key,{title:event.target.value})}/></label>
+        <label>Section marks<input type="number" min="1" value={section.marks}
+          onChange={event=>updateSection(section.key,{marks:readMarks(event)})}/></label>
+      </div>
+      {section.questions.map((question,questionIndex)=>{
+        const updateQuestion=update=>updateSection(section.key,{questions:section.questions.map(item=>
+          item.key===question.key?{...item,...update}:item)});
+        return <div className="defense-rubric-fields" key={question.key}>
+          <label>Question {questionIndex+1}<input maxLength={500} value={question.title}
+            onChange={event=>updateQuestion({title:event.target.value})}/></label>
+          <label>Question marks<input type="number" min="1" value={question.marks}
+            onChange={event=>updateQuestion({marks:readMarks(event)})}/></label>
+          <button type="button" onClick={()=>updateSection(section.key,{questions:section.questions.filter(item=>item.key!==question.key)})}>
+            Remove question
+          </button>
+        </div>;
+      })}
+      <p>Question marks · {marksSum(section.questions)} / {section.marks||'—'}</p>
+      <div className="defense-group-tabs">
+        <button type="button" disabled={section.questions.length>=50}
+          onClick={()=>updateSection(section.key,{questions:[...section.questions,newQuestion()]})}>+ Add Question</button>
+        <button type="button" onClick={()=>onChange(sections.filter(item=>item.key!==section.key))}>Remove Section</button>
+      </div>
+    </fieldset>)}
+    <button type="button" disabled={sections.length>=30} onClick={()=>onChange([...sections,
+      {key:'s'+crypto.randomUUID(),title:'',marks:'',questions:[newQuestion()]}])}>+ Add Section</button>
+  </div>;
+}
 const formatMarks=marks=>marks===null?'Incomplete':marks.toFixed(2);
 
-function defenseScores(ratings,maxRating){
+function defenseScores(ratings,maxRating,sectionMarks,rubric){
   const marks=rubric.map(([section,,criteria])=>{
     const values=criteria.map(([key])=>ratings[key]);
-    if(values.some(value=>value===undefined))return null;
-    const sum=values.reduce((total,value)=>total+value,0);
-    return sum/(criteria.length*maxRating)*sectionMarks[section];
+    if(!values.length||values.some(value=>value===undefined))return null;
+    return values.reduce((total,value,index)=>total+
+      value/maxRating*(criteria[index][3]??sectionMarks[section]/criteria.length),0);
   });
-  const total=marks.includes(null)?null:marks.reduce((sum,value)=>sum+value,0);
+  const total=!marks.length||marks.includes(null)?null:marks.reduce((sum,value)=>sum+value,0);
   return {marks,total};
 }
 
-function DefenseMarksEditor({ratings,ratingOptions,maxRating,wording,busy,error,onSave,onCancel}){
+function DefenseMarksEditor({ratings,ratingOptions,maxRating,sectionMarks,totalMarks,rubric,wording,busy,error,onSave,onCancel}){
   const [draft,setDraft]=useState(()=>({...ratings}));
-  const {total}=defenseScores(draft,maxRating);
+  const {total}=defenseScores(draft,maxRating,sectionMarks,rubric);
   return <form className="defense-section defense-marks-editor defense-screen" onSubmit={event=>{
     event.preventDefault();
     if(!busy)onSave(draft);
@@ -196,7 +236,7 @@ function CohortPicker({course,cohort,cohortYear,autoSelect,onChange}){
   </div>;
 }
 
-function StudentPicker({course,cohort,cohortYear,selected,onChange}){
+function StudentPicker({course,cohort,cohortYear,assessment,assessmentType,defense,assigned,selected,onChange}){
   const [page,setPage]=useState(1);
   const [result,setResult]=useState(null);
   const [error,setError]=useState('');
@@ -204,12 +244,12 @@ function StudentPicker({course,cohort,cohortYear,selected,onChange}){
   useEffect(()=>{
     if(!course)return;
     const controller=new AbortController();
-    const params={page,...(cohortYear?{cohortName:cohort,cohortYear}:{})};
+    const params={page,...(cohortYear?{cohortName:cohort,cohortYear}:{}),assessment,assessmentType,defense};
     api.get('/evaluations/eligible/'+course,{params,signal:controller.signal})
       .then(({data})=>{if(!controller.signal.aborted)setResult(data);})
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
-  },[course,cohort,cohortYear,page,retry]);
+  },[course,cohort,cohortYear,assessment,assessmentType,defense,page,retry]);
   function changePage(next){
     setResult(null);
     setError('');
@@ -219,10 +259,10 @@ function StudentPicker({course,cohort,cohortYear,selected,onChange}){
     <legend><TeachingIcon name="users" size={16}/> Enrolled students · {selected.length} selected</legend>
     {!course?<p>Choose a course to load students.</p>:error?<p role="alert">{error} <button type="button" onClick={()=>{setError('');setRetry(value=>value+1);}}>Retry</button></p>:!result?<p role="status">Loading students…</p>:<>
       {result.total===0&&<p>{cohortYear?'No enrolled students for this cohort.':'No enrolled students for this course.'}</p>}
-      <div className="defense-students">{result.students.map(student=><label key={student._id}>
+      <div className="defense-students">{result.students.filter(student=>!assigned.has(student._id)).map(student=><label key={student._id}>
         <input type="checkbox" checked={selected.includes(student._id)} onChange={event=>onChange(event.target.checked
           ? [...selected,student._id] : selected.filter(id=>id!==student._id))}/>
-        {student.studentId} · {student.user?.name}
+        {student.user?.name}
       </label>)}</div>
       {result.total>50&&<div className="ev-actions">
         <button type="button" disabled={page<=1} onClick={()=>changePage(page-1)}>Previous</button>
@@ -277,6 +317,7 @@ export function ProjectDefenseEditor(){
 }
 
 function DefenseForm({id,initialCourse}){
+  const navigate=useNavigate();
   const [groups,setGroups]=useState(()=>[{...empty,groupName:'Group 1'}]);
   const [activeGroup,setActiveGroup]=useState(0);
   const [courses,setCourses]=useState(null);
@@ -287,17 +328,27 @@ function DefenseForm({id,initialCourse}){
   const [editingWording,setEditingWording]=useState(false);
   const [editingMarks,setEditingMarks]=useState(false);
   const [showScoring,setShowScoring]=useState(false);
+  const [activeEvaluator,setActiveEvaluator]=useState(0);
+  const [showRubricSetup,setShowRubricSetup]=useState(false);
+  const scoringRef=useRef(null);
+  const rubricSetupRef=useRef(null);
+  const groupDetailsRef=useRef(null);
   useEffect(()=>{
     const controller=new AbortController();
     const options={signal:controller.signal};
     Promise.all([api.get('/evaluations/courses',options),id?api.get(endpoint+'/'+id,options):null,
       api.get(endpoint+'/assessments',options)])
-      .then(([courseResult,recordResult,assessmentResult])=>{
+      .then(async ([courseResult,recordResult,assessmentResult])=>{
         if(controller.signal.aborted)return;
-        if(recordResult)setGroups([recordResult.data.record]);
-        else if(courseResult.data.courses.some(course=>course._id===initialCourse)){
-          setGroups([{...empty,course:initialCourse,groupName:'Group 1'}]);
-        }
+        const opened=recordResult?.data.record;
+        const courseId=opened?.course||courseResult.data.courses.find(course=>course._id===initialCourse)?._id;
+        const records=courseId
+          ? (await api.get(endpoint+'/courses/'+courseId+'/groups',options)).data.records
+          : [];
+        if(controller.signal.aborted)return;
+        if(opened&&!records.some(record=>record._id===opened._id))records.unshift(opened);
+        setGroups(records.length?records:[{...empty,course:courseId||'',groupName:'Group 1'}]);
+        setActiveGroup(Math.max(0,records.findIndex(record=>record._id===id)));
         setCourses(courseResult.data.courses);
         setAssessments(assessmentResult.data.assessments);
       })
@@ -306,6 +357,23 @@ function DefenseForm({id,initialCourse}){
   },[id,initialCourse]);
 
   const form=groups[activeGroup];
+  const customRubric=form.customRubric;
+  const rubric=customRubric?customRubric.map(section=>[section.key,section.title,
+    section.questions.map(question=>[question.key,question.title,'',question.marks])]):defaultRubric;
+  const sectionMarks=customRubric?Object.fromEntries(customRubric.map(section=>[section.key,section.marks])):
+    form.rubricSectionMarks||defaultSectionMarks;
+  const totalMarks=form.projectTotalMarks??defaultProjectTotal;
+  const sectionTotal=rubric.reduce((sum,[section])=>sum+Number(sectionMarks[section]),0);
+  const validAllocation=validMarks(totalMarks)&&sectionTotal===totalMarks&&
+    rubric.every(([section])=>validMarks(sectionMarks[section]))&&(!customRubric||
+      (customRubric.length>0&&customRubric.every(section=>section.title.trim()&&section.questions.length>0&&
+        marksSum(section.questions)===section.marks&&section.questions.every(question=>question.title.trim()&&validMarks(question.marks)))));
+  const additionalEvaluations=form.additionalEvaluations||[];
+  const evaluation=additionalEvaluations[activeEvaluator-1];
+  const ratings=evaluation?.ratings||form.ratings;
+  const notes=evaluation?.notes||form.notes;
+  const assigned=new Set(groups.flatMap((group,index)=>index!==activeGroup&&group.course===form.course&&
+    group.assessment===form.assessment&&group.assessmentType===form.assessmentType?group.students:[]));
   const ratingOptions=form.ratingOptions||defaultRatingOptions;
   const maxRating=ratingOptions.reduce((highest,option)=>Math.max(highest,option),0);
   const finalized=form.status==='finalized';
@@ -318,33 +386,98 @@ function DefenseForm({id,initialCourse}){
   }
   function selectGroup(index){
     setActiveGroup(index);
+    setActiveEvaluator(0);
     setShowScoring(false);
+    setShowRubricSetup(false);
     setNotice('');
     setError('');
   }
   function addGroup(){
+    const groupNames=new Set(groups.map(group=>group.groupName.trim().toLowerCase()));
+    let number=1;
+    while(groupNames.has('group '+number))number++;
     setGroups(previous=>[...previous,{...empty,course:form.course,cohort:form.cohort,cohortYear:form.cohortYear,
       assessment:form.assessment,assessmentType:form.assessmentType,assessmentTitle:form.assessmentTitle,
-      groupName:'Group '+(previous.length+1)}]);
+      projectTotalMarks:totalMarks,rubricSectionMarks:form.rubricSectionMarks,customRubric,
+      groupName:'Group '+number}]);
     selectGroup(groups.length);
   }
   function resetGroup(){
     if(!window.confirm('Clear the active group’s students, project details, ratings, and notes?'))return;
-    setForm({...form,...empty,course:form.course,cohort:form.cohort,cohortYear:form.cohortYear,groupName:form.groupName});
+    setForm({...form,...empty,additionalEvaluations:[],course:form.course,cohort:form.cohort,cohortYear:form.cohortYear,groupName:form.groupName});
+    setActiveEvaluator(0);
     setError('');
     setNotice(form._id?'Group cleared. Save the draft to keep these changes.':'Group cleared.');
   }
   const patch=(key,value)=>{setNotice('');setForm(previous=>({...previous,[key]:value}));};
-  const rate=(key,value)=>patch('ratings',{...form.ratings,[key]:value});
-  const {marks,total}=defenseScores(form.ratings,maxRating);
+  function updateCustomRubric(sections){
+    const keys=new Set(sections.flatMap(section=>section.questions.map(question=>question.key)));
+    const evaluations=[form,...additionalEvaluations];
+    const dropsScores=evaluations.some(item=>[...Object.keys(item.ratings),...Object.keys(item.notes)].some(key=>!keys.has(key)));
+    if(dropsScores&&!window.confirm('This change removes existing ratings or notes for the removed questions. Continue?'))return;
+    const keepQuestions=values=>Object.fromEntries(Object.entries(values).filter(([key])=>keys.has(key)));
+    setForm(previous=>({...previous,customRubric:sections,ratings:keepQuestions(previous.ratings),notes:keepQuestions(previous.notes),
+      additionalEvaluations:(previous.additionalEvaluations||[]).map(item=>({...item,
+        ratings:keepQuestions(item.ratings),notes:keepQuestions(item.notes)}))}));
+  }
+  function updateEvaluation(key,value){
+    if(!evaluation){patch(key,value);return;}
+    patch('additionalEvaluations',additionalEvaluations.map((item,index)=>index===activeEvaluator-1?{...item,[key]:value}:item));
+  }
+  function openScoring(){
+    setShowScoring(true);
+    requestAnimationFrame(()=>scoringRef.current?.scrollIntoView({block:'start'}));
+  }
+  function editGroup(){
+    setShowScoring(false);
+    setShowRubricSetup(false);
+    groupDetailsRef.current?.querySelector('input')?.focus();
+  }
+  async function deleteGroup(){
+    if(busy||!form._id||!window.confirm(`Delete ${form.groupName||'this group'} and its evaluations?`))return;
+    setBusy(true);
+    setError('');
+    try{
+      await api.delete(endpoint+'/'+form._id,{data:{__v:form.__v}});
+      if(id===form._id){
+        navigate(route+'/new?'+new URLSearchParams({course:form.course}),{replace:true});
+        return;
+      }
+      const remaining=groups.filter((_,index)=>index!==activeGroup);
+      setGroups(remaining.length?remaining:[{...empty,course:form.course,groupName:'Group 1'}]);
+      selectGroup(Math.min(activeGroup,Math.max(0,remaining.length-1)));
+    }catch(error){
+      setError(message(error));
+    }finally{
+      setBusy(false);
+    }
+  }
+  const rate=(key,value)=>updateEvaluation('ratings',{...ratings,[key]:value});
+  const {marks,total}=defenseScores(ratings,maxRating,sectionMarks,rubric);
+  const evaluatorTotals=[form.ratings,...additionalEvaluations.map(item=>item.ratings)]
+    .map(item=>defenseScores(item,maxRating,sectionMarks,rubric).total);
+  const groupTotal=evaluatorTotals.includes(null)?null:evaluatorTotals.reduce((sum,value)=>sum+value,0)/evaluatorTotals.length;
   const course=courses?.find(course=>course._id===form.course);
   const courseAssessments=assessments.filter(item=>!form.course||item.course._id===form.course);
   const assessmentValue=form.assessment?form.assessmentType+':'+form.assessment:'';
   const assessmentKey=assessment=>assessment.type+':'+assessment._id;
+  const currentAssessment=courseAssessments.find(item=>assessmentKey(item)===assessmentValue);
+  const assessmentMax=finalized
+    ? form.assessmentTotalMarks ?? currentAssessment?.totalMarks
+    : currentAssessment?.totalMarks ?? form.assessmentTotalMarks;
+  const assessmentMarks=!validAllocation||groupTotal===null?null:groupTotal/totalMarks*assessmentMax;
   const courseLabel=course?.name||course?.title||'';
-  const backTo=form.course?defenseHome+'?'+new URLSearchParams({course:form.course}):defenseHome;
-  async function save(finalize){
+  async function save(finalize,continueToScoring=false){
     if(busy||finalized)return;
+    if(!form._id&&(!form.groupName.trim()||!form.students.length)){
+      setError('Enter a group name and select at least one student.');
+      return;
+    }
+    if(!validAllocation){
+      setNotice('');
+      setError('Complete the rubric and make sure question marks add up to each section and section marks add up to the project total.');
+      return;
+    }
     if(finalize){
       const missing=[
         !form.evaluatorName?.trim()&&'Evaluator name',
@@ -352,9 +485,13 @@ function DefenseForm({id,initialCourse}){
         !form.projectTitle?.trim()&&'Project title',
         !form.cohort?.trim()&&'Training cohort',
         !form.defenseDate&&'Defense date',
-        ...rubric.flatMap(([section,,criteria])=>criteria
+        ...additionalEvaluations.flatMap((item,index)=>[
+          !item.name.trim()&&`Evaluator ${index+2} name`,
+          defenseScores(item.ratings,maxRating,sectionMarks,rubric).total===null&&`Complete all ratings for ${item.name.trim()||'evaluator '+(index+2)}`,
+        ]),
+        ...rubric.flatMap(([section,title,criteria])=>criteria
           .filter(([key])=>form.ratings[key]===undefined)
-          .map(([key,label])=>`Section ${section} rating — ${wording(key,label)}`)),
+          .map(([key,label])=>`${wording(section,title)} rating — ${wording(key,label)}`)),
       ].filter(Boolean);
       if(missing.length){
         setNotice('');
@@ -371,7 +508,15 @@ function DefenseForm({id,initialCourse}){
         ? await api.put(endpoint+'/'+form._id,{...form,finalize})
         : await api.post(endpoint,{...form,finalize});
       setForm(response.data.record);
-      setNotice(finalize?'Evaluation finalized.':form._id?'Draft saved.':'Defense form created. You can score it now or open it later from Saved Defenses.');
+      if(!form._id&&!finalize){
+        setShowRubricSetup(true);
+        requestAnimationFrame(()=>rubricSetupRef.current?.scrollIntoView({block:'start'}));
+      }
+      if(continueToScoring){
+        setShowRubricSetup(false);
+        openScoring();
+      }
+      setNotice(finalize?'Evaluation finalized.':form._id?'':'Group created. Set up its rubric before scoring.');
     }catch(error){
       setError(message(error));
     }finally{
@@ -381,14 +526,14 @@ function DefenseForm({id,initialCourse}){
   async function saveMarks(ratings){
     setError('');
     if(!finalized){
-      patch('ratings',ratings);
+      updateEvaluation('ratings',ratings);
       setEditingMarks(false);
       setNotice('Marks updated. Save the draft to keep these changes.');
       return;
     }
     setBusy(true);
     try{
-      const {data}=await api.patch(endpoint+'/'+form._id+'/marks',{ratings,__v:form.__v});
+      const {data}=await api.patch(endpoint+'/'+form._id+'/marks',{ratings,evaluatorId:evaluation?._id,__v:form.__v});
       setForm(data.record);
       setEditingMarks(false);
       setNotice('Marks saved.');
@@ -399,57 +544,96 @@ function DefenseForm({id,initialCourse}){
     }
   }
   return <div className="evaluations defense-page">
-    <nav className="ev-create-breadcrumb defense-screen" aria-label="Breadcrumb">
-      <Link to="/admin">Dashboard</Link><span aria-hidden="true">/</span>
-      <Link to={backTo}>Project Defense</Link><span aria-hidden="true">/</span>
-      <span aria-current="page">{id?'Defense Evaluation':'New Defense'}</span>
-    </nav>
-    <nav className="defense-toolbar defense-screen" aria-label="Project defense actions">
-      <Link className="btn" to={backTo}><span aria-hidden="true">←</span> Back to Project Defense</Link>
-      <div className="defense-toolbar-actions">
-        {courses&&<>{finalized&&<span className="ev-status">Finalized</span>}
-          {!finalized&&<button type="button" disabled={busy||editing} onClick={()=>setEditingWording(true)}>Edit Form</button>}
-          {form._id&&<button type="button" disabled={busy||editing} onClick={()=>{setError('');setNotice('');setEditingMarks(true);}}>Edit Marks</button>}
-          <button type="button" disabled={editing} onClick={()=>window.print()}><TeachingIcon name="file" size={15}/> Print / Save PDF</button></>}
-        <Link className="btn btn-primary" to={route}><TeachingIcon name="folder" size={15}/> Saved Defenses</Link>
-      </div>
-    </nav>
-    {!courses?(error?<p className="ev-error" role="alert">{error}</p>:<p role="status">Loading evaluation…</p>):<>
-      <section className="defense-group-panel defense-screen" aria-label="Defense groups">
+    {!courses?(error?<p className="ev-error" role="alert">{error}</p>:<p role="status">Loading evaluation…</p>):<div className="defense-workspace">
+      <aside className="defense-group-panel defense-group-sidebar defense-screen" aria-labelledby="defense-groups-title">
+        <header className="defense-group-heading">
+          <TeachingIcon name="users" size={19}/>
+          <h3 id="defense-groups-title">List of Groups</h3>
+          <span>{groups.filter(group=>group._id).length} saved</span>
+        </header>
         <div className="defense-group-tabs" role="group" aria-label="Choose a group">
-          {groups.map((group,index)=><button type="button" key={index} disabled={busy||editing}
-            aria-pressed={index===activeGroup} onClick={()=>selectGroup(index)}>
-            {group.groupName||'Group '+(index+1)}
-          </button>)}
-          <button type="button" disabled={busy||editing} onClick={addGroup}>+ Add Group</button>
+          {groups.map((group,index)=>{
+            const members=group.students?.length??0;
+            const date=group.defenseDate&&new Date(group.defenseDate+'T00:00:00Z');
+            const status=group.status==='finalized'?'Finalized':group._id?'Draft':'Unsaved';
+            return <button type="button" key={group._id||index} disabled={busy||editing}
+              aria-pressed={index===activeGroup} onClick={()=>selectGroup(index)}>
+              <span className="defense-group-avatar"><TeachingIcon name="users" size={18}/></span>
+              <span className="defense-group-info">
+                <strong>{group.groupName||'Group '+(index+1)}</strong>
+                {date&&<span><TeachingIcon name="calendar" size={13}/> {date.toLocaleDateString('en-GB',{timeZone:'UTC'})}</span>}
+                <span>{members} {members===1?'member':'members'}</span>
+              </span>
+              <span className="defense-group-status" data-status={status}>{status}</span>
+            </button>;
+          })}
         </div>
+        <button type="button" disabled={busy||editing} onClick={addGroup}>+ Add Group</button>
         <div className="defense-group-controls">
           <strong>Active group · {form.groupName||'Group '+(activeGroup+1)}</strong>
-          <button className="defense-group-reset" type="button" disabled={busy||finalized||editing} onClick={resetGroup}>Reset Active Group</button>
+          {form._id&&!finalized&&<>
+            <button type="button" disabled={busy||editing} onClick={editGroup}><TeachingIcon name="edit" size={14}/> Edit Group</button>
+            <button type="submit" form="defense-group-form" disabled={busy||editing}><TeachingIcon name="check" size={14}/> Save Group</button>
+          </>}
+          {form._id&&<button type="button" className="defense-delete-group" disabled={busy||editing} onClick={deleteGroup}>
+            <TeachingIcon name="trash" size={14}/> Delete Group
+          </button>}
+          {form._id&&!finalized&&<button type="button" disabled={busy||editing}
+            aria-expanded={showRubricSetup} aria-controls="defense-rubric-setup"
+            onClick={()=>setShowRubricSetup(previous=>!previous)}>Set Up Rubric</button>}
+          {form._id&&<button type="button" disabled={busy||editing} aria-expanded={showScoring||finalized}
+            aria-controls="defense-scoring" onClick={()=>showScoring&&!finalized?setShowScoring(false):openScoring()}>
+            {showScoring&&!finalized?'Hide Scoring':'Open Scoring'}
+          </button>}
+          {form._id&&!finalized&&showScoring&&<button type="button" disabled={busy||editing||!form.course}
+            onClick={()=>save(true)}>Finalize Evaluation</button>}
+          {form._id&&<>
+            {!finalized&&<button type="button" disabled={busy||editing} onClick={()=>setEditingWording(true)}>Edit Form</button>}
+            <button type="button" disabled={busy||editing} onClick={()=>{setError('');setNotice('');setEditingMarks(true);}}>Edit Marks</button>
+            <button type="button" disabled={editing} onClick={()=>window.print()}><TeachingIcon name="file" size={15}/> Print / Save PDF</button>
+          </>}
         </div>
-      </section>
-      {editingWording?<DefenseWordingEditor wording={form.wording} ratingOptions={ratingOptions} ratings={form.ratings}
+      </aside>
+      <div className="defense-workspace-form">
+      {(showScoring||finalized||editingMarks)&&(!finalized||additionalEvaluations.length>0)&&<div className="defense-group-panel defense-evaluator-picker defense-screen">
+        {additionalEvaluations.length>0&&<label>Evaluator
+          <select value={activeEvaluator} disabled={busy||editing} onChange={event=>setActiveEvaluator(Number(event.target.value))}>
+            <option value={0}>{form.evaluatorName||'Evaluator 1'}</option>
+            {additionalEvaluations.map((item,index)=><option key={index} value={index+1}>{item.name||`Evaluator ${index+2}`}</option>)}
+          </select>
+        </label>}
+        {!finalized&&<div className="defense-group-tabs">
+          <button type="button" disabled={busy||editing} onClick={()=>{
+            patch('additionalEvaluations',[...additionalEvaluations,{name:'',ratings:{},notes:{}}]);
+            setActiveEvaluator(additionalEvaluations.length+1);
+          }}>+ Add Evaluator</button>
+          {evaluation&&<button type="button" disabled={busy||editing} onClick={()=>{
+            patch('additionalEvaluations',additionalEvaluations.filter((_,index)=>index!==activeEvaluator-1));
+            setActiveEvaluator(0);
+          }}>Remove Evaluator</button>}
+        </div>}
+      </div>}
+      {editingWording?<DefenseWordingEditor wording={form.wording} ratingOptions={ratingOptions} customRubric={customRubric}
+        usedRatings={[form.ratings,...additionalEvaluations.map(item=>item.ratings)].flatMap(item=>Object.values(item))}
         onCancel={()=>setEditingWording(false)} onApply={(wording,options)=>{
         setForm(previous=>({...previous,wording,ratingOptions:options}));
         setEditingWording(false);
         setNotice('Form updated. Save the draft to keep these changes.');
-      }}/>:editingMarks?<DefenseMarksEditor ratings={form.ratings} ratingOptions={ratingOptions} maxRating={maxRating} wording={wording} busy={busy} error={error}
+      }}/>:editingMarks?<DefenseMarksEditor ratings={ratings} ratingOptions={ratingOptions} maxRating={maxRating}
+        sectionMarks={sectionMarks} totalMarks={totalMarks} rubric={rubric} wording={wording} busy={busy} error={error}
         onSave={saveMarks} onCancel={()=>{setError('');setEditingMarks(false);}}/>
-      :<form onSubmit={event=>{event.preventDefault();save(false);}}>
+      :<form id="defense-group-form" onSubmit={event=>{event.preventDefault();save(false);}}>
         <header className="defense-title">
           <img src="/telesom-academy-logo.png" alt="Telesom Academy"/>
           <div>
             <h2>{wording('title',defenseTitle)}</h2>
             <p>{courseLabel||'System Architecture, Technical Implementations & Defense Matrix'}</p>
           </div>
-          <span className="defense-title-art defense-screen" aria-hidden="true">
-            <span className="defense-title-screen">&lt;/&gt;</span>
-            <TeachingIcon name="graduate" size={38}/>
-          </span>
+          <img className="defense-title-art defense-screen" src="/certificates-graduation.webp" alt=""/>
         </header>
         <fieldset className="defense-fields" disabled={busy||finalized}>
-          <section className="defense-section">
-            <DefenseSectionTitle icon="users">Section A · {wording('A',candidateTitle)}</DefenseSectionTitle>
+          <section className="defense-section defense-group-details" ref={groupDetailsRef}>
+            <DefenseSectionTitle icon="users">{form._id?wording('A',candidateTitle):'Group Creation'}</DefenseSectionTitle>
             <div className="defense-details">
               <label className="defense-screen"><span className="defense-field-label"><TeachingIcon name="clipboard" size={15}/> Exam or quiz</span><select value={assessmentValue} required={!form._id} onChange={event=>{
                 const selected=courseAssessments.find(item=>assessmentKey(item)===event.target.value);
@@ -488,44 +672,53 @@ function DefenseForm({id,initialCourse}){
                 <span className="defense-print">{form.defenseDate||'—'}</span>
               </label>
               <label><span className="defense-field-label"><span className="defense-screen"><TeachingIcon name="profile" size={15}/></span>Evaluator name</span>
-                <input className="defense-screen" placeholder="Enter evaluator name" maxLength={200} value={form.evaluatorName||''}
-                  onChange={event=>patch('evaluatorName',event.target.value)}/>
-                <span className="defense-print">{form.evaluatorName||'—'}</span>
+                <input className="defense-screen" placeholder="Enter evaluator name" maxLength={200} value={(evaluation?evaluation.name:form.evaluatorName)||''}
+                  onChange={event=>updateEvaluation(evaluation?'name':'evaluatorName',event.target.value)}/>
+                <span className="defense-print">{(evaluation?evaluation.name:form.evaluatorName)||'—'}</span>
               </label>
             </div>
             <div className="defense-screen"><StudentPicker key={JSON.stringify([activeGroup,form.course,form.cohort,form.cohortYear])}
               course={form.course} cohort={form.cohort} cohortYear={form.cohortYear}
-              selected={form.students} onChange={value=>patch('students',value)}/></div>
+              assessment={form.assessment} assessmentType={form.assessmentType} defense={form._id}
+              assigned={assigned} selected={form.students} onChange={value=>patch('students',value)}/></div>
           </section>
-          {!finalized&&<div className="defense-scoring-bar defense-screen">
-            <span className="defense-icon"><TeachingIcon name="chart" size={17}/></span>
-            <div>
-              <strong>Defense Rubric</strong>
-              <p>{form._id?`Score the defense out of ${totalMarks} marks.`:'You can create this form without entering marks.'}</p>
-            </div>
-            <button type="button" aria-expanded={showScoring} aria-controls="defense-scoring"
-              onClick={()=>{setShowScoring(previous=>!previous);setError('');}}>
-              {showScoring?'Hide Rubric':form._id?'Open Scoring':'Preview Rubric'}
-            </button>
-          </div>}
-          <div id="defense-scoring" className={showScoring||finalized?'defense-scoring':'defense-scoring is-collapsed'}>
-          {rubric.map(([section,title,criteria])=><section className="defense-section" key={section}>
-            <DefenseSectionTitle icon={section==='G'?'users':'clipboard'}>Section {section} · {wording(section,title)}</DefenseSectionTitle>
+          {form._id&&!finalized&&showRubricSetup&&<section id="defense-rubric-setup" ref={rubricSetupRef} className="defense-section defense-mark-allocation defense-screen">
+            <DefenseSectionTitle icon="clipboard">Step 2 · Set Up Rubric</DefenseSectionTitle>
+            <label>Project total marks
+              <input type="number" min="1" step="1" value={totalMarks}
+                onChange={event=>patch('projectTotalMarks',readMarks(event))}/>
+            </label>
+            {customRubric?<CustomRubricEditor sections={customRubric} onChange={updateCustomRubric}/>:<>
+            <button type="button" onClick={()=>updateCustomRubric([])}>Create Custom Rubric</button>
+            <div className="defense-details">
+              {rubric.map(([section,title])=><label key={section}>Section {section} · {wording(section,title)}
+                <input type="number" min="1" step="1" value={sectionMarks[section]}
+                  onChange={event=>patch('rubricSectionMarks',{...sectionMarks,[section]:readMarks(event)})}/>
+              </label>)}
+            </div></>}
+            <p role="status">Section total · <strong>{sectionTotal}</strong> / {totalMarks||'—'}</p>
+            {!validAllocation&&<p>Complete the titles and marks. Questions must add up to their section, and sections must add up to the project total.</p>}
+            <button type="button" className="btn-primary" disabled={!validAllocation||busy}
+              onClick={()=>save(false,true)}>Save Rubric &amp; Open Scoring</button>
+          </section>}
+          <div id="defense-scoring" ref={scoringRef} className={showScoring||finalized?'defense-scoring':'defense-scoring is-collapsed'}>
+          {rubric.map(([section,title,criteria],index)=><section className="defense-section" key={section}>
+            <DefenseSectionTitle icon={section==='G'?'users':'clipboard'}>Section {customRubric?index+1:section} · {wording(section,title)} · {sectionMarks[section]||'—'} marks</DefenseSectionTitle>
             {section==='G'?<div className="defense-matrix-scroll"><table className="defense-matrix defense-professional">
               <thead><tr><th scope="col">Key attribute</th>{ratingOptions.map(score=><th scope="col" key={score}>{score}</th>)}</tr></thead>
               <tbody>{criteria.map(([key,label])=><tr key={key}><th scope="row">{wording(key,label)}</th>{ratingOptions.map(score=><td key={score}>
                 <input className="defense-screen" type="radio" name={key} aria-label={wording(key,label)+' · '+score}
-                  checked={form.ratings[key]===score} onChange={()=>rate(key,score)}/>
-                <span className="defense-print">{form.ratings[key]===score?'✓':''}</span>
+                  checked={ratings[key]===score} onChange={()=>rate(key,score)}/>
+                <span className="defense-print">{ratings[key]===score?'✓':''}</span>
               </td>)}</tr>)}</tbody>
-            </table></div>:criteria.map(([key,label,guidance])=><fieldset className="defense-criterion" key={key}>
-              <legend>{wording(key,label)}</legend>
+            </table></div>:criteria.map(([key,label,guidance,questionMarks])=><fieldset className="defense-criterion" key={key}>
+              <legend>{wording(key,label)}{customRubric&&` · ${questionMarks||'—'} marks`}</legend>
               {(form.wording?.[key+'Hint']??guidance)?.trim()&&<p className="defense-guidance">Look for · {form.wording?.[key+'Hint']??guidance}</p>}
-              <div className="defense-scores defense-screen"><span>Rating</span><Rating criterion={key} value={form.ratings[key]} options={ratingOptions} onChange={value=>rate(key,value)}/></div>
-              <p className="defense-print">Rating · {form.ratings[key]??'—'} / {maxRating}</p>
-              {guidance&&<label>Evaluation notes<textarea className="defense-screen" maxLength={4000} value={form.notes[key]||''}
-                onChange={event=>patch('notes',{...form.notes,[key]:event.target.value})}/>
-                <span className="defense-print">{form.notes[key]||'—'}</span>
+              <div className="defense-scores defense-screen"><span>Rating</span><Rating criterion={key} value={ratings[key]} options={ratingOptions} onChange={value=>rate(key,value)}/></div>
+              <p className="defense-print">Rating · {ratings[key]??'—'} / {maxRating}</p>
+              {(guidance||customRubric)&&<label>Evaluation notes<textarea className="defense-screen" maxLength={4000} value={notes[key]||''}
+                onChange={event=>updateEvaluation('notes',{...notes,[key]:event.target.value})}/>
+                <span className="defense-print">{notes[key]||'—'}</span>
               </label>}
             </fieldset>)}
           </section>)}
@@ -533,7 +726,12 @@ function DefenseForm({id,initialCourse}){
             <DefenseSectionTitle icon="chart">Section I · {wording('I',placementTitle)}</DefenseSectionTitle>
             <table className="defense-matrix"><thead><tr><th scope="col">Assessment category</th><th scope="col">Score</th></tr></thead>
               <tbody>{rubric.map(([section,title],index)=><tr key={section}><th scope="row">{wording(section,title)}</th><td>{formatMarks(marks[index])} / {sectionMarks[section]}</td></tr>)}</tbody>
-              <tfoot><tr><th scope="row">Final system marks</th><td>{formatMarks(total)} / {totalMarks}</td></tr></tfoot>
+              <tfoot>
+                <tr><th scope="row">Evaluator rubric marks</th><td>{formatMarks(total)} / {totalMarks}</td></tr>
+                {additionalEvaluations.length>0&&<tr><th scope="row">Group average</th><td>{formatMarks(groupTotal)} / {totalMarks}</td></tr>}
+                {assessmentMax>0&&<tr><th scope="row">{form.assessmentTitle||'Assessment'} marks</th>
+                  <td>{formatMarks(assessmentMarks)} / {assessmentMax}</td></tr>}
+              </tfoot>
             </table>
             <fieldset className="defense-outcomes">
               <legend>Defense outcome recommendation</legend>
@@ -553,15 +751,16 @@ function DefenseForm({id,initialCourse}){
           </section>
           </div>
         </fieldset>
-        <footer className="defense-footer defense-screen">
+        {(error||notice||!form._id)&&<footer className="defense-footer defense-screen">
           {error&&<p className="ev-error defense-save-error" role="alert">{error}</p>}
           {notice&&<p className="ev-notice" role="status">{notice}</p>}
-          {!finalized&&<div className="ev-actions">
-            <button type="submit" className="btn-primary" disabled={busy}>{busy?'Saving…':form._id?'Save Draft':'Create Defense Form'}</button>
-            {form._id&&showScoring&&<button type="button" disabled={busy||!form.course} onClick={()=>save(true)}>Finalize Evaluation</button>}
+          {!form._id&&<div className="ev-actions">
+            <button type="button" disabled={busy} onClick={resetGroup}>Reset Group</button>
+            <button type="submit" className="btn-primary" disabled={busy}>{busy?'Saving…':'Create Group'}</button>
           </div>}
-        </footer>
+        </footer>}
       </form>}
-    </>}
+      </div>
+    </div>}
   </div>;
 }

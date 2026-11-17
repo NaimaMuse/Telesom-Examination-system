@@ -15,7 +15,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
  const admin=await User.create({name:'Admin Test',email:'admin@eval.test',role:'admin',password:'hashed-test-password'});
  const users=[],students=[];for(let i=0;i<4;i++){const u=await User.create({name:'Student '+i,email:`student${i}@eval.test`,role:'student'});users.push(u);students.push(await Student.create({user:u._id,studentId:'EVAL-'+i,gender:'female'}));}
  const course=await Course.create({name:'Evaluation Course',durationWeeks:16});for(const s of students.slice(0,3))await Enrollment.create({student:s._id,course:course._id,academicYear:'2026'});
- async function req(method,p,body,user=admin){const r=await fetch(base+p,{method,headers:{Authorization:'Bearer '+token(user._id),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};}
+ async function req(method,p,body,user=admin){const r=await fetch(base+p,{method,headers:{Authorization:'Bearer '+token(user._id),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:r.status,data:r.status===204?null:await r.json()};}
  function ok(r,status=200){assert.equal(r.status,status,JSON.stringify(r.data));return r.data;}
  const eligible=ok(await req('GET','/evaluations/eligible/'+course._id));assert.equal(eligible.total,3);
  let f=ok(await req('POST','/evaluations',{course:course._id,title:'Course feedback'}),201).form;
@@ -54,5 +54,69 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
  assert.equal(all.students.length,4);
  ok(await req('POST','/evaluations/'+all._id+'/publish'));
  ok(await req('PUT','/evaluations/'+all._id+'/response',{answers:{q1:5},submit:true},users[3]));
+ const defenseCourse=await Course.create({name:'Defense Course',durationWeeks:16,academicYear:'2026',batch:'cohort 6'});
+ await Enrollment.insertMany([
+   {course:defenseCourse._id,student:students[0]._id,academicYear:'2026',batch:'cohort 6'},
+   {course:defenseCourse._id,student:students[1]._id,academicYear:'2026'},
+   {course:defenseCourse._id,student:students[2]._id,academicYear:'2026',batch:'cohort 7'},
+   {course:defenseCourse._id,student:students[3]._id,academicYear:'2025'},
+ ]);
+ const defenseEligible=ok(await req('GET',`/evaluations/eligible/${defenseCourse._id}?cohortName=cohort%206&cohortYear=2026`));
+ assert.equal(defenseEligible.total,2);
+ assert.deepEqual(defenseEligible.students.map(s=>s._id),students.slice(0,2).map(s=>String(s._id)));
+ const teacher=await User.create({name:'Defense Teacher',email:'teacher@eval.test',role:'teacher',password:'hashed-test-password'});
+ const exam=await require('../models/Exam').create({
+   title:'Final Project',course:defenseCourse._id,totalMarks:50,examDate:new Date(),createdBy:teacher._id,
+ });
+ const defense={course:defenseCourse._id,cohort:'cohort 6',cohortYear:'2026',assessment:exam._id,assessmentType:'exam'};
+ await require('../models/ProjectDefense').init();
+ const saved=ok(await req('POST','/evaluations/defenses',{
+   ...defense,students:[students[1]._id],additionalEvaluations:[{name:'Second evaluator',ratings:{b1:4},notes:{b1:'Good explanation'}}],
+ }),201);
+ assert.deepEqual(saved.record.students,[String(students[1]._id)]);
+ assert.equal(saved.record.additionalEvaluations[0].ratings.b1,4);
+ const available=ok(await req('GET',`/evaluations/eligible/${defenseCourse._id}?cohortName=cohort%206&cohortYear=2026&assessment=${exam._id}&assessmentType=exam`));
+ assert.deepEqual(available.students.map(s=>s._id),[String(students[0]._id)]);
+ ok(await req('POST','/evaluations/defenses',{...defense,students:[students[1]._id]}),409);
+ const ratings=Object.fromEntries(['b1','b2','b3','c1','d1','e1','f1','g1','g2','g3','g4'].map(key=>[key,5]));
+ const finish={...saved.record,evaluatorName:'First evaluator',projectTitle:'Project',defenseDate:'2026-11-17',ratings,finalize:true};
+ ok(await req('PUT','/evaluations/defenses/'+saved.record._id,finish),400);
+ finish.additionalEvaluations[0].ratings=ratings;
+ const finalized=ok(await req('PUT','/evaluations/defenses/'+saved.record._id,finish)).record;
+ assert.equal(finalized.status,'finalized');
+ const updated=ok(await req('PATCH',`/evaluations/defenses/${finalized._id}/marks`,{
+   __v:finalized.__v,evaluatorId:finalized.additionalEvaluations[0]._id,ratings:{...ratings,b1:3},
+ })).record;
+ assert.equal(updated.ratings.b1,5);
+ assert.equal(updated.additionalEvaluations[0].ratings.b1,3);
+ const groupDraft={...defense,groupName:'Group 2',students:[students[0]._id],projectTotalMarks:100};
+ ok(await req('POST','/evaluations/defenses',groupDraft),400);
+ const rubricSectionMarks={B:15,C:20,D:20,E:15,F:10,G:20};
+ const secondGroup=ok(await req('POST','/evaluations/defenses',{...groupDraft,rubricSectionMarks}),201).record;
+ assert.equal(secondGroup.projectTotalMarks,100);
+ assert.deepEqual(secondGroup.rubricSectionMarks,rubricSectionMarks);
+ const courseGroups=ok(await req('GET',`/evaluations/defenses/courses/${defenseCourse._id}/groups`)).records;
+ assert.deepEqual(courseGroups.map(group=>group._id),[finalized._id,secondGroup._id]);
+ assert.equal(courseGroups[0].additionalEvaluations[0].ratings.b1,3);
+ assert.deepEqual(ok(await req('GET',`/evaluations/defenses/courses/${secondCourse._id}/groups`)).records,[]);
+ const questionKey='q'+require('node:crypto').randomUUID();
+ const customRubric=[{
+   key:'s'+require('node:crypto').randomUUID(),title:'Project demo',marks:100,
+   questions:[{key:questionKey,title:'Demonstrate the solution',marks:90}],
+ }];
+ const customDraft={...secondGroup,customRubric,evaluatorName:'Evaluator',projectTitle:'Demo',defenseDate:'2026-11-17',finalize:true};
+ const groupUrl='/evaluations/defenses/'+secondGroup._id;
+ ok(await req('PUT',groupUrl,customDraft),400);
+ customRubric[0].questions[0].marks=100;
+ ok(await req('PUT',groupUrl,customDraft),400);
+ const customFinal=ok(await req('PUT',groupUrl,{...customDraft,ratings:{[questionKey]:4}})).record;
+ assert.deepEqual(customFinal.customRubric,customRubric);
+ assert.equal(customFinal.status,'finalized');
+ const rescored=ok(await req('PATCH',groupUrl+'/marks',{__v:customFinal.__v,ratings:{[questionKey]:5}})).record;
+ ok(await req('DELETE',groupUrl,{__v:customFinal.__v}),409);
+ ok(await req('DELETE',groupUrl,{__v:rescored.__v},users[0]),403);
+ ok(await req('DELETE',groupUrl,{__v:rescored.__v}),204);
+ ok(await req('GET',groupUrl),404);
+ ok(await req('POST','/evaluations/defenses',{...defense,students:[students[2]._id]}),400);
  console.log('Evaluation HTTP integration passed: assignments, publication, notifications, validation, concurrent limits, uniqueness, editing, closure, reports and authorization.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(server)await new Promise(r=>server.close(r));await mongoose.disconnect();if(child){child.kill();await delay(500);}console.log('Isolated MongoDB test files: '+dir);});

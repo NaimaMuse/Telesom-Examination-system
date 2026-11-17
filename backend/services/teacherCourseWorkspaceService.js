@@ -4,7 +4,7 @@ const Teacher=require('../models/Teacher'),Assignment=require('../models/CourseT
 const Enrollment=require('../models/Enrollment'),Contract=require('../models/TeacherContract');
 const Lesson=require('../models/TeachingLesson'),Exam=require('../models/Exam'),Quiz=require('../models/Quiz'),Note=require('../models/Note');
 const {summary,teachingDay}=require('./teacherContractService');
-const {enrollmentBatch}=require('./batchService');
+const {enrollmentBatch,enrollmentCohortFilter}=require('./batchService');
 const fail=(message,statusCode=400)=>{throw Object.assign(new Error(message),{statusCode});};
 const publicCourse=course=>{const {performanceWriteLock,__v,...safe}=course;return safe;};
 const id=value=>String(value?._id||value||'');
@@ -43,11 +43,9 @@ async function resolveScope(user,query={}) {
   return {teacher,cohorts,courses,contracts:matchingContracts,selected,contract};
 }
 function enrollmentFilter(scope) {
-  const configuredBatch=enrollmentBatch({course:scope.course,academicYear:scope.academicYear});
-  const batch=scope.batch||'';
   return {
-    course:scope.course._id,academicYear:scope.academicYear,status:'enrolled',
-    batch:batch===configuredBatch?{$in:[batch,'',null]}:batch,
+    course:scope.course._id,status:'enrolled',
+    ...enrollmentCohortFilter(scope.course,scope.academicYear,scope.batch||''),
   };
 }
 const assessmentFilter=scope=>({course:scope.course._id,academicYear:scope.academicYear,$and:[{$or:[{batch:scope.batch||''},{batch:''},{batch:{$exists:false}}]},...(scope.semester?[{$or:[{semester:scope.semester},{semester:''},{semester:{$exists:false}}]}]:[])]});
