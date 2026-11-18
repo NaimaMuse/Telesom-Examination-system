@@ -2,6 +2,7 @@ import StudentPerformanceReport from './StudentPerformanceReport';
 import { usePageSearch } from '../../context/PageSearchContext';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../../services/api';
+import TeachingIcon from '../../components/TeachingIcon';
 import './TeacherPerformance.css';
 
 const STUDENTS_PER_PAGE = 10;
@@ -135,29 +136,36 @@ export default function TeacherPerformance() {
   const ready = !loading && !!report;
   const changeCourse = event => { setCourseId(event.target.value); setAssessmentId(''); setCohort(''); closeDetails(); };
 
-  return <div className="performance-page">
+  return <div className="performance-page records-design">
+    <header className="records-hero">
+      <span className="records-hero-icon"><TeachingIcon name="users" size={30}/></span>
+      <div><span>ACADEMY REPORTS</span><h1>Student Records</h1><p>View, filter and manage student performance records.</p></div>
+      <div className="records-hero-wave" aria-hidden="true"/>
+    </header>
     {error && <div role="alert" className="performance-alert error">{error} <button className="performance-button" onClick={() => setRevision(value => value + 1)}>Retry</button></div>}
     <section className="performance-stats" aria-label="Course summary" aria-live="polite">
-      <div className="performance-stat performance-ranked highest"><span>Highest student</span><strong className="performance-ranked-name">{ready?highestStudent?.student||'No marks yet':'—'}</strong><small>{ready&&highestStudent?(highestStudent.courseName||report?.course?.title||highestStudent.course):'Students with saved marks'}</small><b className="performance-ranked-score">{ready&&highestStudent?highestStudent.totalMarks:'—'}<em>/100</em></b></div>
-      <div className="performance-stat performance-ranked lowest"><span>Lowest student</span><strong className="performance-ranked-name">{ready?lowestStudent?.student||'No marks yet':'—'}</strong><small>{ready&&lowestStudent?(lowestStudent.courseName||report?.course?.title||lowestStudent.course):'Students with saved marks'}</small><b className="performance-ranked-score">{ready&&lowestStudent?lowestStudent.totalMarks:'—'}<em>/100</em></b></div>
-      <div className="performance-stat success"><span>Passing students</span><strong>{ready ? summary?.passingStudents || 0 : '—'}</strong><small>Completed results</small></div>
-      <div className="performance-stat"><span>Failing students</span><strong>{ready ? summary?.failingStudents || 0 : '—'}</strong><small>{summary?.incompleteStudents || 0} incomplete results excluded</small></div>
+      <div className="performance-stat performance-ranked highest"><i className="records-stat-icon" aria-hidden="true"><TeachingIcon name="star" size={27}/></i><span>Highest student</span><strong className="performance-ranked-name">{ready?highestStudent?.student||'No marks yet':'—'}</strong><small>{ready&&highestStudent?(highestStudent.courseName||report?.course?.title||highestStudent.course):'Students with saved marks'}</small><b className="performance-ranked-score">{ready&&highestStudent?highestStudent.totalMarks:'—'}<em>/100</em></b></div>
+      <div className="performance-stat performance-ranked lowest"><i className="records-stat-icon" aria-hidden="true"><TeachingIcon name="certificate" size={27}/></i><span>Lowest student</span><strong className="performance-ranked-name">{ready?lowestStudent?.student||'No marks yet':'—'}</strong><small>{ready&&lowestStudent?(lowestStudent.courseName||report?.course?.title||lowestStudent.course):'Students with saved marks'}</small><b className="performance-ranked-score">{ready&&lowestStudent?lowestStudent.totalMarks:'—'}<em>/100</em></b></div>
+      <div className="performance-stat success"><i className="records-stat-icon" aria-hidden="true"><TeachingIcon name="users" size={27}/></i><span>Passing students</span><strong>{ready ? summary?.passingStudents || 0 : '—'}</strong><small>Completed results</small></div>
+      <div className="performance-stat"><i className="records-stat-icon" aria-hidden="true"><TeachingIcon name="bell" size={27}/></i><span>Failing students</span><strong>{ready ? summary?.failingStudents || 0 : '—'}</strong><small>{summary?.incompleteStudents || 0} incomplete results excluded</small></div>
     </section>
     <section className="performance-panel">
       <div className="performance-filters">
-        <label>Course{courses.length<=1?<input className="performance-assigned-course" readOnly value={report?.course ? [report.course.courseCode,report.course.title||report.course.name].filter(Boolean).join(' · ') : loading?'Loading assigned course…':'No assigned course'}/>:<select value={courseId || report?.course?._id || ''} onChange={changeCourse}>{!courses.length && <option value="">{loading ? 'Loading courses…' : 'No assigned courses'}</option>}{courses.map(course => <option key={course._id} value={course._id}>{course.courseCode} · {course.title}</option>)}</select>}</label>
-        <label>Year / Cohort<select disabled={loading} value={cohort} onChange={event => { setCohort(event.target.value); closeDetails(); }}><option value="">All cohorts</option>{(report?.cohorts || []).map(year => <option key={year} value={year}>{year}</option>)}{cohort && !report?.cohorts?.includes(cohort) && <option value={cohort}>{cohort}</option>}</select></label>
-        <label>Assessment<select disabled={loading} value={assessmentId} onChange={event => { setAssessmentId(event.target.value); closeDetails(); }}><option value="">All assessments</option>{(report?.assessments || []).map(assessment => <option key={assessment._id} value={assessment._id}>{assessment.title}</option>)}</select></label>
+        <label><span className="records-filter-label"><TeachingIcon name="book" size={16}/>Course</span>{courses.length<=1?<input className="performance-assigned-course" readOnly value={report?.course ? [report.course.courseCode,report.course.title||report.course.name].filter(Boolean).join(' · ') : loading?'Loading assigned course…':'No assigned course'}/>:<select value={courseId || report?.course?._id || ''} onChange={changeCourse}>{!courses.length && <option value="">{loading ? 'Loading courses…' : 'No assigned courses'}</option>}{courses.map(course => <option key={course._id} value={course._id}>{course.courseCode} · {course.title}</option>)}</select>}</label>
+        <label><span className="records-filter-label"><TeachingIcon name="calendar" size={16}/>Year / Cohort</span><select disabled={loading} value={cohort} onChange={event => { setCohort(event.target.value); closeDetails(); }}><option value="">All cohorts</option>{(report?.cohorts || []).map(year => <option key={year} value={year}>{year}</option>)}{cohort && !report?.cohorts?.includes(cohort) && <option value={cohort}>{cohort}</option>}</select></label>
+        <label><span className="records-filter-label"><TeachingIcon name="clipboard" size={16}/>Assessment</span><select disabled={loading} value={assessmentId} onChange={event => { setAssessmentId(event.target.value); closeDetails(); }}><option value="">All assessments</option>{(report?.assessments || []).map(assessment => <option key={assessment._id} value={assessment._id}>{assessment.title}</option>)}</select></label>
       </div>
+      <section className="performance-records-panel" aria-label="Student records">
       {!loading && allocation && (allocation.allocatedMarks > 100 || !!allocation.invalidAssessmentCount) && <div role="status" className="performance-alert">{allocation.allocatedMarks > 100 ? 'Allocations exceed 100 marks. Update assessment maxima to finalize results.' : ''}{!!allocation.invalidAssessmentCount && ' ' + allocation.invalidAssessmentCount + ' invalid assessments excluded.'}</div>}
-      <div className="performance-list-heading"><div><h2>Student records <span>{loading ? '…' : students.length}</span></h2><p>{hasAssessmentFilter ? 'Showing students with saved marks for the selected assessments.' : 'Total marks combine all saved course results.'}</p></div>{!loading && allocation && <div className="performance-allocation"><span><strong>100</strong> course marks</span><span><strong>{allocation.allocatedMarks}</strong> allocated</span><span><strong>{allocation.remainingMarks}</strong> remaining</span><span className="performance-threshold">Pass mark: {allocation.passingThreshold == null ? 'Not set' : allocation.passingThreshold + '/100'}</span></div>}</div>
+      <div className="performance-list-heading"><div className="records-list-title"><span className="records-list-icon"><TeachingIcon name="list" size={25}/></span><div><h2>Student Records <span>{loading ? '…' : students.length}</span></h2><p>{hasAssessmentFilter ? 'Showing students with saved marks for the selected assessments.' : 'Total marks combine all saved course results.'}</p></div></div>{!loading && allocation && <div className="performance-allocation"><span><strong>100</strong> course marks</span><span><strong>{allocation.allocatedMarks}</strong> allocated</span><span><strong>{allocation.remainingMarks}</strong> remaining</span><span className="performance-threshold">Pass mark: {allocation.passingThreshold == null ? 'Not set' : allocation.passingThreshold + '/100'}</span></div>}</div>
       {loading ? <div className="performance-empty" role="status"><div className="spinner" /><p>Loading student records…</p></div> : !students.length ? <div className="performance-empty"><span className="performance-empty-symbol">⌕</span><h3>{error ? 'Records unavailable' : 'No students found'}</h3><p>{error ? 'Retry to load the latest records.' : 'Try another course, cohort or assessment.'}</p></div> : <>
-      <div className="performance-table-wrap" {...swipeHandlers}><table className="performance-table performance-records-table"><thead><tr><th>Student</th><th>Student ID</th><th>Course</th><th>Year / Cohort</th><th>Course total</th>{hasAssessmentFilter && <th>{filteredMarksLabel}</th>}<th><span className="performance-sr-only">Actions</span></th></tr></thead><tbody>{pageStudents.map(student => <tr key={student._id}>
+      <div className="performance-table-wrap" {...swipeHandlers}><table className="performance-table performance-records-table"><thead><tr><th>#</th><th>Student</th><th>Student ID</th><th>Course</th><th>Year / Cohort</th><th>Course total</th>{hasAssessmentFilter && <th>{filteredMarksLabel}</th>}<th>Action</th></tr></thead><tbody>{pageStudents.map((student,index) => <tr key={student._id}>
+        <td><span className="records-row-number">{startIndex+index+1}</span></td>
         <td><div className="performance-student"><span className="performance-avatar" aria-hidden="true">{student.student?.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('')}</span><strong>{student.student}</strong></div></td><td><span className="performance-id">{student.studentId}</span></td>
         <td><div className="performance-course-name">{student.courseName || student.course}</div><small className="performance-muted">{report?.course?.courseCode}</small></td><td>{student.cohorts?.join(', ') || '—'}</td>
         <td><div className="performance-score"><strong>{student.hasMarks ? student.totalMarks : '—'}<span>/100</span></strong><div className="performance-progress"><span style={{ width: Math.max(0, Math.min(100, student.totalMarks || 0)) + '%' }} /></div><small>{student.status}</small></div></td>
         {hasAssessmentFilter && <td><strong>{student.filteredMarks}<span className="performance-muted">/{student.filteredMaximum}</span></strong></td>}
-        <td><button type="button" className="performance-view" aria-label={'View results for ' + student.student} onClick={() => setSelectedStudentId(String(student._id))}>View <span aria-hidden="true">↗</span></button></td>
+        <td><button type="button" className="performance-view" aria-label={'View results for ' + student.student} onClick={() => setSelectedStudentId(String(student._id))}><TeachingIcon name="eye" size={14}/> View</button></td>
       </tr>)}</tbody></table></div>
       {pageCount > 1 && <nav className="performance-record-pages" aria-label="Student record pages" {...swipeHandlers}>
         <span aria-live="polite">{startIndex + 1}–{startIndex + pageStudents.length} of {students.length} students</span>
@@ -168,6 +176,7 @@ export default function TeacherPerformance() {
         </div>
       </nav>}
       </>}
+      </section>
     </section>
     {showReport && <StudentPerformanceReport courseId={courseId || report?.course?._id} cohort={cohort} onClose={closeReport} />}
     {selectedStudent && <StudentResultsModal student={selectedStudent} onClose={closeDetails} />}

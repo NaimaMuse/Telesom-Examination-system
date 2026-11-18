@@ -6,6 +6,7 @@ import LoginPage from './pages/Login';
 import AdminLoginPage from './pages/admin/AdminLogin';
 import RoleRedirect from './pages/RoleRedirect';
 import DashboardLayout from './components/DashboardLayout';
+import {HomePage} from './pages/PublicPages';
 
 class AppErrorBoundary extends Component {
   state = { failed:false };
@@ -29,7 +30,7 @@ class AppErrorBoundary extends Component {
  * App — root router + auth context wrapper.
  *
  * Routes:
- *   /           → redirect to /staff/login
+ *   /           → public academy home page
  *   /login      → LoginPage (public)
  *   /signup     → SignupPage (public)
  *   /dashboard  → RoleRedirect (protected, redirects based on role)
@@ -43,8 +44,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Default: open staff sign-in */}
-          <Route path="/" element={<Navigate to="/staff/login" replace />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/about" element={<Navigate to="/#about" replace />} />
+          <Route path="/contact" element={<Navigate to="/#contact" replace />} />
 
           {/* Public Authentication Pages */}
           <Route path="/login" element={<LoginPage key="student" />} />

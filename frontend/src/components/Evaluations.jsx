@@ -1,7 +1,7 @@
 import {buildReportPdf} from '../utils/reportPdf';
 import {courseEvaluationTemplate} from './EvaluationTemplate';
 import {useEffect,useRef,useState} from 'react';
-import {Link,useNavigate,useParams,useSearchParams} from 'react-router-dom';
+import {Link,useLocation,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
 import './Evaluations.css';
@@ -48,7 +48,7 @@ function CreateEvaluationForm({courses,busy,onCreate,onCancel}){
  </form>;
 }
 const defenseDateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
-function RecentDefenses({course}){
+function RecentDefenses({course,base}){
  const courseId=course?._id;
  const [records,setRecords]=useState(null);
  const [error,setError]=useState('');
@@ -78,8 +78,8 @@ function RecentDefenses({course}){
              {details.length>0&&<p>{details.join(' · ')}</p>}
            </div>
            <div className="ev-recent-action">
-             <span className="ev-status" data-state={record.status}>{finalized?'Finalized':'Draft'}</span>
-             <Link className="btn" to={'/admin/project-defenses/'+record._id} aria-label={(finalized?'View ':'Continue ')+project}>
+             <span className="ev-status" data-state={record.status}>{record.submittedAt?'Sent to Admin':finalized?'Finalized':'Draft'}</span>
+             <Link className="btn" to={base+'/project-defenses/'+record._id} aria-label={(finalized?'View ':'Continue ')+project}>
              {finalized?'View':'Continue'}<TeachingIcon name="arrow" size={15}/>
              </Link>
            </div>
@@ -89,6 +89,8 @@ function RecentDefenses({course}){
  </section>;
 }
 export function NewEvaluation(){
+ const {pathname}=useLocation();
+ const base=pathname.startsWith('/teacher')?'/teacher':'/admin';
  const navigate=useNavigate();
  const [params]=useSearchParams();
  const [courses,setCourses]=useState(null);
@@ -106,7 +108,7 @@ export function NewEvaluation(){
  },[attempt]);
 
  return <div className="evaluations ev-create">
-   <nav className="ev-create-breadcrumb" aria-label="Breadcrumb"><Link to="/admin">Dashboard</Link><span aria-hidden="true">/</span><span aria-current="page">Project Defense</span></nav>
+   <nav className="ev-create-breadcrumb" aria-label="Breadcrumb"><Link to={base}>Dashboard</Link><span aria-hidden="true">/</span><span aria-current="page">Project Defense</span></nav>
    <header className="ev-create-hero">
      <div><h2>Project Defense</h2><p>Generate a defense form for a course and manage saved evaluations.</p></div>
      <div className="ev-create-hero-art" aria-hidden="true">
@@ -120,7 +122,7 @@ export function NewEvaluation(){
        <form className="ev-defense-generator-form" onSubmit={event=>{
          event.preventDefault();
          if(selectedDefenseCourse){
-           navigate('/admin/project-defenses/new?'+new URLSearchParams({course:defenseCourse}));
+           navigate(base+'/project-defenses/new?'+new URLSearchParams({course:defenseCourse}));
          }
        }}>
          <label><span>Choose a course</span>
@@ -130,14 +132,14 @@ export function NewEvaluation(){
          </label>
          <div className="ev-defense-generator-actions">
            <button className="btn btn-primary" type="submit" disabled={!selectedDefenseCourse}>Generate Defense</button>
-           <Link className="btn" to="/admin/project-defenses"><TeachingIcon name="folder" size={16}/>Saved Defenses</Link>
+           <Link className="btn" to={base+'/project-defenses'}><TeachingIcon name="folder" size={16}/>Saved Defenses</Link>
          </div>
        </form>
      </div>
    </section>
    {error&&<div className="ev-error" role="alert">{error} {!courses&&<button type="button" onClick={()=>{setError('');setAttempt(value=>value+1);}}>Retry</button>}</div>}
    {!courses&&!error&&<p role="status">Loading courses…</p>}
-   <RecentDefenses key={selectedDefenseCourse?._id||'all'} course={selectedDefenseCourse}/>
+   <RecentDefenses base={base} key={selectedDefenseCourse?._id||'all'} course={selectedDefenseCourse}/>
  </div>;
 }
 function AdminEvaluationCard({form,base,busy,onDelete}){

@@ -122,3 +122,60 @@
 .performance-report-table th:last-child,.performance-report-table td:last-child{min-width:80px}
 .performance-report-footer{padding:10px 19px;font-size:9px}
 @media(max-width:650px){.performance-report{max-height:85dvh}.performance-report-header{padding:13px 15px}.performance-report-header h2{font-size:15px}.performance-report-title-row{gap:8px}.performance-report-footer{padding:10px 15px}}
+.teacher-shell .performance-page.records-design { color:#142f3b; }
+.records-hero { position:relative; display:flex; align-items:center; gap:15px; min-height:88px; padding:8px 14px 20px; overflow:hidden; }
+.records-hero-icon,.records-list-icon { display:grid; place-items:center; flex-shrink:0; width:48px; height:48px; border-radius:12px; color:#008936; background:linear-gradient(135deg,#e5f9eb,#caf1d4); }
+.records-hero > div:not(.records-hero-wave) { position:relative; z-index:1; }
+.records-hero span:not(.records-hero-icon) { color:#00812e; font-size:12px; font-weight:800; letter-spacing:1px; }
+.records-hero h1 { margin:0; color:#122e3b; font-size:28px; line-height:1.15; letter-spacing:-.8px; }
+.records-hero p { margin:4px 0 0; font-size:12px; color:#35516c; }
+.records-hero-wave { position:absolute; pointer-events:none; width:55%; height:160px; right:13%; top:-127px; transform:rotate(-19deg); border-radius:0 0 65% 50%; background:linear-gradient(110deg,#bcefd740,#a9e6ca 45%,#008134 78%,#005933); box-shadow:0 8px 0 -3px #f4d51d,0 24px 0 0 #d2f1e4; }
+.teacher-shell .performance-page.records-design .performance-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:12px; }
+.teacher-shell .performance-page.records-design .performance-stat { position:relative; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; min-height:104px; padding:12px 12px 10px 72px; gap:2px; border:1px solid #cbe9db; border-left:3px solid #00ae46; border-radius:12px; background:linear-gradient(120deg,#f3fbf6,#e7f5ef); box-shadow:none; }
+.teacher-shell .performance-page.records-design .performance-stat:nth-child(even) { background:linear-gradient(120deg,#fffcf3,#fff5db); border-color:#f4df9e; border-left-color:#f4b900; }
+.teacher-shell .performance-page.records-design .records-stat-icon { position:absolute; left:12px; top:12px; display:grid; place-items:center; width:46px; height:46px; border-radius:50%; color:#00a238; background:#d7f6df; }
+.teacher-shell .performance-page.records-design .performance-stat:nth-child(even) .records-stat-icon { color:#e5ac00; background:#fff0be; }
+.teacher-shell .performance-page.records-design .performance-stat > span { color:#142a36; font-size:11px; font-weight:750; }
+.teacher-shell .performance-page.records-design .performance-ranked-name { color:#132b35; font-size:16px; line-height:1.25; }
+.teacher-shell .performance-page.records-design .performance-stat small { color:#355367; font-size:10px; line-height:1.4; }
+.teacher-shell .performance-page.records-design .performance-ranked-score { align-self:flex-start; margin:3px 0 0; padding:2px 8px; color:#064c27; background:#fff; border:1px solid #d2e8dc; border-radius:6px; font-size:20px; line-height:1.2; }
+.teacher-shell .performance-page.records-design .performance-ranked-score em { margin-left:4px; color:#243e4b; font-size:12px; font-style:normal; font-weight:500; }
+.teacher-shell .performance-page.records-design .lowest .performance-ranked-score { color:#aa7800; border-color:#f1e2b9; }
+.teacher-shell .performance-page.records-design .performance-stat:not(.performance-ranked) > strong { margin:4px 0 0; color:#103c27; font-size:26px; }
+.teacher-shell .performance-page.records-design .performance-panel { overflow:visible; background:transparent; border:0; box-shadow:none; }
+.teacher-shell .performance-page.records-design .performance-filters { padding:10px 16px 12px; margin-bottom:12px; gap:18px; grid-template-columns:1.35fr .95fr 1.1fr; border:1px solid #d3e3e5; border-radius:12px; background:linear-gradient(110deg,#fff,#f5f9fa); }
+.records-filter-label { display:flex; align-items:center; gap:7px; color:#182e3e; font-size:11px; }
+.records-filter-label svg { color:#086332; }
+.teacher-shell .performance-page.records-design .performance-filters :is(select,.performance-assigned-course) { height:34px; margin-top:4px; padding:0 10px; background:#fff; border:1px solid #bdd5d7; border-radius:7px; color:#182e3e; font-size:12px; }
+.teacher-shell .performance-page.records-design .performance-records-panel { padding:0 10px 10px; border:1px solid #d0e0e1; border-radius:13px; background:linear-gradient(120deg,#fff,#f8fbfb); overflow:hidden; }
+.teacher-shell .performance-page.records-design .performance-list-heading { display:flex; flex-direction:row; justify-content:space-between; align-items:center; gap:12px; padding:9px 3px 12px; }
+.records-list-title { display:flex; align-items:center; gap:11px; }
+.records-list-icon { width:38px; height:38px; border-radius:9px; }
+.teacher-shell .performance-page.records-design .performance-list-heading h2 { margin:0; color:#142f3b; font-size:18px; font-weight:800; }
+.teacher-shell .performance-page.records-design .performance-list-heading h2 span { margin-left:7px; padding:3px 9px; border:0; border-radius:5px; color:white; background:linear-gradient(#149b43,#00662c); font-size:12px; }
+.teacher-shell .performance-page.records-design .performance-list-heading p { margin:4px 0 0; color:#36556b; font-size:11px; }
+.teacher-shell .performance-page.records-design .performance-allocation { display:flex; flex-wrap:wrap; gap:0; margin:0; padding:7px 0; border:1px solid #d2e2e4; border-radius:8px; background:#f7faf9; }
+.teacher-shell .performance-page.records-design .performance-allocation > span { display:flex; flex-direction:column; align-items:center; gap:2px; min-width:90px; padding:0 12px; color:#28455a; font-size:10px; border-right:1px solid #bbd3d8; }
+.teacher-shell .performance-page.records-design .performance-allocation > span:last-child { border:0; margin:0; }
+.teacher-shell .performance-page.records-design .performance-allocation strong { color:#153c28; font-size:16px; }
+.teacher-shell .performance-page.records-design .performance-allocation .performance-threshold { justify-content:center; max-width:135px; text-align:center; }
+.teacher-shell .performance-page.records-design .performance-table-wrap { border:1px solid #d1e3df; border-radius:8px; }
+.teacher-shell .performance-page.records-design .performance-table { width:100%; min-width:790px; border-collapse:collapse; }
+.teacher-shell .performance-page.records-design .performance-table thead th { padding:9px 12px; background:linear-gradient(#09843c,#005327); border:0; color:#fff; font-size:11px; font-weight:750; text-transform:uppercase; white-space:nowrap; }
+.teacher-shell .performance-page.records-design .performance-table tbody td { padding:7px 12px; border-bottom:1px solid #dce9e7; color:#203349; font-size:11px; line-height:1.3; }
+.teacher-shell .performance-page.records-design .performance-table tbody tr:nth-child(even) { background:linear-gradient(90deg,#f0f8f5,#e9f4f2); }
+.teacher-shell .performance-page.records-design .performance-table tbody tr:hover { background:#e0f2e8; }
+.records-row-number { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:#ddf5e5; color:#17472c; font-weight:750; }
+.teacher-shell .performance-page.records-design .performance-student { gap:9px; }
+.teacher-shell .performance-page.records-design .performance-student strong { color:#172c37; font-size:11px; }
+.teacher-shell .performance-page.records-design .performance-avatar { width:28px; height:28px; border:0; border-radius:50%; background:#d5f0da; color:#153e27; font-size:11px; }
+.teacher-shell .performance-page.records-design .performance-table tr:nth-child(even) .performance-avatar { background:#ffecc1; color:#825b19; }
+.teacher-shell .performance-page.records-design .performance-course-name { font-size:11px; line-height:1.3; }
+.teacher-shell .performance-page.records-design .performance-score strong { font-size:12px; font-weight:600; }
+.teacher-shell .performance-page.records-design .performance-score strong span { font-size:11px; }
+.teacher-shell .performance-page.records-design .performance-progress { height:5px; max-width:125px; margin:3px 0; background:#c9d7db; }
+.teacher-shell .performance-page.records-design .performance-progress span { background:#13994c; }
+.teacher-shell .performance-page.records-design .performance-score small { font-size:10px; color:#35516a; }
+.teacher-shell .performance-page.records-design .performance-view { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:66px; padding:4px 10px; border:1px solid #42a166; border-radius:6px; background:linear-gradient(#fff,#eaf7ed); color:#00682d; font-size:11px; font-weight:750; white-space:nowrap; }
+@media(max-width:1100px) { .teacher-shell .performance-page.records-design .performance-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .teacher-shell .performance-page.records-design .performance-list-heading { flex-wrap:wrap; } }
+@media(max-width:600px) { .records-hero { padding:8px 0 18px; gap:10px; } .records-hero h1 { font-size:23px; } .records-hero p { max-width:235px; font-size:11px; } .records-hero-wave { right:-35%; opacity:.5; } .teacher-shell .performance-page.records-design .performance-stat { padding-left:56px; } .teacher-shell .performance-page.records-design .records-stat-icon { left:8px; width:36px; height:36px; } .teacher-shell .performance-page.records-design .performance-filters { grid-template-columns:1fr; gap:10px; } .teacher-shell .performance-page.records-design .performance-allocation { width:100%; } .teacher-shell .performance-page.records-design .performance-allocation > span { min-width:0; flex:1; padding:0 6px; } }

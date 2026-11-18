@@ -51,6 +51,7 @@ import '../pages/teacher/TeacherDashboardReference.css';
 import '../pages/admin/AcademicRecordsDesign.css';
 import '../pages/admin/AdminOutlinesDesign.css';
 import '../pages/admin/AnalyticsMakeupDesign.css';
+import './TeacherShellDesign.css';
 
 function DashboardContentFrame({active, children}) {
   return active ? <div className="dashboard-main">{children}</div> : children;
@@ -63,6 +64,7 @@ const NAV = {
       section: 'Overview',
       items: [
         { to: '/admin',            label: 'Dashboard',         icon: 'grid', end: true },
+        { to: '/', label: 'Home', icon: 'home', end: true },
       ],
     },
     {
@@ -101,8 +103,10 @@ const NAV = {
       section: 'Overview',
       items: [
         { to: '/teacher', label: 'Dashboard', icon: 'grid', end: true },
+        { to: '/', label: 'Home', icon: 'home', end: true },
         { to: '/teacher/my-course', label: 'My Course', icon: 'book' },
         { to: '/teacher/exams', label: 'Exams & Quizzes', icon: 'clipboard' },
+        { to: '/teacher/evaluations/new', label: 'Project Defense', icon: 'file' },
         { to: '/teacher/results', label: 'Results & Marks', icon: 'clipboard' },
         { to: '/teacher/performance', label: 'Student Performance', icon: 'chart' },
         { to: '/teacher/makeup', label: 'Makeup Classes', icon: 'reschedule' },
@@ -115,6 +119,7 @@ const NAV = {
       section: 'Overview',
       items: [
         { to: '/student',           label: 'Dashboard',       icon: 'grid', end: true },
+        { to: '/', label: 'Home', icon: 'home', end: true },
       ],
     },
     {
@@ -177,6 +182,10 @@ const ROLE_ROUTES = {
       <Route path="students" element={<TeacherStudents />} />
       <Route path="my-course/outline" element={<MyCourse outlinePage />} />
       <Route path="exams"     element={<TeacherExams />} />
+      <Route path="evaluations/new" element={<ProjectDefenseEditor />} />
+      <Route path="project-defenses" element={<ProjectDefenseList />} />
+      <Route path="project-defenses/new" element={<ProjectDefenseEditor />} />
+      <Route path="project-defenses/:id" element={<ProjectDefenseEditor />} />
       <Route path="results"  element={<TeacherResults />} />
       <Route path="performance" element={<TeacherPerformance />} />
       <Route path="outlines" element={<LegacyTeachingRedirect />} />
@@ -210,6 +219,8 @@ const PAGE_META = {
   '/admin/evaluations': {title:'Evaluation Forms',hint:'Manage evaluations and review student feedback.'},
   '/admin/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/admin/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
+  '/teacher/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
+  '/teacher/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
   '/student/evaluations': {title:'Evaluation Forms',hint:'Share feedback on your courses and learning experience.'},
   '/teacher/my-course/outline': {title:'Course Planner',hint:'Plan lessons, organize topics and track teaching progress.'},
   '/admin/reports': {title:'Reports Center',hint:'Filtered academy reports and exports.'},
@@ -395,7 +406,7 @@ export default function DashboardLayout({ role }) {
                     to={item.to}
                     end={item.end}
                     className={({ isActive }) =>
-                      `sidebar-link ${isActive || (item.to === '/admin/evaluations/new' && /^\/admin\/project-defenses(?:\/|$)/.test(location.pathname)) ? 'active' : ''}`
+                      `sidebar-link ${isActive || (item.to === '/'+role+'/evaluations/new' && /^\/(admin|teacher)\/project-defenses(?:\/|$)/.test(location.pathname)) ? 'active' : ''}`
                     }
                     onClick={() => setSidebarOpen(false)}
                   >
