@@ -4,9 +4,10 @@ import TeachingIcon from '../components/TeachingIcon';
 import './PublicPages.css';
 
 const features=[
-  {icon:'users',title:'Student Management',description:'Keep student records and learning progress in one place.'},
-  {icon:'clipboard',title:'Assessments & Exams',description:'Manage quizzes, exams and project evaluations.'},
-  {icon:'chart',title:'Detailed Reports',description:'Follow academic performance and learning outcomes.'},
+  {icon:'graduate',title:'Student Management',description:'Student records and progress.'},
+  {icon:'teacher',title:'Teacher Management',description:'Teaching and course coordination.'},
+  {icon:'chart',title:'Track Performance',description:'Assessments and learning outcomes.'},
+  {icon:'clipboard',title:'Assessments & Exams',description:'Quizzes, exams and evaluations.'},
 ];
 
 function PublicLayout({children}){
@@ -20,12 +21,12 @@ function PublicLayout({children}){
     <header className="public-header">
       <Link className="public-brand" to="/" aria-label="Telesom Academy home">
         <img src="/telesom-academy-logo.png" alt="" width="49" height="49"/>
-        <span><b>Telesom</b> Academy</span>
+        <span><b>Telesom</b><span>Academy</span></span>
       </Link>
       <nav className="public-nav" aria-label="Main navigation">
-        {[['home','Home'],['about','About Us'],['contact','Contact Us']].map(([id,label])=>
+        {[['home','Home','home'],['about','About Us','users'],['contact','Contact Us','profile']].map(([id,label,icon])=>
           <Link key={id} to={'/#'+id} className={(hash||'#home')==='#'+id?'active':''}
-            aria-current={(hash||'#home')==='#'+id?'location':undefined}>{label}</Link>)}
+            aria-current={(hash||'#home')==='#'+id?'location':undefined}><TeachingIcon name={icon} size={18}/>{label}</Link>)}
       </nav>
       <Link className="public-login" to="/staff/login"><TeachingIcon name="profile" size={18}/>Login</Link>
     </header>
@@ -50,18 +51,18 @@ function FeatureStrip(){
 export function HomePage(){
   return <PublicLayout>
     <section className="public-hero" id="home">
+      <img className="public-campus-background" src="/academy-campus-original-clear-logo.png"
+        alt="Academy building with a landscaped entrance and reflective glass facade"
+        fetchPriority="high" width="1167" height="1348"/>
       <div className="public-hero-copy">
         <p className="public-eyebrow">ACADEMIC MANAGEMENT SYSTEM<span aria-hidden="true"/></p>
         <h1>Telesom <span>Academy</span></h1>
-        <p className="public-hero-description">A connected space for students, teachers and academic progress.</p>
+        <p className="public-hero-description">Learn Today, Lead Tomorrow.</p>
         <p className="public-hero-detail">Manage learning, assessments and performance with the Telesom Academy academic platform.</p>
         <div className="public-hero-actions">
-          <Link className="public-button primary" to="/staff/login"><TeachingIcon name="users" size={19}/>Get Started<TeachingIcon name="arrow" size={17}/></Link>
-          <Link className="public-button secondary" to="/#about"><TeachingIcon name="book" size={18}/>Learn More</Link>
+          <Link className="public-button primary" to="/staff/login"><TeachingIcon name="bolt" size={19}/>Get Started<TeachingIcon name="arrow" size={17}/></Link>
+          <Link className="public-button secondary" to="/#about"><TeachingIcon name="play" size={18}/>Learn More</Link>
         </div>
-      </div>
-      <div className="public-hero-visual">
-        <img src="/academy-home-hero.png" alt="Laptop displaying an academic dashboard beside books and a green plant" fetchPriority="high" width="900" height="600"/>
       </div>
     </section>
     <FeatureStrip/>

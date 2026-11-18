@@ -11,24 +11,25 @@
   margin:0;
   padding:0 18px;
   border:0;
-  border-bottom:2px solid #dbba3c;
+  border-bottom:1px solid #E2EAE4;
   border-radius:0;
-  background:linear-gradient(110deg,#06472e,#08773d);
-  box-shadow:0 2px 8px rgb(9 64 42 / 12%);
+  background:#fff;
+  box-shadow:0 2px 8px #173d2405;
 }
 .dash-shell.teacher-shell header.academy-header .academy-header-search {
   height:32px;
   padding:5px 12px;
-  background:#ffffffed;
-  border-color:#ffffff70;
+  background:#F5F8F9;
+  border-color:#E7EDEF;
 }
 .dash-shell.teacher-shell header.academy-header .academy-menu-toggle,
 .dash-shell.teacher-shell header.academy-header .academy-account-menu > summary,
 .dash-shell.teacher-shell header.academy-header .academy-account-identity strong,
 .dash-shell.teacher-shell header.academy-header .topbar-icon-btn {
-  color:#fff;
+  color:#005B35;
 }
-.dash-shell.teacher-shell header.academy-header .academy-account-identity small { color:#d6efdf; }
+.dash-shell.teacher-shell header.academy-header .academy-account-identity strong { color:#17231D; }
+.dash-shell.teacher-shell header.academy-header .academy-account-identity small { color:#718078; }
 .dash-shell.teacher-shell header.academy-header .academy-account-identity { gap:2px; }
 .dash-shell.teacher-shell header.academy-header .academy-account-avatar {
   width:30px;
@@ -39,8 +40,8 @@
 .dash-shell.teacher-shell header.academy-header .topbar-icon-btn {
   width:32px;
   height:32px;
-  background:#ffffff12;
-  border:1px solid #ffffff30;
+  background:#f5faf6;
+  border:1px solid #cce8d1;
 }
 .dash-shell.teacher-shell header.academy-header .academy-header-actions { gap:12px; }
 .dash-shell.teacher-shell .dash-main > .dashboard-main {

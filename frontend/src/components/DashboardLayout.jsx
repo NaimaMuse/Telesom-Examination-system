@@ -1,7 +1,7 @@
 import TeacherAttendance from '../pages/admin/TeacherAttendance';
 import TeacherStudents from '../pages/teacher/TeacherStudents';
 import Evaluations, { NewEvaluation } from './Evaluations';
-import {ProjectDefenseEditor,ProjectDefenseList} from './ProjectDefenses';
+import {EvaluationCenter,ProjectDefenseEditor,ProjectDefenseList} from './ProjectDefenses';
 import AcademyHeader from './AcademyHeader';
 import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
@@ -11,7 +11,7 @@ import NotificationBell from './NotificationBell';
 import TelesomLogo from './TelesomLogo';
 import StudentPageHeader from './StudentPageHeader';
 import { useState, useEffect } from 'react';
-import { NavLink, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './dashboard.css';
 import './dashboard-theme.css';
@@ -64,7 +64,6 @@ const NAV = {
       section: 'Overview',
       items: [
         { to: '/admin',            label: 'Dashboard',         icon: 'grid', end: true },
-        { to: '/', label: 'Home', icon: 'home', end: true },
       ],
     },
     {
@@ -80,8 +79,9 @@ const NAV = {
       section: 'Academic',
       items: [
         { to: '/admin/exams',      label: 'Exam & Quiz Mgmt',  icon: 'clipboard' },
-        { to: '/admin/evaluations', label: 'Evaluation Forms', icon: 'clipboard', end: true },
-        { to: '/admin/evaluations/new', label: 'Project Defense', icon: 'file' },
+        { to: '/admin/evaluation-center', label: 'Evaluation Center', icon: 'clipboard' },
+        { to: '/admin/evaluations', label: 'Course Feedback Forms', icon: 'file', end: true },
+        { to: '/admin/project-defenses', label: 'Project Defense', icon: 'chart' },
         { to: '/admin/marks',      label: 'Marks & Results',   icon: 'chart' },
         { to: '/admin/attendance', label: 'Attendance',         icon: 'calendar' },
         { to: '/admin/outlines', label: 'Teaching & Outlines', icon: 'book' },
@@ -103,10 +103,9 @@ const NAV = {
       section: 'Overview',
       items: [
         { to: '/teacher', label: 'Dashboard', icon: 'grid', end: true },
-        { to: '/', label: 'Home', icon: 'home', end: true },
         { to: '/teacher/my-course', label: 'My Course', icon: 'book' },
         { to: '/teacher/exams', label: 'Exams & Quizzes', icon: 'clipboard' },
-        { to: '/teacher/evaluations/new', label: 'Project Defense', icon: 'file' },
+        { to: '/teacher/evaluation-center', label: 'Project Defense', icon: 'clipboard' },
         { to: '/teacher/results', label: 'Results & Marks', icon: 'clipboard' },
         { to: '/teacher/performance', label: 'Student Performance', icon: 'chart' },
         { to: '/teacher/makeup', label: 'Makeup Classes', icon: 'reschedule' },
@@ -119,7 +118,6 @@ const NAV = {
       section: 'Overview',
       items: [
         { to: '/student',           label: 'Dashboard',       icon: 'grid', end: true },
-        { to: '/', label: 'Home', icon: 'home', end: true },
       ],
     },
     {
@@ -150,6 +148,7 @@ const ROLE_ROUTES = {
   admin: (
     <Routes>
       <Route index            element={<AdminDashboard />} />
+      <Route path="evaluation-center" element={<EvaluationCenter admin />} />
       <Route path="evaluations" element={<Evaluations admin />} />
       <Route path="evaluations/new" element={<NewEvaluation />} />
       <Route path="evaluations/:id" element={<Evaluations admin />} />
@@ -183,6 +182,7 @@ const ROLE_ROUTES = {
       <Route path="my-course/outline" element={<MyCourse outlinePage />} />
       <Route path="exams"     element={<TeacherExams />} />
       <Route path="evaluations/new" element={<ProjectDefenseEditor />} />
+      <Route path="evaluation-center" element={<EvaluationCenter />} />
       <Route path="project-defenses" element={<ProjectDefenseList />} />
       <Route path="project-defenses/new" element={<ProjectDefenseEditor />} />
       <Route path="project-defenses/:id" element={<ProjectDefenseEditor />} />
@@ -216,9 +216,11 @@ const ROLE_ROUTES = {
 };
 
 const PAGE_META = {
-  '/admin/evaluations': {title:'Evaluation Forms',hint:'Manage evaluations and review student feedback.'},
+  '/admin/evaluation-center': {title:'Evaluation Center',hint:'Coordinate project defense reviews between teachers and Admin.'},
+  '/admin/evaluations': {title:'Course Feedback Forms',hint:'Manage course evaluations and review student feedback.'},
   '/admin/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/admin/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
+  '/teacher/evaluation-center': {title:'Project Defense',hint:'Evaluate student projects and submit completed assessments to Admin.'},
   '/teacher/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/teacher/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
   '/student/evaluations': {title:'Evaluation Forms',hint:'Share feedback on your courses and learning experience.'},
@@ -374,12 +376,12 @@ export default function DashboardLayout({ role }) {
       {/* ── Sidebar ── */}
       <aside className={`dash-sidebar academy-sidebar ${sidebarOpen ? 'open' : ''}`}>
         {/* Brand */}
-        <div className="sidebar-brand">
+        <Link to="/" className="sidebar-brand" aria-label="Telesom Academy home" onClick={() => setSidebarOpen(false)}>
           <TelesomLogo size="lg" showText={false} />
           <div className="sidebar-brand-text">
             <strong>Telesom Academy</strong>
           </div>
-        </div>
+        </Link>
 
         {/* Navigation */}
         <nav className="sidebar-nav">

@@ -69,12 +69,42 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
    title:'Final Project',course:defenseCourse._id,totalMarks:50,examDate:new Date(),createdBy:teacher._id,
  });
  const defense={course:defenseCourse._id,cohort:'cohort 6',cohortYear:'2026',assessment:exam._id,assessmentType:'exam'};
+ const teacherProfile=await require('../models/Teacher').create({user:teacher._id,teacherId:'DEFENSE-TEACHER'});
+ await require('../models/CourseTeacher').create({teacher:teacherProfile._id,course:defenseCourse._id,academicYear:'2026'});
+ assert.deepEqual(ok(await req('GET','/evaluations/courses',null,teacher)).courses.map(item=>item._id),[String(defenseCourse._id)]);
+ assert.equal(ok(await req('GET','/evaluations/defenses/assessments',null,teacher)).assessments.length,1);
+ assert.equal(ok(await req('GET','/evaluations/eligible/'+defenseCourse._id,null,teacher)).total,4);
+ ok(await req('GET','/evaluations/eligible/'+secondCourse._id,null,teacher),403);
+ ok(await req('GET','/evaluations/defenses/courses/'+secondCourse._id+'/groups',null,teacher),403);
+ ok(await req('GET','/evaluations',null,teacher),403);
+ ok(await req('GET','/evaluations/'+f._id,null,teacher),403);
+ const teacherRubric=[{key:'s'+require('node:crypto').randomUUID(),title:'Demo',marks:50,
+   questions:[{key:'q'+require('node:crypto').randomUUID(),title:'Explain the demo',marks:50}]}];
+ const teacherForm={...defense,students:[],customRubric:teacherRubric,projectTotalMarks:90};
+ ok(await req('POST','/evaluations/defenses',teacherForm,teacher),400);
+ const alignedForm=ok(await req('POST','/evaluations/defenses',{...teacherForm,projectTotalMarks:50},teacher),201).record;
+ assert.equal(alignedForm.projectTotalMarks,50);
+ assert.equal(alignedForm.assessmentTotalMarks,50);
+ const submittedForm=ok(await req('POST','/evaluations/defenses/'+alignedForm._id+'/submit',{__v:alignedForm.__v},teacher)).record;
+ assert.ok(submittedForm.submittedAt);
+ const adminNotices=ok(await req('GET','/notifications')).notifications;
+ const submissionNotice=adminNotices.find(notice=>notice.id==='defense-submission:'+submittedForm._id);
+ assert.equal(submissionNotice.href,'/admin/project-defenses/'+submittedForm._id);
+ assert.ok(submissionNotice.title.includes('Defense Teacher'));
+ assert.ok(!ok(await req('GET','/notifications',null,teacher)).notifications.some(notice=>notice.id===submissionNotice.id));
+ ok(await req('POST','/evaluations/defenses/'+alignedForm._id+'/submit',{__v:alignedForm.__v},teacher));
+ assert.equal(ok(await req('GET','/evaluations/defenses/'+alignedForm._id)).record.submittedAt,submittedForm.submittedAt);
+ ok(await req('PUT','/evaluations/defenses/'+alignedForm._id,{...submittedForm},teacher),409);
+ ok(await req('DELETE','/evaluations/defenses/'+alignedForm._id,{__v:submittedForm.__v},teacher),204);
  await require('../models/ProjectDefense').init();
  const saved=ok(await req('POST','/evaluations/defenses',{
    ...defense,students:[students[1]._id],additionalEvaluations:[{name:'Second evaluator',ratings:{b1:4},notes:{b1:'Good explanation'}}],
  }),201);
  assert.deepEqual(saved.record.students,[String(students[1]._id)]);
  assert.equal(saved.record.additionalEvaluations[0].ratings.b1,4);
+ ok(await req('GET','/evaluations/defenses/'+saved.record._id,null,teacher));
+ assert.equal(ok(await req('GET','/evaluations/defenses',null,teacher)).total,1);
+ ok(await req('POST','/evaluations/defenses',{course:secondCourse._id,students:[]},teacher),403);
  const available=ok(await req('GET',`/evaluations/eligible/${defenseCourse._id}?cohortName=cohort%206&cohortYear=2026&assessment=${exam._id}&assessmentType=exam`));
  assert.deepEqual(available.students.map(s=>s._id),[String(students[0]._id)]);
  ok(await req('POST','/evaluations/defenses',{...defense,students:[students[1]._id]}),409);

@@ -38,6 +38,7 @@ const schema = new Schema({
   signature: {type:String,trim:true,maxlength:200,default:''},
   signatureDate: {type:String,default:''},
   status: {type:String,enum:['draft','finalized'],default:'draft'},
+  submittedAt: {type:Date,default:null},
 },{timestamps:true,optimisticConcurrency:true});
 
 schema.index({course:1,assessment:1,assessmentType:1,students:1},{
