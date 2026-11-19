@@ -619,7 +619,7 @@
 .student-google-option .google-sign-in-button { max-width: 210px; margin-inline: auto; }
 
 .unified-login .auth-centered-container { max-width: 340px; }
-.unified-login .auth-card { padding: 1.25rem clamp(.8rem, 4vw, 1.2rem); }
+.unified-login .auth-card { padding: 1.25rem clamp(.8rem, 4vw, 1.2rem) 2.5rem; }
 .unified-login .auth-card-header { margin-bottom: .6rem; }
 .unified-login .header-brand-wrap { width: 100%; justify-content: center; text-align: center; }
 .unified-login .header-brand-wrap .telesom-logo { margin-right: 2rem; }
