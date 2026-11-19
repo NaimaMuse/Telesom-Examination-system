@@ -3,6 +3,7 @@ import Judges from '../pages/admin/Judges';
 import TeacherStudents from '../pages/teacher/TeacherStudents';
 import Evaluations, { NewEvaluation } from './Evaluations';
 import {EvaluationCenter,ProjectDefenseEditor,ProjectDefenseList} from './ProjectDefenses';
+import DefenseWorkflow from './DefenseWorkflow';
 import AcademyHeader from './AcademyHeader';
 import api from '../services/api';
 import TeachingIcon from './TeachingIcon';
@@ -108,7 +109,7 @@ const NAV = {
         { to: '/teacher', label: 'Dashboard', icon: 'grid', end: true },
         { to: '/teacher/my-course', label: 'My Course', icon: 'book' },
         { to: '/teacher/exams', label: 'Exams & Quizzes', icon: 'clipboard' },
-        { to: '/teacher/evaluation-center', label: 'Project Defense', icon: 'clipboard' },
+        { to: '/teacher/project-defenses', label: 'Project Defense', icon: 'clipboard' },
         { to: '/teacher/results', label: 'Results & Marks', icon: 'clipboard' },
         { to: '/teacher/performance', label: 'Student Performance', icon: 'chart' },
         { to: '/teacher/makeup', label: 'Makeup Classes', icon: 'reschedule' },
@@ -165,7 +166,10 @@ const ROLE_ROUTES = {
       <Route path="evaluations" element={<Evaluations admin />} />
       <Route path="evaluations/new" element={<NewEvaluation />} />
       <Route path="evaluations/:id" element={<Evaluations admin />} />
-      <Route path="project-defenses" element={<ProjectDefenseList />} />
+      <Route path="project-defenses" element={<Navigate to="workflow" replace />} />
+      <Route path="project-defenses/workflow" element={<DefenseWorkflow />} />
+      <Route path="project-defenses/workflow/:kind/:id" element={<DefenseWorkflow />} />
+      <Route path="project-defenses/legacy" element={<ProjectDefenseList />} />
       <Route path="project-defenses/new" element={<ProjectDefenseEditor />} />
       <Route path="project-defenses/:id" element={<ProjectDefenseEditor />} />
       <Route path="students"  element={<StudentMgmt />} />
@@ -197,7 +201,10 @@ const ROLE_ROUTES = {
       <Route path="exams"     element={<TeacherExams />} />
       <Route path="evaluations/new" element={<ProjectDefenseEditor />} />
       <Route path="evaluation-center" element={<EvaluationCenter />} />
-      <Route path="project-defenses" element={<ProjectDefenseList />} />
+      <Route path="project-defenses" element={<Navigate to="workflow" replace />} />
+      <Route path="project-defenses/workflow" element={<DefenseWorkflow />} />
+      <Route path="project-defenses/workflow/:kind/:id" element={<DefenseWorkflow />} />
+      <Route path="project-defenses/legacy" element={<ProjectDefenseList />} />
       <Route path="project-defenses/new" element={<ProjectDefenseEditor />} />
       <Route path="project-defenses/:id" element={<ProjectDefenseEditor />} />
       <Route path="results"  element={<TeacherResults />} />
@@ -231,7 +238,10 @@ const ROLE_ROUTES = {
   judge: (
     <Routes>
       <Route index element={<Navigate to="/judge/project-defenses" replace />} />
-      <Route path="project-defenses" element={<ProjectDefenseList />} />
+      <Route path="project-defenses" element={<Navigate to="workflow" replace />} />
+      <Route path="project-defenses/workflow" element={<DefenseWorkflow />} />
+      <Route path="project-defenses/workflow/:kind/:id" element={<DefenseWorkflow />} />
+      <Route path="project-defenses/legacy" element={<ProjectDefenseList />} />
       <Route path="project-defenses/:id" element={<ProjectDefenseEditor />} />
       <Route path="*" element={<Navigate to="/judge/project-defenses" replace />} />
     </Routes>
@@ -242,7 +252,10 @@ const PAGE_META = {
   '/admin/judges': {title:'Judges',hint:'Create judge accounts and assign project defense evaluations.'},
   '/admin/evaluation-center': {title:'Evaluation Center',hint:'Coordinate project defense reviews between teachers and Admin.'},
   '/admin/evaluations': {title:'Course Feedback Forms',hint:'Manage course evaluations and review student feedback.'},
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   '/admin/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/admin/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
   '/teacher/evaluation-center': {title:'Project Defense',hint:'Evaluate student projects and submit completed assessments to Admin.'},

@@ -452,9 +452,13 @@ function SubmissionConfirmation({record,onClose}){
 }
 
 function TeacherDefenseForm({id}){
+<<<<<<< HEAD
   const [search]=usePageSearch();
   const [confirmation,setConfirmation]=useState(null);
 
+=======
+  const [confirmation,setConfirmation]=useState(null);
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   const [form,setForm]=useState(null);
   const [assessments,setAssessments]=useState([]);
   const [records,setRecords]=useState([]);
@@ -517,7 +521,10 @@ function TeacherDefenseForm({id}){
         setForm(record);
         setRecords(previous=>previous.map(item=>item._id===record._id?record:item));
         setConfirmation(record);
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
       }
       setNotice(send?'Form sent to the admin.':'Form saved.');
     }catch(error){setError(error.response?.data?.message||error.message);}
@@ -534,7 +541,10 @@ function TeacherDefenseForm({id}){
     <section className="defense-section defense-teacher-builder">
       {error&&<p className="ev-error" role="alert">{error}</p>}
       {confirmation&&<SubmissionConfirmation record={confirmation} onClose={()=>setConfirmation(null)}/>}
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
       {notice&&!form?.submittedAt&&<p className="ev-notice" role="status">{notice}</p>}
       {!form?(!error&&<p role="status">Loading form…</p>):<>
         {records.length>0&&<label>Saved forms
@@ -573,10 +583,15 @@ function TeacherDefenseForm({id}){
 }
 
 function DefenseForm({id,initialCourse,initialScoring=false}){
+<<<<<<< HEAD
   const [search]=usePageSearch();
   const {route,teacher,judge}=useDefensePaths();
   const {user}=useAuth();
 
+=======
+  const {route,teacher,judge}=useDefensePaths();
+  const {user}=useAuth();
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   const navigate=useNavigate();
   const [groups,setGroups]=useState(()=>[{...empty,groupName:'Group 1'}]);
   const [activeGroup,setActiveGroup]=useState(0);
@@ -646,8 +661,12 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
     return ()=>controller.abort();
   },[id,initialCourse,teacher,judge,user?.name]);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   const form=groups[activeGroup];
+  const pendingGroupIndex=groups.findIndex(group=>!group._id);
 
   useEffect(()=>{
     if(!initialScoring||!form?._id)return;
@@ -675,7 +694,10 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
     customSections.every(section=>section.title.trim()&&section.questions.length>0&&
       questionTotalMatches(section)&&section.questions.every(question=>question.title.trim()&&validQuestionMarks(question.marks)));
   const additionalEvaluations=judge?[]:form.additionalEvaluations||[];
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   const evaluation=additionalEvaluations[activeEvaluator-1];
   const ratings=judge?form.ratings:evaluation?.ratings||form.ratings;
   const notes=judge?form.notes:evaluation?.notes||form.notes;
@@ -710,8 +732,12 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
       groupName:'Group '+number};
   }
   function addGroup(){
-    setGroups(previous=>[...previous,freshGroup(previous,form)]);
-    selectGroup(groups.length);
+    if(pendingGroupIndex===-1){
+      setGroups(previous=>[...previous,freshGroup(previous,form)]);
+    }
+    const index=pendingGroupIndex===-1?groups.length:pendingGroupIndex;
+    if(index!==activeGroup)selectGroup(index);
+    requestAnimationFrame(()=>groupDetailsRef.current?.scrollIntoView({block:'start'}));
   }
   const patch=(key,value)=>{setNotice('');setForm(previous=>({...previous,[key]:value}));};
   function updateEvaluation(key,value){
@@ -761,7 +787,10 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
   const assessmentMarks=!validAllocation||groupTotal===null?null:groupTotal/totalMarks*assessmentMax;
   const courseLabel=course?.name||course?.title||form.courseName||'';
   async function save(finalize,continueToScoring=false){
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
     if(busy||finalized)return;
     if(!form._id&&(!form.groupName.trim()||!form.students.length)){
       setError('Enter a group name and select at least one student.');
@@ -864,11 +893,15 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
         </header>
         <div className="defense-group-tabs" role="group" aria-label="Choose a group">
           {groups.map((group,index)=>{
+<<<<<<< HEAD
             if(!matchesPageSearch(search,group.groupName,group.projectTitle,group.cohort,group.course,group.students,group.status))return null;
+=======
+            if(!group._id)return null;
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
             const members=group.students?.length??0;
             const date=group.defenseDate&&new Date(group.defenseDate+'T00:00:00Z');
-            const status=group.submittedAt?'Sent to Admin':group.status==='finalized'?'Finalized':group._id?'Draft':'Unsaved';
-            return <button type="button" key={group._id||index} disabled={busy||editing}
+            const status=group.submittedAt?'Sent to Admin':group.status==='finalized'?'Finalized':'Draft';
+            return <button type="button" key={group._id} disabled={busy||editing}
               aria-pressed={index===activeGroup} onClick={()=>selectGroup(index)}>
               <span className="defense-group-avatar"><TeachingIcon name="users" size={18}/></span>
               <span className="defense-group-info">
@@ -880,7 +913,9 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
             </button>;
           })}
         </div>
-        {!judge&&<button type="button" disabled={busy||editing} onClick={addGroup}>+ Add Group</button>}
+        {!judge&&<button type="button" disabled={busy||editing} onClick={addGroup}>
+          {pendingGroupIndex!==-1&&pendingGroupIndex!==activeGroup?'Continue New Group':'+ Add Group'}
+        </button>}
         <div className="defense-group-controls">
           <strong>Active group · {form.groupName||'Group '+(activeGroup+1)}</strong>
           {!judge&&form._id&&!finalized&&<>
@@ -893,9 +928,12 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
           {!judge&&form._id&&!submitted&&<button type="button" className="defense-delete-group" disabled={busy||editing} onClick={deleteGroup}>
             <TeachingIcon name="trash" size={14}/> Delete Group
           </button>}
+<<<<<<< HEAD
           {!judge&&form._id&&!finalized&&<button type="button" disabled={busy||editing}
             onClick={()=>{setError('');setEditingMarks(true);}}>Set Up Rubric</button>}
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
           {form._id&&<button type="button" disabled={busy||editing} aria-expanded={showScoring||finalized}
             aria-controls="defense-scoring" onClick={()=>showScoring&&!finalized?setShowScoring(false):openScoring()}>
             {showScoring&&!finalized?'Hide Scoring':'Open Scoring'}

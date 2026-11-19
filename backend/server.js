@@ -84,6 +84,7 @@ const startServer = async () => {
   await connectDB();
   await require('./models/User').ensureOptionalStudentEmailIndex();
   await Promise.all(Object.values(require('./models/Evaluation')).map(model => model.init()));
+  await Promise.all([require('./models/ProjectDefense').init(), require('./models/ExamResult').init()]);
   await require('./models/Session').init();
   await require('./models/Certificate').init();
   const server = app.listen(PORT, () => {

@@ -25,9 +25,13 @@ router.use(asyncHandler(async(req,res,next)=>{
     const course=req.params.course||req.query.course;
     if(course&&!req.defenseCourses.includes(String(course)))fail('This course is outside your project defense access.',403);
   }
+  req.defenseFilter.workflowForm={$exists:false};
   next();
 }));
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
 const criteria = ['b1','b2','b3','c1','d1','e1','f1','g1','g2','g3','g4'];
 const rubricSections = ['B','C','D','E','F','G'];
 const fields = ['groupName','projectTitle','cohort','cohortYear','evaluatorName','defenseDate','ratings','notes','wording','outcome','summary','signature','signatureDate'];
@@ -118,7 +122,10 @@ router.get('/',asyncHandler(async(req,res)=>{
       .populate('course','name title').populate('assignedJudge','name email')
       .sort({updatedAt:-1,_id:-1}).skip((page-1)*50).limit(50).lean(),
     Defense.countDocuments(filter),
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   ]);
   res.json({records,total});
 }));
@@ -128,7 +135,10 @@ router.get('/recent',asyncHandler(async(req,res)=>{
   if(course!==undefined&&(typeof course!=='string'||!mongoose.isObjectIdOrHexString(course)))fail('Choose a valid course.');
   const records=await Defense.find({...req.defenseFilter,...(course?{course}:{})})
     .select('course groupName projectTitle defenseDate status submittedAt teacherOwned')
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
     .populate('course','name title')
     .sort({updatedAt:-1,_id:-1}).limit(5).lean();
   res.json({records});
@@ -166,7 +176,10 @@ router.get('/courses/:course/cohorts',asyncHandler(async(req,res)=>{
 router.get('/assessments',authorizeRoles('admin','teacher'),asyncHandler(async(req,res)=>{
   const teachers=await User.distinct('_id',{role:'teacher'});
   const filter=req.user.role==='teacher'?req.defenseAssessmentFilter:{createdBy:{$in:teachers}};
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   const [exams,quizzes]=await Promise.all([Exam,Quiz].map(Model=>
     Model.find(filter).select('title course totalMarks type').populate('course','name title').sort({title:1,_id:1}).lean()));
   const assessments=[...exams.map(exam=>({...exam,type:'exam'})),
@@ -185,7 +198,7 @@ router.get('/:id',asyncHandler(async(req,res)=>{
 router.patch('/:id/judge',authorizeRoles('admin'),asyncHandler(async(req,res)=>{
   if(!mongoose.isObjectIdOrHexString(req.params.id))fail('Choose a valid defense form.');
   if(!Number.isSafeInteger(req.body.__v))fail('Reload this form before assigning a judge.',409);
-  const record=await Defense.findById(req.params.id);
+  const record=await Defense.findOne({_id:req.params.id,workflowForm:{$exists:false}});
   if(!record)fail('Defense evaluation not found.',404);
   if(req.body.__v!==record.__v)fail('This form has changed. Reload before assigning a judge.',409);
   if(record.status==='finalized')fail('A finalized defense cannot be assigned to a judge.',409);
@@ -380,6 +393,7 @@ router.post('/:id/submit',asyncHandler(async(req,res)=>{
   if(record.submittedAt)return res.json({record});
   if(req.body.__v!==record.__v)fail('This form has changed. Reopen it before sending.',409);
   if(!record.customRubric?.length)fail('Create the sections and sub-questions before sending.');
+<<<<<<< HEAD
   validateCustomRubric(record.toObject().customRubric,record.projectTotalMarks);
   const Model=record.assessmentType==='exam'?Exam:Quiz;
   const assessment=await Model.findById(record.assessment).select('totalMarks').lean();
@@ -387,12 +401,17 @@ router.post('/:id/submit',asyncHandler(async(req,res)=>{
   if(record.projectTotalMarks!==assessment.totalMarks)fail('Section marks must add up to the assessment maximum.');
   record.assessmentTotalMarks=assessment.totalMarks;
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   record.submittedAt=new Date();
   await saveVersion(record);
   res.json({record});
 }));
 router.delete('/:id',authorizeRoles('admin','teacher'),asyncHandler(async(req,res)=>{
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   if(!mongoose.isObjectIdOrHexString(req.params.id))fail('Choose a valid group.');
   if(!Number.isSafeInteger(req.body?.__v))fail('Reload this group before deleting it.',409);
   const filter={...req.defenseFilter,_id:req.params.id};
