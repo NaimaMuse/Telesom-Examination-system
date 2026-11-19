@@ -236,49 +236,62 @@
 .dw-create-group-primary { background:#f4dfaa; border-color:#dfc584; color:#382809; }
 .dw-create-group-primary:hover { background:#ecd291; color:#382809; }
 .dw-staff-overview {
+  --dw-overview-gold:#edc565;
+  --dw-overview-light-gold:#fff6df;
+  --dw-overview-gold-border:#e7d7ae;
   position:relative; isolation:isolate; overflow:hidden;
-  align-content:start; min-height:calc(100vh - 8rem); gap:.65rem; padding:.65rem;
-  border-radius:.75rem; background:#eff7f2;
+  align-content:start; min-height:calc(100vh - 8rem); gap:.45rem; padding:.45rem;
+  border-radius:.65rem; background:#f8f5eb; font-size:.78rem;
 }
 .dw-staff-overview::before {
   content:''; position:absolute; inset:auto 0 0 auto; width:13rem; height:9rem; z-index:-1; pointer-events:none;
-  background:radial-gradient(circle,#abd1bc 1.3px,transparent 1.6px) 0 0 / 10px 10px;
+  background:radial-gradient(circle,#dfc17c 1.3px,transparent 1.6px) 0 0 / 10px 10px;
   mask-image:radial-gradient(ellipse at bottom right,#000,transparent 73%);
 }
 .dw-overview-hero {
   position:relative; isolation:isolate; overflow:hidden; justify-content:flex-start;
-  gap:.75rem 1rem; padding:.85rem 1.1rem; border-radius:.65rem;
-  background:linear-gradient(105deg,#053823,#07562c 75%,#096130);
+  gap:.5rem .7rem; padding:.55rem .75rem; border-radius:.55rem;
+  background:linear-gradient(105deg,#103a2c,#145038);
 }
-.dw-overview-hero h1 { font-size:clamp(1.3rem,3vw,1.65rem); }
-.dw-overview-hero p { margin-top:.2rem; color:#e1f1e7; font-size:.8rem; }
-.dw-overview-emblem { display:grid; place-items:center; color:#ffcf3c; padding-right:1rem; border-right:1px solid #ffffff3b; }
+.dw-overview-hero h1 { font-size:clamp(1.12rem,2.5vw,1.4rem); }
+.dw-overview-hero p { margin-top:.15rem; color:#e1f1e7; font-size:.74rem; }
+.dw-overview-emblem { display:grid; place-items:center; color:var(--dw-overview-gold); padding-right:.65rem; border-right:1px solid #ffffff3b; }
+.dw-overview-emblem svg { width:1.8rem; height:1.8rem; }
 .dw-overview-art { position:absolute; right:21%; bottom:-1.5rem; z-index:-1; color:#052e1e; opacity:.45; pointer-events:none; }
-.dw-overview-hero .dw-button { margin-left:auto; min-height:2rem; border-radius:2rem; font-size:.75rem; }
-.dw-staff-overview .dw-overview-panel { gap:.55rem; padding:.7rem .85rem; border-color:#e6eee8; }
+.dw-staff-overview .dw-button { min-height:1.8rem; padding:.25rem .5rem; font-size:.73rem; }
+.dw-overview-hero .dw-button { margin-left:auto; border-radius:2rem; background:var(--dw-overview-light-gold); border-color:var(--dw-overview-gold); }
+.dw-overview-hero .dw-button:hover { background:var(--dw-overview-gold); color:#183d2f; }
+.dw-staff-overview :is(.dw-grid,.dw-card) { gap:.45rem; }
+.dw-staff-overview .dw-card { padding:.5rem .65rem; border-color:var(--dw-overview-gold-border); background:#fffdfa; }
+.dw-staff-overview .dw-card h2 { font-size:.9rem; }
+.dw-staff-overview .dw-grid .dw-button { background:var(--dw-overview-light-gold); color:#174832; border-color:var(--dw-overview-gold-border); }
+.dw-staff-overview .dw-grid .dw-button:hover { background:var(--dw-overview-gold); }
 .dw-overview-heading {
   display:flex; align-items:center; justify-content:space-between;
-  gap:.6rem; padding-bottom:.35rem; border-bottom:1px solid #cbded3;
+  gap:.4rem; padding-bottom:.25rem; border-bottom:1px solid var(--dw-overview-gold-border);
 }
 .dw-overview-heading :is(h1,h2) {
-  display:flex; align-items:center; gap:.55rem; color:#0c522e;
-  font-size:1rem; letter-spacing:normal;
+  display:flex; align-items:center; gap:.35rem; color:#145038;
+  font-size:.9rem; letter-spacing:normal;
 }
-.dw-staff-overview .dw-overview-panel label { gap:.3rem; font-size:.85rem; }
-.dw-staff-overview .dw-overview-panel select { padding:.38rem .55rem; border-color:#cbded3; }
-.dw-staff-overview .dw-overview-panel > p { font-size:.8rem; color:var(--dw-muted); }
-.dw-assignment-cards { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; }
-.dw-assignment-cards a { gap:.65rem; min-height:3.65rem; padding:.5rem .65rem; }
-.dw-assignment-cards a div { font-size:.875rem; }
-.dw-assignment-cards a div span { font-size:.77rem; }
+.dw-overview-heading svg { width:1.15rem; height:1.15rem; }
+.dw-staff-overview .dw-overview-panel label { gap:.2rem; font-size:.77rem; }
+.dw-staff-overview .dw-overview-panel select { padding:.26rem .45rem; border-color:var(--dw-overview-gold-border); }
+.dw-staff-overview .dw-overview-panel > p { font-size:.75rem; color:var(--dw-muted); }
+.dw-staff-overview .dw-list { gap:.35rem; }
+.dw-staff-overview .dw-list a { gap:.45rem; min-height:2.85rem; padding:.32rem .45rem; border-color:#e6dac1; }
+.dw-staff-overview .dw-list a:hover { background:var(--dw-overview-light-gold); }
+.dw-staff-overview .dw-list a div span { font-size:.72rem; }
+.dw-staff-overview .dw-pill { padding:.16rem .4rem; font-size:.7rem; }
+.dw-assignment-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .dw-assignment-initial {
-  display:grid; place-items:center; flex:none; width:2.15rem; height:2.15rem;
+  display:grid; place-items:center; flex:none; width:1.65rem; height:1.65rem;
   border-radius:50%; background:#064e30; color:#fff; font-weight:750;
 }
-.dw-assignment-cards .dw-pill { display:inline-flex; align-items:center; gap:.28rem; font-size:.72rem; }
+.dw-assignment-cards .dw-pill { display:inline-flex; align-items:center; gap:.2rem; }
 .dw-assignment-open {
-  display:grid; place-items:center; flex:none; min-width:1.9rem; min-height:1.9rem;
-  border:1px solid #d6e4db; border-radius:.45rem; color:#15563a; font-weight:800;
+  display:grid; place-items:center; flex:none; min-width:1.5rem; min-height:1.5rem;
+  border:1px solid var(--dw-overview-gold-border); border-radius:.35rem; color:#15563a; font-weight:800;
 }
 .dw-group-detail {
   --dw-rating-surface:#fff8e7;
@@ -322,7 +335,7 @@
   .dw-builder-actions .dw-button { min-height:2rem; }
   .dw-builder-section-head { flex-wrap:wrap; gap:.35rem; }
   .dw-builder-remove { justify-self:start; }
-  .dw-assignment-cards a { gap:.35rem; padding:.4rem; }
+  .dw-staff-overview .dw-assignment-cards a { gap:.35rem; }
   .dw-assignment-cards .dw-pill { white-space:normal; }
   .dw-overview-hero .dw-button { margin-left:0; }
 }
