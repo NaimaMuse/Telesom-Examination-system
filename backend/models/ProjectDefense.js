@@ -9,6 +9,22 @@ const schema = new Schema({
   assessmentTotalMarks: {type:Number,min:0.01},
   students: [{type:Schema.Types.ObjectId,ref:'Student'}],
   groupAssignmentEnforced: {type:Boolean},
+  workflowForm: {type:Schema.Types.ObjectId,ref:'DefenseRubric',index:true},
+  workflowFormTitle: String,
+  workflowRevision: Number,
+  workflowSections: {type:[new Schema({
+    title:String, marks:Number,
+    questions:[new Schema({title:String})],
+  })],default:undefined},
+  workflowEvaluators: {type:[new Schema({
+    user:{type:Schema.Types.ObjectId,ref:'User',required:true},
+    scores:[{type:Number}],
+    questionRatings:{type:[[Number]],default:undefined},
+    comments:[{type:String,maxlength:4000}],
+    revision:{type:Number,default:0},
+    submittedAt:Date,
+  },{_id:false})],default:undefined},
+  workflowFinalMark: Number,
   evaluator: {type:Schema.Types.ObjectId,ref:'User',required:true},
   assignedJudge: {type:Schema.Types.ObjectId,ref:'User',default:null,index:true},
   evaluatorName: {type:String,trim:true,maxlength:200,default:''},
@@ -50,5 +66,6 @@ schema.index({course:1,assessment:1,assessmentType:1,students:1},{
   partialFilterExpression:{groupAssignmentEnforced:true,'students.0':{$exists:true}},
   name:'unique_defense_student_group',
 });
+schema.index({'workflowEvaluators.user':1});
 
 module.exports = mongoose.model('ProjectDefense',schema);

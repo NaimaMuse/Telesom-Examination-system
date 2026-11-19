@@ -20,6 +20,7 @@ export default function TeachingIcon({name, size=20}) {
     users: <><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m3 11v-3a6 6 0 0 0-3-5"/></>,
     clock: <><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/></>,
     check: <><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></>,
+    shield: <><path d="M12 2c3 2 6 3 9 3v6c0 5-4 9-9 11-5-2-9-6-9-11V5c3 0 6-1 9-3Z"/><path d="m8 12 3 3 5-6"/></>,
     cross: <><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></>,
     home: <><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-8h6v8"/></>,
     grid: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,

@@ -9,7 +9,6 @@ const User = require('../models/User');
 const {asyncHandler,pick} = require('../controllers/resourceController');
 const {fail} = require('../services/evaluationRules');
 const {enrollmentCohortFilter} = require('../services/batchService');
-<<<<<<< HEAD
 const {assessmentReadScope} = require('../services/gradebookIntegrityService');
 const {authorizeRoles} = require('../middleware/roleMiddleware');
 
@@ -26,34 +25,9 @@ router.use(asyncHandler(async(req,res,next)=>{
     const course=req.params.course||req.query.course;
     if(course&&!req.defenseCourses.includes(String(course)))fail('This course is outside your project defense access.',403);
   }
+  req.defenseFilter.workflowForm={$exists:false};
   next();
 }));
-=======
-const {requireDefenseCourse,defenseCourseFilter}=require('../middleware/defenseAccess');
-
-const router = express.Router();
-router.use(asyncHandler(async(req,res,next)=>{
-  if(req.defenseCourses){
-    const course=req.params.course||req.body?.course||req.query.course;
-    if(course!==undefined)requireDefenseCourse(req,course);
-  }
-  next();
-}));
-router.param('course',(req,res,next,course)=>{
-  try{requireDefenseCourse(req,course);next();}catch(error){next(error);}
-});
-router.param('id',async(req,res,next,id)=>{
-  try{
-    if(req.defenseCourses){
-      if(!mongoose.isObjectIdOrHexString(id))fail('Choose a valid defense.');
-      const record=await Defense.findById(id).select('course').lean();
-      if(!record)fail('Defense evaluation not found.',404);
-      requireDefenseCourse(req,record.course);
-    }
-    next();
-  }catch(error){next(error);}
-});
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
 const criteria = ['b1','b2','b3','c1','d1','e1','f1','g1','g2','g3','g4'];
 const rubricSections = ['B','C','D','E','F','G'];
 const fields = ['groupName','projectTitle','cohort','cohortYear','evaluatorName','defenseDate','ratings','notes','wording','outcome','summary','signature','signatureDate'];
@@ -140,16 +114,10 @@ router.get('/',asyncHandler(async(req,res)=>{
   const filter={...req.defenseFilter,...require('../services/pageSearch').textSearchFilter(req.query.search,
     ['groupName','projectTitle','assessmentTitle','cohort','evaluatorName','status'])};
   const [records,total]=await Promise.all([
-<<<<<<< HEAD
     Defense.find(filter).select('course groupName projectTitle cohort status updatedAt submittedAt teacherOwned assignedJudge __v')
       .populate('course','name title').populate('assignedJudge','name email')
       .sort({updatedAt:-1,_id:-1}).skip((page-1)*50).limit(50).lean(),
     Defense.countDocuments(filter),
-=======
-    Defense.find(defenseCourseFilter(req)).select('course groupName projectTitle cohort status updatedAt submittedAt')
-      .populate('course','name title').sort({updatedAt:-1,_id:-1}).skip((page-1)*50).limit(50).lean(),
-    Defense.countDocuments(defenseCourseFilter(req)),
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
   ]);
   res.json({records,total});
 }));
@@ -157,13 +125,8 @@ router.get('/',asyncHandler(async(req,res)=>{
 router.get('/recent',asyncHandler(async(req,res)=>{
   const {course}=req.query;
   if(course!==undefined&&(typeof course!=='string'||!mongoose.isObjectIdOrHexString(course)))fail('Choose a valid course.');
-<<<<<<< HEAD
   const records=await Defense.find({...req.defenseFilter,...(course?{course}:{})})
     .select('course groupName projectTitle defenseDate status submittedAt teacherOwned')
-=======
-  const records=await Defense.find(course?{course}:defenseCourseFilter(req))
-    .select('course groupName projectTitle defenseDate status')
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
     .populate('course','name title')
     .sort({updatedAt:-1,_id:-1}).limit(5).lean();
   res.json({records});
@@ -200,11 +163,7 @@ router.get('/courses/:course/cohorts',asyncHandler(async(req,res)=>{
 
 router.get('/assessments',authorizeRoles('admin','teacher'),asyncHandler(async(req,res)=>{
   const teachers=await User.distinct('_id',{role:'teacher'});
-<<<<<<< HEAD
   const filter=req.user.role==='teacher'?req.defenseAssessmentFilter:{createdBy:{$in:teachers}};
-=======
-  const filter={createdBy:{$in:teachers},...defenseCourseFilter(req)};
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
   const [exams,quizzes]=await Promise.all([Exam,Quiz].map(Model=>
     Model.find(filter).select('title course totalMarks type').populate('course','name title').sort({title:1,_id:1}).lean()));
   const assessments=[...exams.map(exam=>({...exam,type:'exam'})),
@@ -223,7 +182,7 @@ router.get('/:id',asyncHandler(async(req,res)=>{
 router.patch('/:id/judge',authorizeRoles('admin'),asyncHandler(async(req,res)=>{
   if(!mongoose.isObjectIdOrHexString(req.params.id))fail('Choose a valid defense form.');
   if(!Number.isSafeInteger(req.body.__v))fail('Reload this form before assigning a judge.',409);
-  const record=await Defense.findById(req.params.id);
+  const record=await Defense.findOne({_id:req.params.id,workflowForm:{$exists:false}});
   if(!record)fail('Defense evaluation not found.',404);
   if(req.body.__v!==record.__v)fail('This form has changed. Reload before assigning a judge.',409);
   if(record.status==='finalized')fail('A finalized defense cannot be assigned to a judge.',409);
@@ -409,7 +368,6 @@ async function save(req,res){
   await saveVersion(record);
   res.status(creating?201:200).json({record});
 }
-<<<<<<< HEAD
 router.post('/',authorizeRoles('admin','teacher'),asyncHandler(save));
 router.put('/:id',authorizeRoles('admin','teacher','judge'),asyncHandler(save));
 router.post('/:id/submit',asyncHandler(async(req,res)=>{
@@ -419,31 +377,11 @@ router.post('/:id/submit',asyncHandler(async(req,res)=>{
   if(record.submittedAt)return res.json({record});
   if(req.body.__v!==record.__v)fail('This form has changed. Reopen it before sending.',409);
   if(!record.customRubric?.length)fail('Create the sections and sub-questions before sending.');
-=======
-router.post('/',asyncHandler(save));
-router.put('/:id',asyncHandler(save));
-router.post('/:id/submit',asyncHandler(async(req,res)=>{
-  const record=await Defense.findById(req.params.id);
-  if(!record)fail('Defense evaluation not found.',404);
-  if(record.submittedAt)return res.json({record});
-  if(record.__v!==req.body?.__v)fail('This form changed. Reload before sending.',409);
-  if(!record.customRubric?.length)fail('Create the rubric before sending.');
-  validateCustomRubric(record.toObject().customRubric,record.projectTotalMarks);
-  const Model=record.assessmentType==='exam'?Exam:Quiz;
-  const assessment=await Model.findById(record.assessment).select('totalMarks').lean();
-  if(!assessment)fail('Choose an existing assessment.');
-  if(record.projectTotalMarks!==assessment.totalMarks)fail('Section marks must add up to the assessment maximum.');
-  record.assessmentTotalMarks=assessment.totalMarks;
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
   record.submittedAt=new Date();
   await saveVersion(record);
   res.json({record});
 }));
-<<<<<<< HEAD
 router.delete('/:id',authorizeRoles('admin','teacher'),asyncHandler(async(req,res)=>{
-=======
-router.delete('/:id',asyncHandler(async(req,res)=>{
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
   if(!mongoose.isObjectIdOrHexString(req.params.id))fail('Choose a valid group.');
   if(!Number.isSafeInteger(req.body?.__v))fail('Reload this group before deleting it.',409);
   const filter={...req.defenseFilter,_id:req.params.id};

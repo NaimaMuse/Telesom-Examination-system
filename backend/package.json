@@ -16,7 +16,8 @@
     "test:academy:integration": "node tests/academy.http.test.js",
     "migrate:batches": "node scripts/migrateBatchIndex.js",
     "test:my-course:integration": "node tests/myCourse.http.test.js",
-    "test:evaluations:integration": "node tests/evaluations.http.test.js"
+    "test:evaluations:integration": "node tests/evaluations.http.test.js",
+    "test:defense-workflow": "node tests/defenseWorkflow.http.test.js"
   },
   "keywords": [
     "nodejs",

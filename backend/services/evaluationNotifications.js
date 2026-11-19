@@ -1,7 +1,18 @@
 const {Form,Notice,Response}=require('../models/Evaluation');
 const Student=require('../models/Student');
 const Defense=require('../models/ProjectDefense');
+const Rubric=require('../models/DefenseRubric');
 async function evaluationNotices(user){
+ const handoffs=['admin','teacher'].includes(user.role)
+  ?await Rubric.find({'handoff.recipient':user._id}).select('title handoff exam').sort({'handoff.sentAt':-1}).limit(60).lean():[];
+ const workflowNotices=handoffs.map(form=>({
+  id:'defense-form:'+form._id+':'+form.handoff.sentAt.toISOString(),
+  type:'evaluation',
+  title:'Review defense form · '+form.title,
+  message:form.title,
+  href:'/'+user.role+'/project-defenses/workflow/forms/'+form._id+'?exam='+form.exam,
+  scheduledAt:form.handoff.sentAt.toISOString(),
+ }));
  if(user.role==='admin'){
   const defenses=await Defense.find({submittedAt:{$ne:null}})
    .sort({submittedAt:-1,_id:-1}).limit(60)
@@ -19,7 +30,7 @@ async function evaluationNotices(user){
    .sort({submittedAt:-1,_id:-1}).limit(60)
    .populate('form','title')
    .populate({path:'student',populate:{path:'user',select:'name'}}).lean();
-  return [...defenseNotices,...submissions.filter(response=>response.form).map(response=>({
+  return [...workflowNotices,...defenseNotices,...submissions.filter(response=>response.form).map(response=>({
    id:'evaluation-submission:'+response._id,
    type:'evaluation',
    title:(response.student?.user?.name||'A student')+' submitted '+response.form.title,
@@ -27,7 +38,7 @@ async function evaluationNotices(user){
    scheduledAt:response.submittedAt.toISOString()
   }))].sort((a,b)=>b.scheduledAt.localeCompare(a.scheduledAt)).slice(0,60);
  }
- if(user.role!=='student')return [];
+ if(user.role!=='student')return workflowNotices;
  const student=await Student.findOne({user:user._id}).lean();if(!student)return [];
  const forms=await Form.find({students:student._id,status:'published',reminders:true,deadline:{$gt:new Date(),$lte:new Date(Date.now()+86400000)}}).lean();
  for(const f of forms){if(f.responseLimit&&f.responseCount>=f.responseLimit)continue;await Notice.updateOne({student:student._id,form:f._id,event:'reminder:'+new Date(f.deadline).toISOString()},{$setOnInsert:{title:'Evaluation deadline approaching',message:f.title}},{upsert:true});}
