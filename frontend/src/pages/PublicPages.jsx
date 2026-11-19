@@ -31,13 +31,13 @@ function PublicLayout({children}){
           <Link key={id} to={'/#'+id} className={(hash||'#home')==='#'+id?'active':''}
             aria-current={(hash||'#home')==='#'+id?'location':undefined}><TeachingIcon name={icon} size={18}/>{label}</Link>)}
       </nav>
-      <Link className={`public-login${user?' public-account':''}`} to={user?dashboard:'/staff/login'} aria-label={user?'Go to your dashboard':'Login'} title={user?'My dashboard':'Login'}><TeachingIcon name="profile" size={user?23:18}/>{!user&&!authLoading&&'Login'}</Link>
+      <Link className={`public-login${user?' public-account':''}`} to={user?dashboard:'/login'} aria-label={user?'Go to your dashboard':'Login'} title={user?'My dashboard':'Login'}><TeachingIcon name="profile" size={user?23:18}/>{!user&&!authLoading&&'Login'}</Link>
     </header>
     <main id="public-content">{children}</main>
     <footer className="public-footer">
       <span>© {new Date().getFullYear()} Telesom Academy</span>
       <span>Academic Management System</span>
-      <div><Link to="/#about">About Us</Link><Link to="/#contact">Contact Us</Link><Link to={user?dashboard:'/staff/login'}>{user?'My Dashboard':'Login'}</Link></div>
+      <div><Link to="/#about">About Us</Link><Link to="/#contact">Contact Us</Link><Link to={user?dashboard:'/login'}>{user?'My Dashboard':'Login'}</Link></div>
     </footer>
   </div>;
 }
@@ -53,7 +53,7 @@ function FeatureStrip(){
 
 export function HomePage(){
   const {user}=useAuth();
-  const accountPath=user?(user.role==='judge'?'/judge/project-defenses':`/${user.role}`):'/staff/login';
+  const accountPath=user?(user.role==='judge'?'/judge/project-defenses':`/${user.role}`):'/login';
   return <PublicLayout>
     <section className="public-hero" id="home">
       <img className="public-campus-background" src="/academy-campus-original-clear-logo.png"
