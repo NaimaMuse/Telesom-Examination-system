@@ -259,7 +259,8 @@ router.get('/teacher-attendance',authorizeRoles('admin'),asyncHandler(async(req,
     status:'active',startDate:{$lte:date},$or:[{endDate:null},{endDate:{$gte:date}}]
   }).populate({path:'teacher',populate:{path:'user',select:'name isActive'}})
     .populate('course','title name teachingSchedule').lean();
-  const active=contracts.filter(contract=>contract.course&&contract.teacher?.user?.isActive&&contract.teacher.status!=='inactive');
+  const active=contracts.filter(contract=>contract.course&&contract.teacher?.user?.isActive&&contract.teacher.status!=='inactive'&&
+    contract.course.teachingSchedule?.some(slot=>slot.day===new Date(date+'T12:00:00Z').getUTCDay()));
   const entries=await TeacherAttendance.find({date,contract:{$in:active.map(contract=>contract._id)}}).lean();
   const scheduled=await Makeup.find({lesson:{$in:entries.map(entry=>entry._id)},status:'scheduled'}).select('lesson').lean();
   const byContract=new Map(entries.map(entry=>[String(entry.contract),entry]));
@@ -283,10 +284,18 @@ router.put('/teacher-attendance',authorizeRoles('admin'),asyncHandler(async(req,
     const contract=await contractService.loadContract(id(req.body.contract));
     if(contract.status!=='active'||date<contract.startDate||(contract.endDate&&date>contract.endDate))fail('Attendance must fall within an active contract.');
     const teacher=await Teacher.findById(contract.teacher).populate('user','isActive');
-    if(!teacher?.user?.isActive||teacher.status==='inactive'||!await Course.exists({_id:contract.course}))fail('An active teacher and course are required.');
+    const course=await Course.findById(contract.course).select('teachingSchedule').lean();
+    if(!teacher?.user?.isActive||teacher.status==='inactive'||!course)fail('An active teacher and course are required.');
+    if(!course.teachingSchedule?.some(slot=>slot.day===new Date(date+'T12:00:00Z').getUTCDay()))fail('Attendance can only be marked on a scheduled teaching day.');
     const filter={contract:contract._id,date};
     const previous=await TeacherAttendance.findOne(filter);
-    if(status==='present'&&previous&&await Makeup.exists({lesson:previous._id,status:'scheduled'}))fail('Cancel the linked makeup class before marking this date present.',409);
+    if(status==='present'&&previous){
+      const linked={$or:[{lesson:previous._id},{attendance:previous._id}],status:'scheduled'};
+      if(await Makeup.exists(linked)){
+        if(req.body.cancelMakeup!==true)fail('Confirm cancellation of the linked makeup class before marking Present.',409);
+        await Makeup.updateMany(linked,{$set:{status:'cancelled'}});
+      }
+    }
     const attendance=await TeacherAttendance.findOneAndUpdate(filter,
       {$set:{status,markedBy:req.user._id}},{upsert:true,new:true,runValidators:true});
     res.json({attendance});

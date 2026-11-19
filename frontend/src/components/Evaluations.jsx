@@ -1,3 +1,4 @@
+import {usePageSearch,matchesPageSearch} from '../context/PageSearchContext';
 import {buildReportPdf} from '../utils/reportPdf';
 import {courseEvaluationTemplate} from './EvaluationTemplate';
 import {useEffect,useRef,useState} from 'react';
@@ -48,6 +49,7 @@ function CreateEvaluationForm({courses,busy,onCreate,onCancel}){
  </form>;
 }
 export function NewEvaluation(){
+ const [search]=usePageSearch();
  const {pathname}=useLocation();
  const base=pathname.startsWith('/teacher')?'/teacher':'/admin';
  const navigate=useNavigate();
@@ -86,7 +88,7 @@ export function NewEvaluation(){
        }}>
          <label><span>Choose a course</span>
            <select required value={selectedDefenseCourse?defenseCourse:''} disabled={!courses?.length} onChange={event=>setDefenseCourse(event.target.value)}>
-             <CourseOptions courses={courses||[]}/>
+             <CourseOptions courses={(courses||[]).filter(course=>course._id===defenseCourse||matchesPageSearch(search,course))}/>
            </select>
          </label>
          <div className="ev-defense-generator-actions">
@@ -177,6 +179,9 @@ function StudentEvaluationCard({form,base}) {
 }
 export default function Evaluations({admin=false}){
  const {id}=useParams(),navigate=useNavigate();const [forms,setForms]=useState([]),[form,setForm]=useState(null),[response,setResponse]=useState(null),[answers,setAnswers]=useState({}),[courses,setCourses]=useState([]),[students,setStudents]=useState([]),[eligible,setEligible]=useState(0),[studentPage,setStudentPage]=useState(1),[page,setPage]=useState(1),[total,setTotal]=useState(0),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[preview,setPreview]=useState(false),[report,setReport]=useState(null),[reportPage,setReportPage]=useState(1),[search,setSearch]=useState(''),[drag,setDrag]=useState(null),[editing,setEditing]=useState(false),[editField,setEditField]=useState(null);
+ const [pageSearch]=usePageSearch();
+ const listSearch=id?'':pageSearch;
+ useEffect(()=>{setPage(1);},[listSearch]);
  const moreActions=useRef(null);
  const publishedRedirect=useRef(false);
  useEffect(()=>{
@@ -207,13 +212,13 @@ export default function Evaluations({admin=false}){
  if(admin&&loadedForm.status==='draft'&&!loadedForm.responseCount){
    loadedForm.questions=loadedForm.questions.filter(q=>!(q.key==='course'&&q.title==='Course'&&q.type==='choice'));
  }
- setForm(loadedForm);setResponse(data.response);setAnswers(data.response?.answers||{});setEditing(false);if(reportRequested){setReportPage(1);setSearch('');await getReport(1,'',selectedResponse);}}else{const {data}=await api.get('/evaluations',{params:{page}});setForms(data.forms);setTotal(data.total);}if(admin&&id)setCourses((await api.get('/evaluations/courses')).data.courses);}catch(e){setError(message(e));}finally{setLoading(false);}}
+ setForm(loadedForm);setResponse(data.response);setAnswers(data.response?.answers||{});setEditing(false);if(reportRequested){setReportPage(1);setSearch('');await getReport(1,'',selectedResponse);}}else{const {data}=await api.get('/evaluations',{params:{page,search:listSearch}});setForms(data.forms);setTotal(data.total);}if(admin&&id)setCourses((await api.get('/evaluations/courses')).data.courses);}catch(e){setError(message(e));}finally{setLoading(false);}}
  useEffect(()=>{
    setForm(null);setStudents([]);setEligible(0);setStudentPage(1);setReport(null);setPreview(publishedRedirect.current);
    setNotice(publishedRedirect.current ? publishedNotice : '');
    publishedRedirect.current=false;
    load();
- },[id,page,admin,selectedResponse,reportRequested]);
+ },[id,page,admin,selectedResponse,reportRequested,listSearch]);
  useEffect(()=>{if(!admin||(!form?.course&&!form?.allCourses))return;let current=true;api.get('/evaluations/eligible/'+(form.allCourses?'all':form.course?._id||form.course),{params:{page:studentPage}}).then(({data})=>{if(current){setStudents(data.students);setEligible(data.total);}}).catch(e=>{if(current)setError(message(e));});return()=>{current=false;};},[admin,form?.course,form?.allCourses,studentPage]);
  async function run(fn){setBusy(true);setError('');setNotice('');try{await fn();}catch(e){setError(message(e));}finally{setBusy(false);}}
  function openCreate(){

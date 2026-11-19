@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {Link,useLocation,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import api from '../services/api';
 import {useAuth} from '../context/AuthContext';
-import {usePageSearch} from '../context/PageSearchContext';
+import {usePageSearch,matchesPageSearch} from '../context/PageSearchContext';
 import TeachingIcon from './TeachingIcon';
 import './ProjectDefenses.css';
 
@@ -262,6 +262,7 @@ function StudentPicker({course,cohort,cohortYear,assessment,assessmentType,defen
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
   },[course,cohort,cohortYear,assessment,assessmentType,defense,page,retry]);
+
   function changePage(next){
     setResult(null);
     setError('');
@@ -298,6 +299,7 @@ export function ProjectDefenseList(){
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
   },[page,search]);
+  useEffect(()=>{setPage(1);},[search]);
   function changePage(next){
     setResult(null);
     setError('');
@@ -306,7 +308,7 @@ export function ProjectDefenseList(){
   return <div className="evaluations">
     <div className="ev-actions"><h2>{route.startsWith('/judge')?'Assigned Project Defenses':'Project Defense Evaluations'}</h2><Link to={defenseHome}>Back to Project Defense</Link></div>
     {error?<p role="alert">{error}</p>:!result?<p role="status">Loading evaluations…</p>:<>
-      {result.records.length===0&&<p>No project defense evaluations yet.</p>}
+      {result.records.length===0&&<p>{search.trim()?'No project defenses match your search.':'No project defense evaluations yet.'}</p>}
       <div className="ev-grid ev-admin-grid">{result.records.map(record=><article className="ev-card ev-admin-card" key={record._id}>
         <header className="ev-admin-card-heading"><span>{record.course?.name||record.course?.title}</span>
           <span className="ev-status" data-state={record.status}>{record.submittedAt?'Sent to Admin':record.status}</span></header>
@@ -324,17 +326,18 @@ export function ProjectDefenseList(){
 }
 
 export function EvaluationCenter({admin=false}){
+  const [search]=usePageSearch();
   const {route}=useDefensePaths();
   const [result,setResult]=useState(null);
   const [error,setError]=useState('');
   const [attempt,setAttempt]=useState(0);
   useEffect(()=>{
     const controller=new AbortController();
-    api.get(endpoint,{params:{page:1},signal:controller.signal})
+    api.get(endpoint,{params:{page:1,search},signal:controller.signal})
       .then(({data})=>{if(!controller.signal.aborted)setResult(data);})
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
-  },[attempt]);
+  },[attempt,search]);
   const records=result?.records||[];
   const awaitingReview=records.filter(record=>record.submittedAt&&record.status!=='finalized').length;
   const finalized=records.filter(record=>record.status==='finalized').length;
@@ -449,16 +452,9 @@ function SubmissionConfirmation({record,onClose}){
 }
 
 function TeacherDefenseForm({id}){
-<<<<<<< HEAD
+  const [search]=usePageSearch();
   const [confirmation,setConfirmation]=useState(null);
-=======
-  const confirmationRef=useRef(null);
-  const [showConfirmation,setShowConfirmation]=useState(false);
-  useEffect(()=>{
-    const dialog=confirmationRef.current;
-    if(showConfirmation&&!dialog?.open)dialog?.showModal();
-  },[showConfirmation]);
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+
   const [form,setForm]=useState(null);
   const [assessments,setAssessments]=useState([]);
   const [records,setRecords]=useState([]);
@@ -520,11 +516,8 @@ function TeacherDefenseForm({id}){
         record=data.record;
         setForm(record);
         setRecords(previous=>previous.map(item=>item._id===record._id?record:item));
-<<<<<<< HEAD
         setConfirmation(record);
-=======
-        setShowConfirmation(true);
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+
       }
       setNotice(send?'Form sent to the admin.':'Form saved.');
     }catch(error){setError(error.response?.data?.message||error.message);}
@@ -540,25 +533,14 @@ function TeacherDefenseForm({id}){
     </header>
     <section className="defense-section defense-teacher-builder">
       {error&&<p className="ev-error" role="alert">{error}</p>}
-<<<<<<< HEAD
       {confirmation&&<SubmissionConfirmation record={confirmation} onClose={()=>setConfirmation(null)}/>}
-=======
-      {showConfirmation&&<dialog className="defense-submission-popup" ref={confirmationRef}
-        aria-labelledby="defense-sent-title" aria-describedby="defense-sent-description"
-        onClose={()=>setShowConfirmation(false)}>
-        <button type="button" className="defense-popup-close" aria-label="Close confirmation"
-          autoFocus onClick={()=>confirmationRef.current?.close()}>×</button>
-        <span className="defense-popup-check"><TeachingIcon name="check" size={28}/></span>
-        <h3 id="defense-sent-title">Form sent to Admin</h3>
-        <p id="defense-sent-description">Your project defense form is ready for review.</p>
-      </dialog>}
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+
       {notice&&!form?.submittedAt&&<p className="ev-notice" role="status">{notice}</p>}
       {!form?(!error&&<p role="status">Loading form…</p>):<>
         {records.length>0&&<label>Saved forms
           <select value={form._id||''} disabled={busy} onChange={event=>openForm(event.target.value)}>
             <option value="">New form</option>
-            {records.map(record=><option key={record._id} value={record._id}>
+            {records.filter(record=>record._id===form?._id||matchesPageSearch(search,record.projectTitle,record.groupName,record.cohort,record.course)).map(record=><option key={record._id} value={record._id}>
               {record.assessmentTitle||record.groupName}{record.submittedAt?' · Sent to Admin':''}
             </option>)}
           </select>
@@ -590,14 +572,11 @@ function TeacherDefenseForm({id}){
   </div>;
 }
 
-<<<<<<< HEAD
-function DefenseForm({id,initialCourse}){
+function DefenseForm({id,initialCourse,initialScoring=false}){
+  const [search]=usePageSearch();
   const {route,teacher,judge}=useDefensePaths();
   const {user}=useAuth();
-=======
-function DefenseForm({id,initialCourse,initialScoring=false}){
-  const {route,teacher}=useDefensePaths();
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+
   const navigate=useNavigate();
   const [groups,setGroups]=useState(()=>[{...empty,groupName:'Group 1'}]);
   const [activeGroup,setActiveGroup]=useState(0);
@@ -665,12 +644,9 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
       })
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
-<<<<<<< HEAD
   },[id,initialCourse,teacher,judge,user?.name]);
 
-=======
-  },[id,initialCourse,teacher]);
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+
   const form=groups[activeGroup];
 
   useEffect(()=>{
@@ -697,13 +673,9 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
   const validAllocation=validMarks(totalMarks)&&sectionTotal===totalMarks&&
     rubric.length>0&&rubric.every(([section])=>validMarks(sectionMarks[section]))&&
     customSections.every(section=>section.title.trim()&&section.questions.length>0&&
-<<<<<<< HEAD
-      marksSum(section.questions)===section.marks&&section.questions.every(question=>question.title.trim()&&validMarks(question.marks)));
-  const additionalEvaluations=judge?[]:form.additionalEvaluations||[];
-=======
       questionTotalMatches(section)&&section.questions.every(question=>question.title.trim()&&validQuestionMarks(question.marks)));
-  const additionalEvaluations=form.additionalEvaluations||[];
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+  const additionalEvaluations=judge?[]:form.additionalEvaluations||[];
+
   const evaluation=additionalEvaluations[activeEvaluator-1];
   const ratings=judge?form.ratings:evaluation?.ratings||form.ratings;
   const notes=judge?form.notes:evaluation?.notes||form.notes;
@@ -787,13 +759,9 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
     ? form.assessmentTotalMarks ?? currentAssessment?.totalMarks
     : currentAssessment?.totalMarks ?? form.assessmentTotalMarks;
   const assessmentMarks=!validAllocation||groupTotal===null?null:groupTotal/totalMarks*assessmentMax;
-<<<<<<< HEAD
   const courseLabel=course?.name||course?.title||form.courseName||'';
   async function save(finalize,continueToScoring=false){
-=======
-  const courseLabel=course?.name||course?.title||'';
-  async function save(finalize){
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+
     if(busy||finalized)return;
     if(!form._id&&(!form.groupName.trim()||!form.students.length)){
       setError('Enter a group name and select at least one student.');
@@ -896,6 +864,7 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
         </header>
         <div className="defense-group-tabs" role="group" aria-label="Choose a group">
           {groups.map((group,index)=>{
+            if(!matchesPageSearch(search,group.groupName,group.projectTitle,group.cohort,group.course,group.students,group.status))return null;
             const members=group.students?.length??0;
             const date=group.defenseDate&&new Date(group.defenseDate+'T00:00:00Z');
             const status=group.submittedAt?'Sent to Admin':group.status==='finalized'?'Finalized':group._id?'Draft':'Unsaved';
@@ -924,15 +893,9 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
           {!judge&&form._id&&!submitted&&<button type="button" className="defense-delete-group" disabled={busy||editing} onClick={deleteGroup}>
             <TeachingIcon name="trash" size={14}/> Delete Group
           </button>}
-<<<<<<< HEAD
           {!judge&&form._id&&!finalized&&<button type="button" disabled={busy||editing}
-            aria-expanded={showRubricSetup} aria-controls="defense-rubric-setup"
-            onClick={()=>{
-              setShowRubricSetup(!showRubricSetup);
-              if(!showRubricSetup)requestAnimationFrame(()=>rubricSetupRef.current?.scrollIntoView({block:'start'}));
-            }}>Set Up Rubric</button>}
-=======
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+            onClick={()=>{setError('');setEditingMarks(true);}}>Set Up Rubric</button>}
+
           {form._id&&<button type="button" disabled={busy||editing} aria-expanded={showScoring||finalized}
             aria-controls="defense-scoring" onClick={()=>showScoring&&!finalized?setShowScoring(false):openScoring()}>
             {showScoring&&!finalized?'Hide Scoring':'Open Scoring'}

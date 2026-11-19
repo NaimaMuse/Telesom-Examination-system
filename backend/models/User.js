@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
         'Please provide a valid email address',
       ],
     },
+    profilePicture: {type:String,default:'',maxlength:3_000_000,select:false},
     password: {
       type: String,
       // Students set their own password after verifying their Google account.

@@ -26,6 +26,7 @@ const protectedPaths = [
   '/api/dashboard',
   '/api/reports',
   '/api/profile',
+  '/api/profile/picture',
   '/api/teacher/profile',
 ];
 

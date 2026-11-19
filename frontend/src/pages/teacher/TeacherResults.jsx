@@ -48,6 +48,8 @@ export default function TeacherResults({scope,onEditingChange}) {
     finally { if (isCurrent()) { setLoadingAssessments(false); setLoadingRoster(false); } }
   }, { enabled: !dirty && !saving && !importing, deps: [selectedKey,scopeIdentity,rosterRetry] });
 
+  const day=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Nairobi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
+  const marksLocked=!assessment?.date||!Number.isFinite(new Date(assessment.date).getTime())||day(assessment.date)>day(Date.now());
   const updateStudent = (studentId, field, value) => {
     setDirty(true);
     setStudents((current) => current.map((student) => (
@@ -214,7 +216,7 @@ export default function TeacherResults({scope,onEditingChange}) {
             <p>Use <strong>Name</strong> and <strong>Result</strong>. Add <strong>Email</strong> for duplicate names. Blank results are skipped.</p>
           </div>
           <div className="results-import-picker">
-            <input id="results-excel" className="visually-hidden" type="file" accept=".xlsx,.xls,.csv" disabled={importing || saving} onChange={importResults}/>
+            <input id="results-excel" className="visually-hidden" type="file" accept=".xlsx,.xls,.csv" disabled={importing || saving || marksLocked} onChange={importResults}/>
             <label htmlFor="results-excel">{importing ? 'Reading file…' : importFile ? 'Choose another file' : 'Choose Excel file'}</label>
             <span>.xlsx, .xls, or .csv</span>
           </div>
@@ -289,6 +291,8 @@ export default function TeacherResults({scope,onEditingChange}) {
             : 'No active enrollments match this assessment.'}</span>
             <Link to="/teacher/exams" className="btn btn-secondary">Review assessment settings</Link></div>
         ) : (
+          <>
+          {marksLocked&&<p role="status">Marks entry opens on the assessment date (Africa/Nairobi).</p>}
           <form onSubmit={saveResults}>
             <div className="table-responsive" {...swipeHandlers}>
               <table className="data-table results-table">
@@ -317,7 +321,7 @@ export default function TeacherResults({scope,onEditingChange}) {
                         <td>
                           <input
                             className="form-control results-mark-input"
-                            disabled={saving}
+                            disabled={saving || marksLocked}
                             type="number"
                             min="0"
                             max={assessment?.totalMarks}
@@ -352,11 +356,12 @@ export default function TeacherResults({scope,onEditingChange}) {
             </nav>}
             <div className="results-footer">
               <span>{dirty ? 'Unsaved marks. Live updates resume after saving.' : `${enteredCount} students with marks. Leave non-participants blank.`}</span>{dirty && <button type="button" className="btn btn-secondary" disabled={saving} onClick={()=>{setLoadingRoster(true);setDirty(false);}}>Discard changes</button>}
-              <button type="submit" className="btn btn-primary" disabled={importing || saving || !markedStudents.length}>
+              <button type="submit" className="btn btn-primary" disabled={importing || saving || marksLocked || !markedStudents.length}>
                 {saving ? 'Saving results...' : 'Save class results'}
               </button>
             </div>
           </form>
+          </>
         )}
       </section>
     </div>

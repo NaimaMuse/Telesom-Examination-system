@@ -1,3 +1,4 @@
+import {getAllPages} from '../../services/paginatedApi';
 import WeeklySchedule, { WEEK_DAYS } from '../../components/WeeklySchedule';
 import TeachingIcon from '../../components/TeachingIcon';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
@@ -207,7 +208,7 @@ export default function CourseMgmt() {
     if (!background) setLoading(true);
     setError('');
     try {
-      const response = await api.get('/courses', { signal: context.signal, params: { limit: 100 } });
+      const response = await getAllPages('/courses', { signal: context.signal, params: { limit: 100 } });
       if (context.isCurrent && !context.isCurrent()) return;
       const rows = response.data?.data || response.data?.courses || response.data;
       setCourses(Array.isArray(rows) ? rows.map((course) => ({

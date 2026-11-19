@@ -106,6 +106,11 @@ const resultWrite = (type, handler, action = 'save') => asyncHandler(async (req,
   const reply = await withCourseLock(assessment.course, async () => {
     const current = await Assessment.findById(assessmentId);
     if (!current || current.status === 'cancelled') fail('Assessment is unavailable.', 404);
+    if(req.user.role==='teacher'){
+      const date=current[type==='exam'?'examDate':'quizDate'];
+      const day=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Nairobi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
+      if(!date||!Number.isFinite(new Date(date).getTime())||day(date)>day(Date.now()))fail('Marks can only be entered on or after the assessment date.',403);
+    }
     if (!req.params.assessmentId) {
       const student = req.body.student || existing?.student;
       if (!await Enrollment.exists({ student, course: current.course, status: 'enrolled',...(current.academicYear?{academicYear:current.academicYear}:{}),...(current.batch?{batch:current.batch}:{}) })) fail('Student is not enrolled in the assessment course.', 403);

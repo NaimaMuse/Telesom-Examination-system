@@ -1,3 +1,4 @@
+import {getAllPages} from '../../services/paginatedApi';
 import './StudentDirectory.css';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
@@ -452,7 +453,7 @@ export default function StudentMgmt() {
   const fetchStudents = useCallback(async (background = false, context = {}) => {
     if (!background) setLoading(true);
     try {
-      const res = await api.get('/students', { signal: context.signal, params: { limit: 100 } });
+      const res = await getAllPages('/students', { signal: context.signal, params: { limit: 100 } });
       if (context.isCurrent && !context.isCurrent()) return;
       const records = res.data?.data || res.data?.students;
       if (Array.isArray(records)) {

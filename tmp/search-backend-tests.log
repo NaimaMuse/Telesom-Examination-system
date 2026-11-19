@@ -1,0 +1,158 @@
+
+> telesom-examination-system-backend@1.0.0 test
+> node tests/roleMiddleware.test.js && node tests/modelValidation.test.js && node tests/authController.test.js && node tests/userController.test.js && node tests/domainControllers.test.js && node tests/attendanceImportService.test.js && node tests/routes.test.js && node tests/uploadMiddleware.test.js && node tests/teacherPerformance.test.js && node tests/teacherPerformanceRecords.test.js && node tests/passingMarks.test.js && node tests/assessmentCompletion.test.js && node tests/adminAnalytics.test.js && node tests/studentPortal.test.js && node tests/studentId.test.js && node tests/notifications.test.js && node tests/teacherContract.test.js && node tests/academicProgress.test.js && node tests/adminDashboardHistory.test.js && node tests/evaluations.test.js
+
+--- Running Role Middleware Tests ---
+
+PASS: Admin accessing an admin-only resource
+PASS: Teacher accessing a teacher-only resource
+PASS: Judge accessing an assigned-judge resource
+PASS: Student denied access to an admin-only resource (returns 403)
+PASS: Teacher denied access to an admin-only resource (returns 403)
+PASS: Missing req.user returns 401
+PASS: Multiple allowed roles (admin, teacher) work correctly
+PASS: Rejects invalid role configuration during setup
+PASS: Integration with centralized errorHandler produces consistent 403 JSON response
+
+Tests completed: 9 passed, 0 failed.
+User model validation tests passed.
+--- Running Login Controller Tests ---
+PASS: Student ID alone cannot sign in
+PASS: Missing email returns 400 Bad Request
+PASS: Admin email + password login succeeds
+PASS: Teacher email + password login succeeds
+PASS: Judge email + password login succeeds
+PASS: A valid student portal password cannot establish a session
+
+Tests finished: 6 passed, 0 failed.
+--- Running User Controller Tests ---
+
+PASS: Student creation rejects missing required fields
+PASS: Student creation rejects invalid gender
+PASS: Student creation rejects duplicate email
+PASS: An inactive account without a dropped profile keeps its email
+PASS: A previously deleted student email can be registered under a new account
+PASS: Student account ignores manual ID, assigns a server ID and returns safe data
+PASS: Failed student profile creation removes the orphaned user
+PASS: Teacher creation requires a name and registered email
+PASS: Teacher receives an admin-managed password and only an Argon2id hash is stored
+PASS: Teacher creation rejects a short initial password
+PASS: Judge account returns shareable credentials and stores only an Argon2id password hash
+PASS: Judge account creation rejects a short password
+
+Tests finished: 12 passed, 0 failed.
+Domain controller smoke tests passed.
+Attendance CSV parser tests passed.
+{"timestamp":"2026-11-19T05:55:19.625Z","requestId":"9d23b2cb-f28b-44c7-9af8-4540c9d9b0a5","event":"api_request","actor":null,"method":"GET","route":"/api/teacher","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.657Z","requestId":"f667108c-ff99-4e87-badf-a8d5c525101a","event":"api_request","actor":null,"method":"GET","route":"/api/teacher","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.665Z","requestId":"68d84f25-ecb6-4494-a085-51a758391625","event":"api_request","actor":null,"method":"GET","route":"/api/teacher-contracts","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.672Z","requestId":"3a2855e9-352a-46a0-a6a5-5cf2c0657639","event":"api_request","actor":null,"method":"GET","route":"/api/notifications/","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.677Z","requestId":"b47b73d5-425f-4905-b654-135a12d40bf7","event":"api_request","actor":null,"method":"GET","route":"/api/students","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.685Z","requestId":"bbb2066a-99a4-4b7f-b996-50d9ae931e47","event":"api_request","actor":null,"method":"GET","route":"/api/student","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.692Z","requestId":"77c601d7-0653-448d-b228-e089fb5ba9db","event":"api_request","actor":null,"method":"GET","route":"/api/student","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.696Z","requestId":"004fa7f3-17d5-4904-8447-da57d78b3cb1","event":"api_request","actor":null,"method":"GET","route":"/api/student","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.702Z","requestId":"e6be0fd8-bf84-42b1-abdb-714b62b95151","event":"api_request","actor":null,"method":"GET","route":"/api/student","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.709Z","requestId":"5ef254ef-46db-4f0c-9cd3-2ccd764a793b","event":"api_request","actor":null,"method":"GET","route":"/api/student","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.713Z","requestId":"5a6a5bbd-87a4-4000-a3c6-70dd1ba64073","event":"api_request","actor":null,"method":"GET","route":"/api/teachers","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.716Z","requestId":"a7bf5e0d-19f5-4ca6-8cb9-926963339f2d","event":"api_request","actor":null,"method":"GET","route":"/api/courses","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.720Z","requestId":"8bb5d3a5-9645-4032-b37e-ea61759524e2","event":"api_request","actor":null,"method":"GET","route":"/api/enrollments","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.724Z","requestId":"6f904760-4546-4376-b0e2-4a0b31f19212","event":"api_request","actor":null,"method":"GET","route":"/api/course-teachers","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.727Z","requestId":"55e57b1b-2fb4-40e9-9c90-fb55d8df0791","event":"api_request","actor":null,"method":"GET","route":"/api/exams","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.731Z","requestId":"a5581dad-f67f-478f-907b-48855e9399cd","event":"api_request","actor":null,"method":"GET","route":"/api/exam-results","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.734Z","requestId":"e4c71d2d-2ec0-4d04-8eec-1f68bea66a9b","event":"api_request","actor":null,"method":"GET","route":"/api/quizzes","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.738Z","requestId":"6e091868-01cb-4d8c-9196-8ff50c8d8545","event":"api_request","actor":null,"method":"GET","route":"/api/quiz-results","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.741Z","requestId":"6ada5475-74a8-47df-97c9-8e231bad929d","event":"api_request","actor":null,"method":"GET","route":"/api/attendance","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.745Z","requestId":"f94c7988-8734-45e7-bbea-d3bdaae9ee5a","event":"api_request","actor":null,"method":"GET","route":"/api/attendance-imports","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.748Z","requestId":"d96b0b9f-3684-4df8-836e-2fa5252ba188","event":"api_request","actor":null,"method":"GET","route":"/api/notes","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.752Z","requestId":"d4db8295-1376-40ad-ab82-7bf69be57893","event":"api_request","actor":null,"method":"GET","route":"/api/dashboard/","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.756Z","requestId":"a442d386-a629-4ddb-8e98-becc82859ea2","event":"api_request","actor":null,"method":"GET","route":"/api/reports","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.759Z","requestId":"bee814f9-12a7-48fd-babf-f86447346eca","event":"api_request","actor":null,"method":"GET","route":"/api/profile","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.762Z","requestId":"ebffabbd-4a81-4ff9-a2a0-481cb5ce2baf","event":"api_request","actor":null,"method":"GET","route":"/api/teacher","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.808Z","requestId":"d679ad88-82d5-474b-86a0-07cf8d7d7538","event":"api_request","actor":null,"method":"PUT","route":"/api/teacher","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.812Z","requestId":"5b0a51d3-be0e-424c-b673-f4e6dde19dca","event":"api_request","actor":null,"method":"POST","route":"/api/users/students","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.814Z","requestId":"1a7650e5-9afa-4460-a6f2-d038dc793946","event":"api_request","actor":null,"method":"POST","route":"/api/users/teachers","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.816Z","requestId":"3c60a551-88a3-4e29-a26c-fcac7a757c42","event":"api_request","actor":null,"method":"GET","route":"/api/users/judges","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.821Z","requestId":"38b91451-3a2f-4951-9faa-6decdf69558f","event":"api_request","actor":null,"method":"POST","route":"/api/auth/register","resource":null,"status":403,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.825Z","requestId":"da7202a8-4c55-453e-8fd9-b9ca2f42eb83","event":"api_request","actor":null,"method":"POST","route":"/api/auth/register","resource":null,"status":403,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.830Z","requestId":"4c5f96af-248a-4397-84ff-19ffa819653a","event":"api_request","actor":null,"method":"POST","route":"/api/auth/register","resource":null,"status":403,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.834Z","requestId":"baed2ac3-d1e8-4591-a0a7-72edf3ef7487","event":"api_request","actor":null,"method":"POST","route":"/api/auth/register","resource":null,"status":403,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.838Z","requestId":"56286a89-642e-4f18-91b7-46b49d7a55c1","event":"api_request","actor":null,"method":"PUT","route":"/api/auth/password","resource":null,"status":401,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.840Z","requestId":"eeb20486-31c3-483a-a491-6005605173e4","event":"api_request","actor":null,"method":"GET","route":"/api/health/api/health","resource":null,"status":503,"outcome":"failure"}
+{"timestamp":"2026-11-19T05:55:19.845Z","requestId":"ddf224f3-98f4-4477-bde4-178130434874","event":"login","actor":null,"method":"POST","route":"/api/auth/login","resource":null,"status":400,"outcome":"failure"}
+Route registration and authentication checks passed.
+Upload middleware tests passed.
+Performance calculation tests passed: 87/100, distinct assessment percentages, unique students, configured thresholds, incomplete, invalid and orphaned records.
+Performance student record tests passed: one row per student, full course totals, participant-only assessment filters, popup details and batch identity.
+Pass mark tests passed: 2.5/5 default, valid custom threshold preserved, impossible threshold rejected.
+Assessment completion tests passed: full roster, partial marks, zero scores, duplicate enrollments, invalid scores and empty roster.
+Admin analytics tests passed: unique students, course totals, final grades, attendance deduplication, zero scores and filters.
+Student portal identity scoping, result calculation, empty data and role checks passed.
+Student ID tests passed: sequence, parallel allocations, Nairobi year rollover, existing IDs and 1,000+ students.
+Public registration is disabled for all roles.
+Notifications tests passed: upcoming exams, both quiz stores, assessments, published results only, seven-day window and role privacy.
+Contract balance tests passed: unique days, reversals, Nairobi midnight, date validation and non-negative balances.
+Calendar contracts passed: inclusive dates, leap year, elapsed days independent of lessons, and expiry.
+node:assert:152
+  throw new AssertionError(obj);
+  ^
+
+AssertionError [ERR_ASSERTION]: ValidationError: Course validation failed: durationWeeks: Validator failed for path `durationWeeks` with value `null`
+    at Document.invalidate (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\node_modules\mongoose\lib\document.js:3387:32)
+    at Document.validateSync (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\node_modules\mongoose\lib\document.js:3333:13)
+    at Object.<anonymous> (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\te... == undefined
+    at Object.<anonymous> (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\tests\teacherContract.test.js:36:8)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Object..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: ValidationError: Course validation failed: durationWeeks: Validator failed for path `durationWeeks` with value `null`
+      at Document.invalidate (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\node_modules\mongoose\lib\document.js:3387:32)
+      at Document.validateSync (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\node_modules\mongoose\lib\document.js:3333:13)
+      at Object.<anonymous> (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\tests\teacherContract.test.js:36:89)
+      at Module._compile (node:internal/modules/cjs/loader:1854:14)
+      at Object..js (node:internal/modules/cjs/loader:1985:10)
+      at Module.load (node:internal/modules/cjs/loader:1577:32)
+      at Module._load (node:internal/modules/cjs/loader:1379:12)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+      at node:internal/main/run_main_module:33:47 {
+    errors: {
+      durationWeeks: ValidatorError: Validator failed for path `durationWeeks` with value `null`
+          at _validate (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\node_modules\mongoose\lib\schemaType.js:1453:17)
+          at SchemaType.doValidateSync (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\node_modules\mongoose\lib\schemaType.js:1542:11)
+          at Document.validateSync (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\node_modules\mongoose\lib\document.js:3320:19)
+          at Object.<anonymous> (C:\Users\Naimaa\Desktop\INTERNSHIP\Telesom-Examination-system\backend\tests\teacherContract.test.js:36:89)
+          at Module._compile (node:internal/modules/cjs/loader:1854:14)
+          at Object..js (node:internal/modules/cjs/loader:1985:10)
+          at Module.load (node:internal/modules/cjs/loader:1577:32)
+          at Module._load (node:internal/modules/cjs/loader:1379:12)
+          at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+          at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5) {
+        properties: {
+          message: 'Validator failed for path `durationWeeks` with value `null`',
+          type: 'user defined',
+          validator: [Function: isSafeInteger],
+          path: 'durationWeeks',
+          fullPath: undefined,
+          value: null
+        },
+        kind: 'user defined',
+        path: 'durationWeeks',
+        value: null,
+        reason: undefined,
+        Symbol(mongoose#validatorError): true
+      }
+    },
+    _message: 'Course validation failed'
+  },
+  expected: undefined,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.16.0

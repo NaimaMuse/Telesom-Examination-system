@@ -78,8 +78,13 @@ const filterPerformanceReport = (report, { type = 'all', assessmentId = '', sear
   const selectedAssessmentId = assessmentOptions.some(a => a._id === assessmentId) ? assessmentId : '';
   const filteredAssessments = assessmentOptions.filter(a => !selectedAssessmentId || a._id === selectedAssessmentId);
   const filteredMaximum = round(filteredAssessments.reduce((sum, a) => sum + a.totalMarks, 0));
-  const query = String(search).trim().toLowerCase();
-  const matchesStudent = row => [row.student, row.studentId].some(value => String(value || '').toLowerCase().includes(query));
+  const terms = String(search).normalize('NFKC').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const studentDetails = new Map(report.students.map(row=>[String(row._id),row]));
+  const matchesStudent = value => {
+    const row=studentDetails.get(String(value.studentRecordId || value._id)) || value;
+    const text = [row.student,row.studentId,row.courseName,row.course,row.batch,row.batches,row.cohort,row.status].flat().filter(Boolean).join(' ').normalize('NFKC').toLowerCase();
+    return terms.every(term=>text.includes(term));
+  };
   const results = report.results.filter(row => (type === 'all' || row.assessmentType === type) && (!selectedAssessmentId || row.assessmentId === selectedAssessmentId) && matchesStudent(row));
   const participants = new Set(results.map(row => String(row.studentRecordId)));
   const hasAssessmentFilter = type !== 'all' || !!selectedAssessmentId;

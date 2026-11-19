@@ -1,3 +1,4 @@
+import {usePageSearch,matchesPageSearch} from '../../context/PageSearchContext';
 import {useState} from 'react';
 import {Link} from 'react-router-dom';
 import TeachingIcon from '../../components/TeachingIcon';
@@ -81,6 +82,7 @@ const dashboardRequests = {
 };
 
 export default function StudentDashboard() {
+  const [search]=usePageSearch();
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
 
@@ -99,13 +101,14 @@ export default function StudentDashboard() {
 
   if (!data) return <div className="spinner-wrap" role="status" aria-label="Loading student dashboard"><div className="spinner"/></div>;
 
-  const {courses = [], classSchedules = []} = data.courseData || {};
-  const upcoming = data.assessments?.exams || [];
+  const courses=(data.courseData?.courses||[]).filter(row=>matchesPageSearch(search,row));
+  const classSchedules=(data.courseData?.classSchedules||[]).filter(row=>matchesPageSearch(search,row));
+  const upcoming = (data.assessments?.exams || []).filter(row=>matchesPageSearch(search,row));
   const results = data.results?.results || [];
   const attendance = data.attendance;
   const now = new Date();
   const makeup = (data.makeup?.classes || []).filter(item =>
-    item.displayStatus === 'Scheduled' && Date.parse(item.end) >= now.getTime()
+    matchesPageSearch(search,item) && item.displayStatus === 'Scheduled' && Date.parse(item.end) >= now.getTime()
   );
   const nextClass = getNextClass(classSchedules, makeup, now);
   const avgPct = results.length ? Math.round(results.reduce((sum, result) => sum + result.marks / result.totalMarks * 100, 0) / results.length) + '%' : '—';
@@ -122,6 +125,7 @@ export default function StudentDashboard() {
   ];
 
   return <div className="student-home">
+    {search.trim() && <p role="status">Showing dashboard matches for “{search.trim()}”. Clear search to see all records.</p>}
     {error && <p className="student-home-alert" role="status">Some dashboard data could not refresh.</p>}
     <dl className="student-home-stats">
       {stats.map(([icon, value, label]) => <div key={label}>
@@ -148,7 +152,7 @@ export default function StudentDashboard() {
       <DashboardPanel title="Announcements" icon="megaphone">
         <ul className="student-home-announcements">
           <li>{makeupStatus}</li>
-          {(data.announcements?.announcements || []).slice(0, 2).map(item => <li key={item._id} title={item.title}>{item.title}</li>)}
+          {(data.announcements?.announcements || []).filter(row=>matchesPageSearch(search,row.title,row.message)).slice(0, 2).map(item => <li key={item._id} title={item.title}>{item.title}</li>)}
         </ul>
       </DashboardPanel>
     </div>

@@ -1,3 +1,4 @@
+import {usePageSearch,matchesPageSearch} from '../../context/PageSearchContext';
 import {useCallback,useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
 import api from '../../services/api';
@@ -20,6 +21,9 @@ function SectionIcon({type}){
 }
 
 export default function Judges(){
+  const [search]=usePageSearch();
+  const [editing,setEditing]=useState(null);
+  const [accountBusy,setAccountBusy]=useState(false);
   const [judges,setJudges]=useState([]);
   const [defenses,setDefenses]=useState([]);
   const [form,setForm]=useState({name:'',email:'',password:''});
@@ -62,6 +66,24 @@ export default function Judges(){
     return()=>controller.abort();
   },[load]);
 
+  const visibleJudges=judges.filter(row=>matchesPageSearch(search,row.name,row.email,row.isActive?'active':'inactive'));
+  const visibleDefenses=defenses.filter(row=>matchesPageSearch(search,row.projectTitle,row.groupName,row.cohort,row.course,row.assignedJudge));
+
+  async function saveJudge(event){
+    event.preventDefault();setAccountBusy(true);setError('');
+    try{
+      const {data}=await api.put('/users/judges/'+editing._id,{name:editing.name,email:editing.email,password:editing.password,isActive:editing.isActive});
+      setJudges(rows=>rows.map(row=>row._id===data.judge._id?data.judge:row));
+      setDefenses(rows=>rows.map(row=>String(row.assignedJudge?._id||row.assignedJudge)===String(data.judge._id)?{...row,assignedJudge:data.judge}:row));
+      setEditing(null);setCredentials(null);setNotice('Judge account updated.');
+    }catch(error){setError(errorMessage(error));}finally{setAccountBusy(false);}
+  }
+  async function deleteJudge(judge){
+    if(!window.confirm('Delete '+judge.name+'? Their defense assignments will be cleared. Saved evaluations will remain.'))return;
+    setAccountBusy(true);setError('');
+    try{await api.delete('/users/judges/'+judge._id);setEditing(null);setCredentials(null);await load();setNotice('Judge account deleted.');}
+    catch(error){setError(errorMessage(error));}finally{setAccountBusy(false);}
+  }
   async function createJudge(event){
     event.preventDefault();
     setSaving(true);
@@ -111,8 +133,8 @@ export default function Judges(){
     {error&&<p className="judges-message is-error" role="alert">{error}</p>}
     {notice&&<p className="judges-message" role="status">{notice}</p>}
 
-    <section className="judges-panel">
-      <header className="judges-section-heading">
+    <section className="judges-panel judges-create-panel">
+      <header className="judges-section-heading judges-create-heading">
         <span className="judges-section-icon"><SectionIcon type="user"/></span>
         <div><h2>Create a Judge Account</h2><p>Add a new judge by providing their details below.</p></div>
       </header>
@@ -148,12 +170,12 @@ export default function Judges(){
         <div><h2>Assign Defense Evaluations</h2><p>Assign a judge to each project defense and track the evaluation status.</p></div>
       </header>
       {loading?<p role="status">Loading judges and defense forms…</p>:
-        !defenses.length?<p>No project defense forms are available to assign.</p>:
+        !visibleDefenses.length?<p>No project defense forms are available to assign.</p>:
         <div className="judges-table-scroll"><table className="judges-defense-table">
           <thead><tr><th scope="col">#</th><th scope="col">Project / Defense Title</th>
             <th scope="col">Course &amp; Cohort</th><th scope="col">Status</th>
             <th scope="col">Assigned Judge</th><th scope="col">Action</th></tr></thead>
-          <tbody>{defenses.map((defense,index)=>{
+          <tbody>{visibleDefenses.map((defense,index)=>{
           const currentId=defense.assignedJudge?._id||defense.assignedJudge||'';
           const title=defense.projectTitle||defense.groupName||defense.assessmentTitle||'Untitled defense';
           const status=defense.submittedAt?'Submitted':'Draft';
@@ -180,10 +202,18 @@ export default function Judges(){
 
     <section className="judges-panel">
       <h2>Judge accounts <span>{judges.length}</span></h2>
-      {!loading&&!judges.length?<p>No judge accounts created yet.</p>:
-        <ul className="judges-account-list">{judges.map(judge=><li key={judge._id}>
+      {editing&&<form className="judges-edit-form" onSubmit={saveJudge}>
+        <h3>Edit judge</h3>
+        <label>Name<input required minLength={2} maxLength={100} value={editing.name} onChange={e=>setEditing({...editing,name:e.target.value})}/></label>
+        <label>Email<input required type="email" value={editing.email} onChange={e=>setEditing({...editing,email:e.target.value})}/></label>
+        <label>New password (optional)<input type="password" autoComplete="new-password" minLength={8} maxLength={128} value={editing.password} onChange={e=>setEditing({...editing,password:e.target.value})}/></label>
+        <label><input type="checkbox" checked={editing.isActive} onChange={e=>setEditing({...editing,isActive:e.target.checked})}/> Active account</label>
+        <div><button type="submit" disabled={accountBusy}>Save changes</button><button type="button" disabled={accountBusy} onClick={()=>setEditing(null)}>Cancel</button></div>
+      </form>}
+      {!loading&&!visibleJudges.length?<p>No judge accounts created yet.</p>:
+        <ul className="judges-account-list">{visibleJudges.map(judge=><li key={judge._id}>
           <strong>{judge.name}</strong><span>{judge.email}</span>
-          <small>{judge.isActive?'Active':'Inactive'}</small>
+          <small>{judge.isActive?'Active':'Inactive'}</small><div className="judges-account-actions"><button type="button" disabled={accountBusy} onClick={()=>{setEditing({...judge,password:''});setError('');}}>Edit</button><button type="button" className="judges-delete" disabled={accountBusy} onClick={()=>deleteJudge(judge)}>Delete</button></div>
         </li>)}</ul>}
     </section>
   </main>;

@@ -21,6 +21,7 @@ async function sessionUser(user, studentProfile) {
     _id:user._id, name:user.name, email:user.email, role:user.role,
     isActive:user.isActive, lastLogin:user.lastLogin,
     mustChangePassword:user.role === 'student' ? !user.studentPasswordSet : user.role !== 'teacher' && !!user.mustChangePassword,
+    ...(user.role === 'admin' ? {profilePicture:user.profilePicture || ''} : {}),
     ...(studentProfile ? {studentId:studentProfile.studentId,studentProfileId:studentProfile._id,phone:studentProfile.phone,profilePicture:studentProfile.profilePicture || ''} : {}),
     ...(teacher ? {teacherId:teacher.teacherId,teacherProfileId:teacher._id,department:teacher.department,phone:teacher.phone} : {}),
   };
@@ -48,7 +49,7 @@ const login = asyncHandler(async (req, res) => {
   if (!normalizedEmail) fail(400, 'Email is required to log in');
   if (!password) fail(400, 'Password is required for email login');
 
-  const user = await User.findOne({email:normalizedEmail}).select('+password');
+  const user = await User.findOne({email:normalizedEmail}).select('+password +profilePicture');
   const studentLogin = role === 'student';
   const eligible = user?.isActive && (studentLogin
     ? user.role === 'student' && user.studentPasswordSet === true
@@ -104,7 +105,10 @@ const currentSession = asyncHandler(async (req,res) => {
   if (student && !req.googleVerified && !(req.studentPasswordVerified && req.user.studentPasswordSet)) {
     fail(401, 'Sign in with your registered Google account.');
   }
-  res.json({success:true,user:await sessionUser(req.user,student)});
+  const user = req.user.role === 'admin'
+    ? await User.findById(req.user._id).select('+profilePicture')
+    : req.user;
+  res.json({success:true,user:await sessionUser(user,student)});
 });
 const logout = asyncHandler(async (req,res) => {
   req.securityEvent = 'logout';

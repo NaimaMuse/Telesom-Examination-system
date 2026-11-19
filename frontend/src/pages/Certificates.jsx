@@ -236,6 +236,7 @@ function CourseCertificates() {
     {notice && <p role="status">{notice}</p>}
     {loading && <p role="status">Loading students…</p>}
     {course && !loading && !rows.length && !error && <p role="status">No students are enrolled in this course.</p>}
+    {course && !loading && rows.length > 0 && !visibleRows.length && <p role="status">No students match your search.</p>}
     {course && !loading && rows.length > 0 && <>
       <div className="certificates-toolbar">
         <div><h3 id="certificate-roster-title">Course roster</h3><small>{rows.length} enrollments · {candidates.length} eligible</small></div>

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createStudent, createTeacher, createJudge, listJudges } = require('../controllers/userController');
+const { createStudent, createTeacher, createJudge, listJudges, updateJudge, deleteJudge } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
 
@@ -9,5 +9,8 @@ router.post('/students', protect, authorizeRoles('admin'), createStudent);
 router.post('/teachers', protect, authorizeRoles('admin'), createTeacher);
 router.get('/judges', protect, authorizeRoles('admin'), listJudges);
 router.post('/judges', protect, authorizeRoles('admin'), createJudge);
+
+router.put('/judges/:id', protect, authorizeRoles('admin'), updateJudge);
+router.delete('/judges/:id', protect, authorizeRoles('admin'), deleteJudge);
 
 module.exports = router;

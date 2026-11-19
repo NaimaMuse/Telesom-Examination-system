@@ -16,7 +16,7 @@ export default function CourseOverview({course,contract,lessonProgress,upcoming,
     <section className="co-metrics" aria-label="Teaching progress">
       <OverviewProgressCard title="Teaching Contract" icon="file" className="co-contract-card" available={!!contract} details={contract?<><strong>Teaching contract</strong><span>{date(contract.startDate)} – {date(contract.endDate)}</span><span>{contractDurationLabel(contract)}</span></>:null} rows={[
         ['green','Teaching days completed',contract?.completedTeachingDays??'—'],
-        ['amber','Upcoming teaching days',contract?.remainingScheduledTeachingDays??'—'],
+        ['amber','Remaining teaching days',contract?.remainingTeachingDays??'—'],
         ['blue','Total teaching days',contract?.targetTeachingDays??'—'],
       ]}/>
       <OverviewProgressCard title="Course Progress" icon="calendar" percent={percent} rows={[

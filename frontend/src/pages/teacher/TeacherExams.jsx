@@ -1,3 +1,4 @@
+import {getAllPages} from '../../services/paginatedApi';
 import './AssessmentForm.css';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
@@ -296,7 +297,7 @@ export default function TeacherExams({scope,onEditingChange,onChange}) {
     if (spinner) setLoading(true);
     try {
       if(scope){const response=await api.get('/teacher/my-course',{signal:context.signal,params:scopeParams});if(!context.isCurrent||context.isCurrent())setItems(response.data.assessments||[]);return;}
-      const [res,native] = await Promise.all([api.get('/exams', {signal:context.signal,params:{limit:100}}),api.get('/quizzes',{signal:context.signal,params:{limit:100}})]);
+      const [res,native] = await Promise.all([getAllPages('/exams', {signal:context.signal,params:{limit:100}}),getAllPages('/quizzes',{signal:context.signal,params:{limit:100}})]);
       if (context.isCurrent && !context.isCurrent()) return;
       const list = res.data?.data || res.data?.exams || res.data || [];
       if (Array.isArray(list)) {

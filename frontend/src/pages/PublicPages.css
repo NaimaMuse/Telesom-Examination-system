@@ -357,3 +357,5 @@
   .academy-public .public-hero { min-height:600px; padding-top:155px; padding-bottom:85px; }
   .public-hero h1 { font-size:clamp(44px,10vw,62px); }
 }
+
+.public-header .public-login.public-account { width:42px; height:42px; min-height:42px; padding:0; justify-content:center; border-radius:50%; background:#edf7ef; }

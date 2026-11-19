@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const Contract = require('../models/TeacherContract');
 const Lesson = require('../models/TeachingLesson');
+const TeacherAttendance = require('../models/TeacherAttendance');
 const Teacher = require('../models/Teacher');
 const Course = require('../models/Course');
 const Assignment = require('../models/CourseTeacher');
@@ -17,7 +18,7 @@ const validateContract = data => {
   if (!validDate(data.startDate) || (data.endDate && (!validDate(data.endDate)||data.endDate<data.startDate))) fail('Enter valid contract dates. End date cannot precede start date.');
   if (!String(data.batch||'').trim() || !String(data.academicYear||'').trim()) fail('Cohort and academic year are required.');
 };
-const completedDays = async contractId => Lesson.distinct('completedDay',{contract:contractId,status:'completed',completedDay:{$ne:null}});
+const completedDays = async contractId => TeacherAttendance.distinct('date',{contract:contractId,status:'present'});
 function teachingDayTarget(contract, endDate, weekdays) {
   if (contract.dayBasis !== 'calendar') return contract.totalDays;
   if (!weekdays || !validDate(contract.startDate) || !validDate(endDate)) return null;
@@ -62,7 +63,9 @@ function calculateBalance(contract, days, now=new Date()) {
   const elapsed=calendar?elapsedCalendarDays:completedTeachingDays;
   const remainingContractDays=Math.max(0,contract.totalDays-elapsed);
   const contractStatus=contract.status==='cancelled'?'Cancelled':day<contract.startDate?'Scheduled':endDate&&day>endDate?'Expired':!calendar&&remainingContractDays===0?'Completed':'Active';
-  return {...scheduledTeachingDays(contract,endDate,dates,day),endDate:endDate||null,dayBasis:contract.dayBasis||'teaching',elapsedCalendarDays,totalContractDays:contract.totalDays,completedTeachingDays,remainingContractDays,progress:Math.min(100,Math.round(elapsed/contract.totalDays*100)),contractStatus,completedDates:dates};
+  const scheduleBalance=scheduledTeachingDays(contract,endDate,dates,day);
+  const remainingTeachingDays=scheduleBalance.targetTeachingDays===null?null:Math.max(0,scheduleBalance.targetTeachingDays-completedTeachingDays);
+  return {...scheduleBalance,remainingTeachingDays,endDate:endDate||null,dayBasis:contract.dayBasis||'teaching',elapsedCalendarDays,totalContractDays:contract.totalDays,completedTeachingDays,remainingContractDays,progress:Math.min(100,Math.round(elapsed/contract.totalDays*100)),contractStatus,completedDates:dates};
 }
 const summary = async contract => {
   const plain=contract.toObject?contract.toObject():contract;

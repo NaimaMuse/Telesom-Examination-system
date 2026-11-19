@@ -34,13 +34,15 @@ export default function TeacherAttendance() {
   },[date,revision]);
 
   async function mark(contract,status) {
+    const cancelMakeup=status==='present'&&!!records.find(record=>record.contract===contract)?.attendance?.hasMakeup;
+    if(cancelMakeup&&!window.confirm('Change attendance to Present and cancel the linked makeup class?'))return;
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      const {data} = await api.put('/academy/teacher-attendance',{contract,date,status});
+      const {data} = await api.put('/academy/teacher-attendance',{contract,date,status,cancelMakeup});
       setRecords(current=>current.map(record=>record.contract===contract
-        ? {...record,attendance:{...record.attendance,...data.attendance}}
+        ? {...record,attendance:{...record.attendance,...data.attendance,hasMakeup:cancelMakeup?false:record.attendance?.hasMakeup}}
         : record));
       setNotice(status==='absent'?'Absence saved. You can now schedule a makeup class.':'Attendance saved as present.');
     } catch(error) {
@@ -86,7 +88,7 @@ export default function TeacherAttendance() {
           <div>
             <p className="teacher-attendance-kicker">Teaching operations</p>
             <h1 id="teacher-attendance-title">Teacher Attendance</h1>
-            <p>Mark attendance by date and schedule makeup classes for absences.</p>
+            <p>Mark attendance on scheduled teaching days and arrange makeup classes for absences.</p>
           </div>
         </div>
         <Link className="teacher-attendance-makeup-link" to="/admin/makeup">
@@ -121,10 +123,10 @@ export default function TeacherAttendance() {
         </div>
         {error && !absence && <p className="teacher-attendance-feedback is-error" role="alert">{error}</p>}
         {notice && <p className="teacher-attendance-feedback" role="status"><TeachingIcon name="check" size={17}/>{notice}</p>}
-        {!date || loading || !records.length ? (
+        {!date || loading || !sortedRecords.length ? (
           <div className="teacher-attendance-empty" role="status">
             <TeachingIcon name="clipboard" size={26}/>
-            <p>{!date ? 'Choose an attendance date.' : loading ? 'Loading attendance…' : error ? 'Attendance could not be loaded.' : 'No active teaching contracts for this date.'}</p>
+            <p>{!date ? 'Choose an attendance date.' : loading ? 'Loading attendance…' : error ? 'Attendance could not be loaded.' : search.trim() ? 'No teaching contracts match your search.' : 'No teachers have a scheduled teaching day on this date.'}</p>
           </div>
         ) : (
           <div className="teacher-attendance-table" tabIndex={0} role="region" aria-label="Daily register table">
@@ -150,7 +152,7 @@ export default function TeacherAttendance() {
                         <div className="teacher-attendance-actions">
                           <div className="teacher-attendance-mark">
                             <button type="button" className="attendance-present" aria-label={`Mark ${record.teacher} present`}
-                              disabled={busy || status === 'present' || record.attendance?.hasMakeup} onClick={() => mark(record.contract, 'present')}>
+                              disabled={busy || status === 'present'} onClick={() => mark(record.contract, 'present')}>
                               <TeachingIcon name="check" size={15}/> Present
                             </button>
                             <button type="button" className="attendance-absent" aria-label={`Mark ${record.teacher} absent`}

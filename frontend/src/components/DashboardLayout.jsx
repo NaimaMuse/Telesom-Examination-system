@@ -21,6 +21,7 @@ import { PageSearchContext } from '../context/PageSearchContext';
 
 // ─── Admin Pages ───────────────────────────────────────────────
 import AdminDashboard    from '../pages/admin/AdminDashboard';
+import AdminProfile     from '../pages/admin/AdminProfile';
 import StudentMgmt       from '../pages/admin/StudentMgmt';
 import Internships       from '../pages/admin/Internships';
 import TeacherMgmt       from '../pages/admin/TeacherMgmt';
@@ -159,6 +160,7 @@ const ROLE_ROUTES = {
   admin: (
     <Routes>
       <Route index            element={<AdminDashboard />} />
+      <Route path="profile" element={<AdminProfile />} />
       <Route path="evaluation-center" element={<EvaluationCenter admin />} />
       <Route path="evaluations" element={<Evaluations admin />} />
       <Route path="evaluations/new" element={<NewEvaluation />} />
@@ -237,13 +239,10 @@ const ROLE_ROUTES = {
 };
 
 const PAGE_META = {
-<<<<<<< HEAD
   '/admin/judges': {title:'Judges',hint:'Create judge accounts and assign project defense evaluations.'},
-  '/admin/evaluations': {title:'Evaluation Forms',hint:'Manage evaluations and review student feedback.'},
-=======
   '/admin/evaluation-center': {title:'Evaluation Center',hint:'Coordinate project defense reviews between teachers and Admin.'},
   '/admin/evaluations': {title:'Course Feedback Forms',hint:'Manage course evaluations and review student feedback.'},
->>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
+
   '/admin/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/admin/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
   '/teacher/evaluation-center': {title:'Project Defense',hint:'Evaluate student projects and submit completed assessments to Admin.'},
@@ -261,6 +260,7 @@ const PAGE_META = {
   '/student/outlines': {title:'Course Outlines',hint:'Explore published lessons and track your course progress.'},
   '/student/makeup': {title:'Makeup Classes',hint:'View course makeup notices and check the cohort listed on each class.'},
   '/admin': { title: 'Admin Dashboard', hint: 'Overview of students, courses, exams, and reports.' },
+  '/admin/profile': { title: 'My Account', hint: 'Update your administrator email and password.' },
   '/admin/students': { title: 'Student Management', hint: 'Add, edit, and manage student records.' },
   '/admin/internships': { title: 'Internships', hint: 'Record internship students and their placement dates.' },
   '/admin/contracts': { title: 'Teacher Contracts', hint: 'Monitor completed teaching days and contract balances.' },

@@ -1,0 +1,54 @@
+.admin-account-settings{display:grid;gap:22px;max-width:1120px;margin:0 auto;padding:10px 0 42px;color:#183d2b}
+.admin-account-heading{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:145px;padding:28px 34px;border:1px solid #dfece2;border-radius:20px;overflow:hidden;background:radial-gradient(ellipse at 92% 10%,#d8f1df 0,transparent 36%),linear-gradient(115deg,#f7fcf7,#eff8f1 65%,#e7f4e9);box-shadow:0 12px 32px #16452a0a}
+.admin-account-kicker,.admin-account-section-label{color:#16834d;font-size:10px;font-weight:800;letter-spacing:.15em}
+.admin-account-heading h1{margin:8px 0 5px;color:#153b2a;font-size:clamp(28px,4vw,39px);letter-spacing:-.04em}
+.admin-account-heading p,.admin-account-description{margin:0;color:#62766a;line-height:1.6}
+.admin-account-heading-mark{position:absolute;right:68px;top:-42px;display:grid;place-items:center;width:220px;height:220px;border:1px solid #8cc69a35;border-radius:50%;background:#ffffff55;color:#16834d16;font-size:160px;font-weight:900;line-height:1}
+.admin-account-card{min-width:0;padding:24px;border:1px solid #e1eae3;border-radius:16px;background:#fff;box-shadow:0 8px 26px #153b2a0a}
+.admin-account-identity-card{position:relative;display:flex;align-items:center;gap:22px;padding:25px 28px}
+.admin-account-avatar{display:grid;place-items:center;flex:0 0 92px;width:92px;height:92px;border:3px solid #fff;border-radius:50%;overflow:hidden;background:linear-gradient(145deg,#16834d,#075632);box-shadow:0 0 0 2px #d7982f,0 6px 16px #113d2526;color:#fff;font-size:28px;font-weight:800}
+.admin-account-avatar img{width:100%;height:100%;object-fit:cover}
+.admin-account-identity{min-width:0;flex:1}
+.admin-account-badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:#eaf6ed;color:#16834d;font-size:9px;font-weight:800;letter-spacing:.12em}
+.admin-account-identity h2{margin:8px 0 3px;color:#173b29;font-size:20px;letter-spacing:-.02em}
+.admin-account-identity>p{margin:0;color:#63766a;font-size:13px;overflow-wrap:anywhere}
+.admin-picture-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.admin-picture-select,.admin-account-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:37px;padding:8px 13px;border:1px solid #dce8df;border-radius:8px;background:#fff;color:#245b39;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .16s ease}
+.admin-picture-select:hover,.admin-account-button:hover:not(:disabled){border-color:#16834d;background:#f3faf4}
+.admin-picture-select:active,.admin-account-button:active:not(:disabled){transform:translateY(1px)}
+.admin-picture-select input{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.admin-picture-select:focus-within,.admin-account-button:focus-visible{outline:3px solid #d7982f66;outline-offset:2px}
+.admin-account-button-primary{border-color:#087a43;background:#087a43;color:#fff}
+.admin-account-button-primary:hover:not(:disabled){border-color:#00613e;background:#00613e;color:#fff}
+.admin-account-button-danger{color:#a63d37}
+.admin-account-button:disabled{opacity:.6;cursor:wait}
+.admin-account-hint{margin-top:8px!important;color:#829187!important;font-size:10px!important}
+.admin-account-protected{display:flex;align-items:center;gap:7px;margin-left:auto;padding:8px 11px;border:1px solid #deeee1;border-radius:999px;background:#f7fcf7;color:#287348;font-size:10px;font-weight:700;white-space:nowrap}
+.admin-account-protected span{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#dff1e3;color:#16834d;font-size:11px}
+.admin-account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px}
+.admin-account-card-heading,.admin-account-password-heading{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.admin-account-card-heading h2,.admin-account-password-heading h2{margin:4px 0 0;color:#173b29;font-size:19px;letter-spacing:-.02em}
+.admin-account-section-icon{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border:1px solid #dceee0;border-radius:12px;background:#f0f8f1;color:#16834d;font-size:19px;font-weight:800}
+.admin-account-description{margin-bottom:20px;font-size:12px}
+.admin-account-card form{display:grid;gap:12px}
+.admin-account-card .form-group{margin:0}
+.admin-account-card .form-label{margin-bottom:6px;color:#315b41;font-size:11px;font-weight:700}
+.admin-account-card .form-control{min-height:42px;border-color:#dbe8dd;border-radius:8px;background:#fbfdfb;font-size:13px}
+.admin-account-card .form-control:focus{border-color:#2b995a;box-shadow:0 0 0 3px #2b995a1a}
+.admin-account-success{margin:0;color:#16834d;font-size:12px;font-weight:700}
+.admin-account-error{margin:0;color:#a63d37;font-size:12px;line-height:1.5}
+.admin-account-password{min-width:0;padding:24px;border:1px solid #e1eae3;border-radius:16px;background:#fff;box-shadow:0 8px 26px #153b2a0a}
+.admin-account-password>p{margin:0 0 15px;color:#62766a;font-size:12px;line-height:1.6}
+.admin-account-password .password-form-card{margin:0;border:1px solid #e8eee9;border-radius:12px;box-shadow:none}
+.admin-account-password .password-form-card .card-header{padding:15px 16px;border-bottom:1px solid #e8eee9;background:#f7fbf7}
+.admin-account-password .password-dialog-eyebrow{display:none}
+.admin-account-password .password-form-card .card-title{color:#173b29;font-size:14px}
+.admin-account-password .password-form-card .card-body{padding:16px}
+.admin-account-password .password-form-card .grid-2{grid-template-columns:1fr;gap:0}
+.admin-account-password .password-form-card .form-group{margin-bottom:11px}
+.admin-account-password .password-form-card .form-label{color:#315b41;font-size:11px;font-weight:700}
+.admin-account-password .password-form-card .form-control{min-height:40px;border-color:#dbe8dd;border-radius:8px;background:#fbfdfb;font-size:12px}
+.admin-account-password .password-form-card .password-dialog-hint{margin-bottom:12px;font-size:10px}
+.admin-account-password .password-dialog-actions .btn{min-height:38px;border-radius:8px;font-size:12px}
+@media(max-width:760px){.admin-account-heading{min-height:128px;padding:23px}.admin-account-heading-mark{right:12px;width:150px;height:150px;font-size:110px}.admin-account-grid{grid-template-columns:1fr}.admin-account-identity-card{padding:21px}}
+@media(max-width:520px){.admin-account-settings{gap:15px;padding-top:0}.admin-account-heading{min-height:118px;padding:20px;border-radius:15px}.admin-account-heading p{max-width:260px;font-size:12px}.admin-account-heading-mark{right:-15px;top:-5px;width:100px;height:100px;font-size:72px}.admin-account-identity-card{align-items:flex-start;gap:16px;padding:18px}.admin-account-avatar{flex-basis:68px;width:68px;height:68px;font-size:22px}.admin-account-identity h2{font-size:17px}.admin-account-protected{position:absolute;right:15px;bottom:15px;font-size:0}.admin-account-protected span{font-size:11px}.admin-account-card,.admin-account-password{padding:18px}.admin-account-identity-card{padding-bottom:49px}.admin-account-password .password-form-card .card-body{padding:14px}}

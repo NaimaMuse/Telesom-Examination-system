@@ -1,4 +1,4 @@
-import { usePageSearch } from '../../context/PageSearchContext';
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 
@@ -40,7 +40,7 @@ export default function TeacherNotes() {
 
   const filtered = notes.filter(n=>{
     const matchCourse = !selCourse||n.course===selCourse;
-    const matchSearch = !search||n.title?.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = matchesPageSearch(search,n.title,n.course,n.filename);
     return matchCourse&&matchSearch;
   });
 

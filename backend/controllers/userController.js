@@ -354,7 +354,39 @@ const listJudges = async (req, res, next) => {
   }
 };
 
+
+const updateJudge = async (req,res,next) => {
+  try {
+    if(!mongoose.isObjectIdOrHexString(req.params.id))return res.status(400).json({message:'Invalid judge ID.'});
+    const judge=await User.findOne({_id:req.params.id,role:'judge'});
+    if(!judge)return res.status(404).json({message:'Judge not found.'});
+    const {name,email,password,isActive}=req.body;
+    if(typeof name!=='string'||!name.trim()||typeof email!=='string'||!email.trim())return res.status(400).json({message:'Enter a name and email.'});
+    if(password!==undefined&&password!==''&&!isValidTeacherPassword(password))return res.status(400).json({message:'Password must be 8–128 characters (maximum 72 UTF-8 bytes).'});
+    if(isActive!==undefined&&typeof isActive!=='boolean')return res.status(400).json({message:'Invalid account status.'});
+    judge.name=name.trim();judge.email=email.trim().toLowerCase();
+    if(password)judge.password=await hashPassword(password);
+    if(isActive!==undefined)judge.isActive=isActive;
+    judge.authVersion=(judge.authVersion||0)+1;
+    await judge.save();
+    res.json({success:true,judge:toSafeUser(judge)});
+  }catch(error){return handleAccountError(error,res,next,'Email is already registered');}
+};
+const deleteJudge = async (req,res,next) => {
+  try {
+    if(!mongoose.isObjectIdOrHexString(req.params.id))return res.status(400).json({message:'Invalid judge ID.'});
+    const judge=await User.findOne({_id:req.params.id,role:'judge'});
+    if(!judge)return res.status(404).json({message:'Judge not found.'});
+    judge.isActive=false;judge.authVersion=(judge.authVersion||0)+1;await judge.save();
+    await require('../models/ProjectDefense').updateMany({assignedJudge:judge._id},{$set:{assignedJudge:null},$inc:{__v:1}});
+    await User.deleteOne({_id:judge._id,role:'judge'});
+    res.json({success:true});
+  }catch(error){next(error);}
+};
+
 module.exports = {
+  updateJudge,
+  deleteJudge,
   createStudent,
   createTeacher,
   createJudge,

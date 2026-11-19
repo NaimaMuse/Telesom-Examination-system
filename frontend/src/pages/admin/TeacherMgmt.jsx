@@ -1,3 +1,4 @@
+import {getAllPages} from '../../services/paginatedApi';
 import './TeacherDirectory.css';
 import { WeeklySchedulePreview } from '../../components/WeeklySchedule';
 import { contractEndDate, contractDurationDays, contractDurationLabel } from '../teacher/teachingSchedule.mjs';
@@ -150,7 +151,7 @@ function TeacherDetailsModal({ teacher, courseAssignment, loading, error, onClos
             <h3>Teaching contracts</h3>
             {teacher.contracts?.length ? teacher.contracts.map(contract => <article className="teacher-details-contract" key={contract._id}>
               <div className="teacher-details-contract-heading"><strong>{contract.course?.title || contract.course?.name || 'Course'}</strong><span>{contract.contractStatus}</span></div>
-              <WeeklySchedulePreview schedule={contract.course?.teachingSchedule || []} /><div className="teacher-details-contract-metrics">{[['Teaching days completed',contract.completedTeachingDays],['Upcoming teaching days',contract.remainingScheduledTeachingDays??'—'],['Total teaching days',contract.targetTeachingDays??'—']].map(([label,value])=><div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
+              <WeeklySchedulePreview schedule={contract.course?.teachingSchedule || []} /><div className="teacher-details-contract-metrics">{[['Teaching days completed',contract.completedTeachingDays],['Remaining teaching days',contract.remainingTeachingDays??'—'],['Total teaching days',contract.targetTeachingDays??'—']].map(([label,value])=><div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>
               <dl className="teacher-details-grid">{[['Cohort',contract.cohort],['Academic year',contract.academicYear],['Start date',contract.startDate],['End date',contract.endDate || 'Not set'],['Contract duration',contractDurationLabel(contract)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value || 'Not provided'}</dd></div>)}</dl>
             </article>) : <p className="teacher-details-contract-empty">No teaching contract configured.</p>}
           </section>
@@ -291,7 +292,7 @@ function TeacherDirectory({ navigation }) {
   const fetchTeachers = useCallback(async (background = false, context = {}) => {
     if (!background) setLoading(true);
     try {
-      const res = await api.get('/teachers', { signal: context.signal, params: { limit: 100 } });
+      const res = await getAllPages('/teachers', { signal: context.signal, params: { limit: 100 } });
       if (context.isCurrent && !context.isCurrent()) return;
       const records = res.data?.data || res.data?.teachers;
       if (Array.isArray(records)) setTeachers(records.map((record) => ({
@@ -308,7 +309,7 @@ function TeacherDirectory({ navigation }) {
 
   const fetchCourseAssignments = useCallback(async (background = false, context = {}) => {
     try {
-      const response = await api.get('/course-teachers', { signal: context.signal, params: { limit: 100, status: 'active' } });
+      const response = await getAllPages('/course-teachers', { signal: context.signal, params: { limit: 100, status: 'active' } });
       if (context.isCurrent && !context.isCurrent()) return;
       const rows = response.data?.data || [];
       setCourseAssignments(Array.isArray(rows) ? rows : []);
@@ -323,7 +324,7 @@ function TeacherDirectory({ navigation }) {
   const fetchCourses = useCallback(async (background = false, context = {}) => {
     if (!background) setCoursesLoading(true);
     try {
-      const response = await api.get('/courses', { signal: context.signal, params: { limit: 100, status: 'active' } });
+      const response = await getAllPages('/courses', { signal: context.signal, params: { limit: 100, status: 'active' } });
       if (context.isCurrent && !context.isCurrent()) return;
       const rows = response.data?.data || response.data?.courses || [];
       setCourses(Array.isArray(rows) ? rows.filter((course) => course.isActive !== false && course.status !== 'inactive') : []);
