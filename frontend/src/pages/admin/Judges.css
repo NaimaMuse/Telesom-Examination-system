@@ -1,0 +1,465 @@
+.judges-page {
+  display: grid;
+  width: 100%;
+  max-width: 1292px;
+  gap: 24px;
+  margin: 0 auto;
+  padding: 28px 24px;
+  color: #17231d;
+}
+
+.judges-create-button,
+.judges-credentials button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 18px;
+  background: #087a43;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.judges-create-button:not(:disabled):hover,
+.judges-credentials button:hover {
+  background: #006735;
+  box-shadow: 0 4px 12px #087a4326;
+}
+
+.judges-create-button:focus-visible,
+.judges-credentials button:focus-visible,
+.judges-create-form input:focus-visible,
+.judges-password-toggle:focus-visible,
+.judges-defense-table select:focus-visible,
+.judges-view-button:focus-visible {
+  outline: 3px solid #087a4350;
+  outline-offset: 2px;
+}
+
+.judges-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #d5e9dd;
+  border-radius: 19px;
+  background: linear-gradient(135deg, #fff 0%, #fbfefc 100%);
+  box-shadow: 0 8px 26px #173d240a;
+}
+
+.judges-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 24px 12px;
+  background: linear-gradient(105deg, #f8fcf8 0%, #fff 100%);
+}
+
+.judges-section-icon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  place-items: center;
+  border-radius: 22px;
+  background: #e6f7c7;
+  color: #087a43;
+}
+
+.judges-icon {
+  display: block;
+  width: 23px;
+  height: 23px;
+  flex: 0 0 auto;
+}
+
+.judges-section-icon .judges-icon {
+  width: 36px;
+  height: 36px;
+  stroke-width: 2.4;
+}
+
+.judges-section-heading h2 {
+  margin: 0;
+  color: #005b35;
+  font-size: 27px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.judges-section-heading p {
+  margin: 4px 0 0;
+  color: #59666e;
+  font-size: 16px;
+}
+
+.judges-create-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 22px;
+  padding: 8px 24px 24px;
+}
+
+.judges-create-form label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.judges-input-wrap {
+  display: flex;
+  min-width: 0;
+  min-height: 54px;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #cbd9d4;
+  border-radius: 12px;
+  padding: 0 14px;
+  background: #fff;
+  color: #087a43;
+}
+
+.judges-input-wrap:focus-within {
+  border-color: #087a43;
+  box-shadow: 0 0 0 3px #087a4317;
+}
+
+.judges-input-wrap > .judges-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.judges-input-wrap input {
+  width: 100%;
+  min-width: 0;
+  height: 50px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #17231d;
+  font: inherit;
+  font-size: 16px;
+}
+
+.judges-input-wrap input::placeholder {
+  color: #687485;
+  opacity: 1;
+}
+
+.judges-password-toggle {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  padding: 4px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+}
+
+.judges-password-toggle .judges-icon {
+  width: 21px;
+  height: 21px;
+}
+
+.judges-create-button {
+  min-height: 56px;
+  padding: 0 20px;
+  font-size: 16px;
+}
+
+.judges-create-button .judges-icon {
+  width: 25px;
+  height: 25px;
+}
+
+.judges-create-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.judges-message {
+  margin: 0;
+  border-radius: 9px;
+  padding: 12px 14px;
+  background: #e8f5eb;
+  color: #005b35;
+}
+
+.judges-message.is-error {
+  background: #fff0ed;
+  color: #a32b20;
+}
+
+.judges-credentials {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 24px 22px;
+  border: 1px solid #d6e8d9;
+  border-radius: 12px;
+  padding: 16px;
+  background: #f4faf5;
+}
+
+.judges-credentials p {
+  margin: 8px 0;
+}
+
+.judges-credentials code {
+  overflow-wrap: anywhere;
+  border-radius: 4px;
+  padding: 2px 5px;
+  background: #e8eee9;
+}
+
+.judges-credentials small {
+  color: #66766d;
+}
+
+.judges-table-scroll {
+  overflow-x: auto;
+  padding: 0 20px 20px;
+}
+
+.judges-defense-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.judges-defense-table th {
+  padding: 13px 14px;
+  background: #087a43;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.judges-defense-table th:first-child {
+  border-radius: 12px 0 0 12px;
+  text-align: center;
+}
+
+.judges-defense-table th:last-child {
+  border-radius: 0 12px 12px 0;
+  text-align: center;
+}
+
+.judges-defense-table td {
+  min-height: 70px;
+  border-bottom: 1px solid #e0e7e5;
+  padding: 11px 14px;
+  color: #17231d;
+  font-size: 15px;
+}
+
+.judges-defense-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.judges-defense-table td:first-child {
+  text-align: center;
+}
+
+.judges-row-number {
+  display: inline-grid;
+  width: 46px;
+  height: 42px;
+  place-items: center;
+  border-radius: 10px;
+  background: #e6f6e8;
+  color: #064e32;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.judges-project-title {
+  min-width: 150px;
+  font-size: 17px !important;
+  font-weight: 700;
+}
+
+.judges-course-info {
+  min-width: 230px;
+}
+
+.judges-course-info span {
+  display: block;
+  line-height: 1.45;
+}
+
+.judges-course-info span + span {
+  color: #59666e;
+}
+
+.judges-status-badge {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 11px;
+  padding: 0 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.judges-status-badge .judges-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.judges-status-badge.is-submitted {
+  background: #e4f6e8;
+  color: #087a43;
+}
+
+.judges-status-badge.is-draft {
+  background: #fff3c4;
+  color: #9b7400;
+}
+
+.judges-assigned-label {
+  display: block;
+  min-width: 195px;
+}
+
+.judges-defense-table select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #d3dcdf;
+  border-radius: 11px;
+  padding: 0 14px;
+  background: #fff;
+  color: #17231d;
+  font: inherit;
+  font-size: 15px;
+}
+
+.judges-defense-table select:disabled {
+  background: #f6f8f7;
+  cursor: not-allowed;
+}
+
+.judges-view-button {
+  display: inline-flex;
+  min-width: 110px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid #0b9650;
+  border-radius: 12px;
+  padding: 0 14px;
+  background: #f4fcf6;
+  color: #087a43;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 160ms ease;
+}
+
+.judges-view-button:hover {
+  background: #e3f6e9;
+}
+
+.judges-view-button .judges-icon {
+  width: 23px;
+  height: 23px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.judges-panel > p {
+  padding: 0 24px 22px;
+  color: #59666e;
+}
+
+@media (max-width: 1050px) {
+  .judges-create-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .judges-create-button {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 650px) {
+  .judges-page {
+    gap: 16px;
+    padding: 20px 14px;
+  }
+
+  .judges-section-heading {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .judges-section-icon {
+    width: 54px;
+    height: 54px;
+    flex-basis: 54px;
+    border-radius: 16px;
+  }
+
+  .judges-section-icon .judges-icon {
+    width: 29px;
+    height: 29px;
+  }
+
+  .judges-section-heading h2 {
+    font-size: 21px;
+  }
+
+  .judges-section-heading p {
+    font-size: 14px;
+  }
+
+  .judges-create-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 8px 16px 18px;
+  }
+
+  .judges-create-button {
+    justify-self: stretch;
+  }
+
+  .judges-table-scroll {
+    padding: 0 12px 14px;
+  }
+
+  .judges-defense-table {
+    min-width: 900px;
+  }
+
+  .judges-credentials {
+    align-items: flex-start;
+    flex-direction: column;
+    margin: 0 16px 18px;
+  }
+}

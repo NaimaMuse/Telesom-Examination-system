@@ -1,0 +1,86 @@
+.ms-dialog.ms-class-details {
+  width:min(600px,calc(100vw - 32px));
+  max-height:88dvh;
+  padding:20px;
+  border:1px solid #c5d9c7;
+  border-radius:18px;
+  background:linear-gradient(125deg,#fff,#fdfefd 75%,#f5f9f3);
+  color:#153b29;
+  box-shadow:0 24px 80px #143e3240;
+  scrollbar-width:thin;
+}
+.ms-dialog.ms-class-details::backdrop { background:#1b482f66; backdrop-filter:blur(7px); }
+.ms-class-details > header { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; gap:13px; padding:0 0 17px; }
+.ms-class-details > header::before { content:""; position:absolute; z-index:-1; pointer-events:none; top:-110px; right:-50px; width:320px; height:160px; border-radius:0 0 55% 60%; background:linear-gradient(120deg,#fbf2dc,#e3f0e3); transform:rotate(24deg); border-bottom:1px solid #d7b354; }
+.ms-class-emblem { display:grid; place-items:center; width:48px; height:48px; flex-shrink:0; border-radius:12px; background:linear-gradient(135deg,#fbf8ef,#edf0df); color:#28633a; border:1px solid #f0eee2; }
+.ms-class-details .ms-class-heading { flex:1; min-width:0; padding-left:13px; border-left:1px solid #d6dfd8; }
+.ms-dialog.ms-class-details header h2 { margin:0; color:#064d2d; font-size:24px; font-weight:800; line-height:1.2; letter-spacing:-.6px; }
+.ms-dialog.ms-class-details .ms-class-heading p { margin:5px 0 0; color:#a77c28; font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
+.ms-dialog.ms-class-details header .ms-class-dismiss { display:grid; place-items:center; flex-shrink:0; align-self:flex-start; width:34px; height:34px; padding:0 0 3px; border:2px solid #b6d2aa; border-radius:50%; background:#f3f7ed; color:#0d4c2e; box-shadow:0 3px 8px #234c2510; font-size:26px; line-height:1; }
+.ms-class-details .ms-class-description { margin:0 0 16px; color:#4c6557; }
+.ms-dialog.ms-class-details dl { overflow:hidden; margin:4px 0 0; border:1px solid #d2dcd4; border-radius:10px; }
+.ms-dialog.ms-class-details dl > div { display:grid; grid-template-columns:155px minmax(0,1fr); gap:0; padding:0; border-bottom:1px solid #d7dfd8; font-size:12px; }
+.ms-dialog.ms-class-details dl > div:last-child { border-bottom:0; }
+.ms-class-details dt { display:flex; align-items:center; gap:10px; padding:12px 15px; color:#345f3b; background:#f2f6ef; font-weight:550; }
+.ms-class-details dt svg { flex-shrink:0; color:#32693a; }
+.ms-class-emblem svg { width:29px; height:29px; }
+.ms-class-details dt svg { width:18px; height:18px; }
+.ms-class-details dd { display:flex; align-items:center; min-width:0; padding:11px 17px; margin:0; color:#152d20; line-height:1.5; overflow-wrap:anywhere; }
+.ms-class-status { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:24px; border:1px solid #d4e9c9; background:#e4f1dc; color:#114b28; font-weight:750; font-size:12px; }
+.ms-class-status[data-status="cancelled"] { background:#fff0eb; color:#a33c28; border-color:#f1d1c7; }
+.ms-class-details > footer { display:flex; padding-top:17px; }
+.ms-class-details .ms-class-close { min-width:150px; padding:9px 20px; border:2px solid #d3a83c; border-radius:30px; background:linear-gradient(145deg,#33783d,#084d2c); box-shadow:inset 0 0 0 1px #f4dfaa,0 7px 15px #1f50221a; color:#fff; font-size:13px; font-weight:750; cursor:pointer; }
+.ms-class-close:hover { filter:brightness(1.08); }
+.ms-class-details button:focus-visible { outline:3px solid #d3a83c; outline-offset:4px; }
+@media(max-width:540px) {
+  .ms-dialog.ms-class-details { padding:15px; border-radius:16px; }
+  .ms-class-details > header { gap:10px; padding-bottom:14px; }
+  .ms-class-emblem { width:39px; height:39px; border-radius:12px; }
+  .ms-class-emblem svg { width:26px; height:26px; }
+  .ms-class-details .ms-class-heading { padding-left:11px; }
+  .ms-dialog.ms-class-details header h2 { font-size:20px; }
+  .ms-dialog.ms-class-details .ms-class-heading p { font-size:13px; margin-top:5px; }
+  .ms-dialog.ms-class-details header .ms-class-dismiss { width:33px; height:33px; font-size:26px; }
+  .ms-dialog.ms-class-details dl > div { grid-template-columns:125px minmax(0,1fr); font-size:12px; }
+  .ms-class-details dt { gap:7px; padding:10px; }
+  .ms-class-details dt svg { width:17px; height:17px; }
+  .ms-class-details dd { padding:10px; }
+  .ms-class-status { font-size:11px; padding:5px 8px; gap:5px; }
+  .ms-class-details .ms-class-close { min-width:155px; padding:10px 20px; font-size:12px; }
+}
+.ms-student-notices { display:grid; gap:13px; width:100%; max-width:1250px; margin:5px auto 14px; }
+.ms-student-notice { overflow:hidden; border:1px solid #c3ddc9; border-top-color:#e4d7ab; border-radius:13px; background:#fff; box-shadow:0 5px 16px #174c2910; }
+.ms-student-notice > header { display:flex; align-items:center; gap:11px; padding:12px 17px; background:linear-gradient(115deg,#f2f7eb,#f8fbf6 60%,#fff); }
+.ms-student-notice-icon { display:grid; place-items:center; flex-shrink:0; width:40px; height:40px; border-radius:11px; color:#075a35; background:linear-gradient(135deg,#f0f5e1,#e1efd5); }
+.ms-student-notice-icon svg { width:25px; height:25px; }
+.ms-student-notice h2 { margin:0; color:#065334; font-size:19px; line-height:1.25; letter-spacing:-.6px; }
+.ms-student-notice header p { margin:3px 0 0; color:#a87d29; font-size:12px; font-weight:550; }
+.ms-student-notice .ms-student-view { display:inline-flex; align-items:center; justify-content:center; gap:9px; margin-left:auto; padding:7px 13px; border:1px solid #075b36; border-radius:11px; color:#fff; background:linear-gradient(135deg,#078141,#005135); font-size:12px; font-weight:750; white-space:nowrap; cursor:pointer; }
+.ms-student-view:hover { filter:brightness(1.08); }
+.ms-student-view:focus-visible { outline:3px solid #d8ac3e; outline-offset:3px; }
+.ms-student-notice dl { display:grid; grid-template-columns:1.5fr repeat(4,minmax(0,1fr)); gap:12px; margin:0; padding:15px 17px 17px; }
+.ms-student-notice dl > div { position:relative; min-width:0; padding-left:34px; border-right:1px solid #dee8e0; }
+.ms-student-notice dl > div:last-child { border-right:0; }
+.ms-student-notice dt { padding:0 8px 4px 0; color:#70847c; background:transparent; font-size:11px; font-weight:550; }
+.ms-student-notice dt svg { position:absolute; top:0; left:0; width:27px; height:27px; padding:5px; border-radius:10px; color:#09613a; background:linear-gradient(135deg,#f0f8eb,#e6f3e1); box-sizing:border-box; }
+.ms-student-notice dd { padding:0 11px 0 0; margin:0; color:#0b4732; font-size:12px; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
+.ms-student-notice .ms-class-status { padding:3px 7px; gap:5px; font-size:11px; background:#e1f0d3; }
+.ms-student-empty { padding:22px; margin:0; border:1px solid #d8e7dc; border-radius:12px; background:#fff; color:#486553; font-size:13px; }
+@media(max-width:1000px) {
+  .ms-student-notice dl { grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px 10px; }
+  .ms-student-notice dl > div:nth-child(3) { border-right:0; }
+}
+@media(max-width:600px) {
+  .ms-student-notice > header { flex-wrap:wrap; gap:9px; padding:12px; }
+  .ms-student-notice h2 { font-size:18px; }
+  .ms-student-notice header p { font-size:12px; }
+  .ms-student-notice-icon { width:43px; height:43px; border-radius:12px; }
+  .ms-student-notice .ms-student-view { margin-left:54px; padding:8px 13px; }
+  .ms-student-notice dl { grid-template-columns:repeat(2,minmax(0,1fr)); padding:14px 12px; gap:14px 8px; }
+  .ms-student-notice dl > div { padding-left:38px; }
+  .ms-student-notice dl > div:nth-child(3) { border-right:1px solid #dee8e0; }
+  .ms-student-notice dl > div:nth-child(even) { border-right:0; }
+  .ms-student-notice dd { font-size:12px; }
+  .student-page-banner.student-page-banner--makeup { padding:12px 16px; }
+  .student-page-banner.student-page-banner--makeup h1 { font-size:22px; }
+}

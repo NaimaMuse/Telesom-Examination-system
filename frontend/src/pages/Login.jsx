@@ -45,7 +45,7 @@ export default function LoginPage({ staff = false, recovery = false }) {
         <section className="auth-card" aria-labelledby="login-title">
           <header className="auth-card-header">
             <div className="header-brand-wrap"><TelesomLogo size={staff || !recovery ? 'md' : 'sm'} /></div>
-            {staff && !recovery && <h1 id="login-title">Staff sign in</h1>}
+            {staff && !recovery && <h1 id="login-title">Staff and judge sign in</h1>}
             {!staff && !recovery && <>
               <h1 id="login-title">Student sign in</h1>
             </>}
@@ -56,7 +56,7 @@ export default function LoginPage({ staff = false, recovery = false }) {
           {error && <div className="auth-alert error" role="alert">{error}</div>}
           {staff && recovery ? (
             <div className="staff-password-help">
-              <p>Teachers should contact the academy administrator. Administrators should contact the system operator.</p>
+              <p>Teachers and judges should contact the academy administrator. Administrators should contact the system operator.</p>
               <Link className="portal-forgot-password student-forgot-password" to="/student/forgot-password">
                 Reset a student password
               </Link>

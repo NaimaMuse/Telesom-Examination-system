@@ -147,6 +147,24 @@ const runTests = async () => {
     );
   }
 
+  {
+    const judge={
+      _id:new mongoose.Types.ObjectId(),
+      name:'Judge User',
+      email:'judge@telesom.com',
+      role:'judge',
+      isActive:true,
+      password:hashedPassword,
+    };
+    User.findOne=()=>({select:()=>Promise.resolve(judge)});
+    User.findByIdAndUpdate=()=>Promise.resolve();
+    const {req,res,next,getResult}=createMock({email:judge.email,password:plainPassword});
+    await login(req,res,next);
+    const result=getResult();
+    assert(result.statusCode===200&&result.responseBody?.user?.role==='judge',
+      'Judge email + password login succeeds');
+  }
+
   // Students must use Google even after creating a portal password.
   {
     const mockUser = {

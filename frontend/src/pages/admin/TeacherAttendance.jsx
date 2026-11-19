@@ -3,12 +3,14 @@ import {Link} from 'react-router-dom';
 import MakeupScheduleDialog from '../../components/MakeupScheduleDialog';
 import api from '../../services/api';
 import TeachingIcon from '../../components/TeachingIcon';
+import {usePageSearch,matchesPageSearch} from '../../context/PageSearchContext';
 import './TeacherAttendance.css';
 
 const nairobiToday = () => new Date(Date.now()+3*3600000).toISOString().slice(0,10);
 const errorMessage = error => error.response?.data?.message || 'Could not complete the request. Try again.';
 
 export default function TeacherAttendance() {
+  const [search]=usePageSearch();
   const [date,setDate] = useState(nairobiToday);
   const [records,setRecords] = useState([]);
   const [revision,refresh] = useState(0);
@@ -71,7 +73,7 @@ export default function TeacherAttendance() {
     ['Absent', absent, 'cross', 'absent'],
     ['Not marked', records.length - present - absent, 'clock', 'unmarked'],
   ];
-  const sortedRecords = [...records].sort((a, b) =>
+  const sortedRecords = records.filter(record=>matchesPageSearch(search,record.teacher,record.teacherId,record.course,record.cohort,record.attendance?.status)).sort((a, b) =>
     Number(b.scheduled) - Number(a.scheduled) || a.teacher.localeCompare(b.teacher)
   );
   const statusLabels = {present:'Present', absent:'Absent', unmarked:'Not marked'};

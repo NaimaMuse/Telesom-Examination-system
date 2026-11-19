@@ -65,23 +65,152 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
  assert.equal(defenseEligible.total,2);
  assert.deepEqual(defenseEligible.students.map(s=>s._id),students.slice(0,2).map(s=>String(s._id)));
  const teacher=await User.create({name:'Defense Teacher',email:'teacher@eval.test',role:'teacher',password:'hashed-test-password'});
+ const judgeResponse=ok(await req('POST','/users/judges',{
+   name:'Defense Judge',email:'judge@eval.test',password:'JudgePassword123!',
+ }),201);
+ const judge=await User.findById(judgeResponse.judge._id).select('+password');
+ assert.equal(judge.role,'judge');
+ assert.equal(await require('../utils/passwords').verifyPassword('JudgePassword123!',judge.password),true);
+ assert.equal(judgeResponse.credentials.temporaryPassword,'JudgePassword123!');
+ assert.equal(ok(await req('GET','/users/judges')).judges[0].email,'judge@eval.test');
+ ok(await req('GET','/users/judges',null,judge),403);
  const exam=await require('../models/Exam').create({
    title:'Final Project',course:defenseCourse._id,totalMarks:50,examDate:new Date(),createdBy:teacher._id,
  });
  const defense={course:defenseCourse._id,cohort:'cohort 6',cohortYear:'2026',assessment:exam._id,assessmentType:'exam'};
  await require('../models/ProjectDefense').init();
+ const judgeCourse=await Course.create({name:'Judge Defense Course',durationWeeks:16,academicYear:'2026',batch:'cohort 6'});
+ await Enrollment.create({course:judgeCourse._id,student:students[0]._id,academicYear:'2026',batch:'cohort 6'});
+ const judgeExam=await require('../models/Exam').create({
+   title:'Judge assessment',course:judgeCourse._id,totalMarks:50,examDate:new Date(),createdBy:teacher._id,
+ });
+ const judgeQuestion='q'+require('node:crypto').randomUUID();
+ let judgeForm=ok(await req('POST','/evaluations/defenses',{
+   ...defense,course:judgeCourse._id,assessment:judgeExam._id,students:[students[0]._id],groupName:'Judge group',
+   projectTitle:'Judge project',defenseDate:'2026-11-17',evaluatorName:'Admin',
+   customRubric:[{key:'s'+require('node:crypto').randomUUID(),title:'Project evaluation',marks:90,
+     questions:[{key:judgeQuestion,title:'Demonstrate the project',marks:90}]}],
+   appendCustomRubric:false,
+ }),201).record;
+ ok(await req('PATCH',`/evaluations/defenses/${judgeForm._id}/judge`,{judge:String(judge._id),__v:judgeForm.__v}));
+ judgeForm=ok(await req('GET',`/evaluations/defenses/${judgeForm._id}`)).record;
+ let judgeRecords=ok(await req('GET','/evaluations/defenses',null,judge)).records;
+ assert.deepEqual(judgeRecords.map(record=>record._id),[String(judgeForm._id)]);
+ assert.equal(ok(await req('GET',`/evaluations/defenses/${judgeForm._id}`,null,judge)).record._id,String(judgeForm._id));
+ const judgeSaved=ok(await req('PUT',`/evaluations/defenses/${judgeForm._id}`,{
+   ...judgeForm,groupName:'Tampered group',students:[],projectTitle:'Tampered title',
+   ratings:{[judgeQuestion]:5},outcome:'pass',summary:'Excellent project',signature:'Judge User',
+   signatureDate:'2026-11-17',finalize:true,
+ },judge)).record;
+ assert.equal(judgeSaved.status,'finalized');
+ assert.equal(judgeSaved.groupName,'Judge group');
+ assert.equal(judgeSaved.projectTitle,'Judge project');
+ assert.deepEqual(judgeSaved.students,[String(students[0]._id)]);
+ assert.equal(judgeSaved.evaluatorName,'Defense Judge');
+ assert.equal(judgeSaved.ratings[judgeQuestion],5);
+ ok(await req('GET',`/evaluations/defenses/${judgeForm._id}`,null,teacher),404);
+ ok(await req('DELETE',`/evaluations/defenses/${judgeForm._id}`,{__v:judgeSaved.__v},judge),403);
+ ok(await req('POST','/evaluations/defenses',{...defense},judge),403);
  const saved=ok(await req('POST','/evaluations/defenses',{
    ...defense,students:[students[1]._id],additionalEvaluations:[{name:'Second evaluator',ratings:{b1:4},notes:{b1:'Good explanation'}}],
  }),201);
+ const otherTeacher=await User.create({name:'Other Teacher',email:'other-teacher@eval.test',role:'teacher',password:'hashed-test-password'});
+ const sharedUrl='/evaluations/defenses/'+saved.record._id;
+ ok(await req('GET',sharedUrl,null,teacher),404);
+ assert.deepEqual(ok(await req('GET','/evaluations/defenses',null,teacher)).records,[]);
+ assert.deepEqual(ok(await req('GET','/evaluations/defenses/recent',null,teacher)).records,[]);
+ assert.deepEqual(ok(await req('GET','/evaluations/defenses/courses/'+defenseCourse._id+'/groups',null,teacher)).records,[]);
+ assert.ok(ok(await req('GET','/evaluations/courses',null,teacher)).courses.some(course=>course._id===String(defenseCourse._id)));
+ assert.deepEqual(ok(await req('GET','/evaluations/defenses',null,otherTeacher)).records,[]);
+ assert.deepEqual(ok(await req('GET','/evaluations/defenses/recent',null,otherTeacher)).records,[]);
+ ok(await req('GET',sharedUrl,null,otherTeacher),404);
+ ok(await req('GET','/evaluations/defenses/courses/'+defenseCourse._id+'/groups',null,otherTeacher),403);
+ ok(await req('GET','/evaluations/defenses/courses/'+defenseCourse._id+'/cohorts',null,otherTeacher),403);
+ ok(await req('GET','/evaluations/eligible/'+defenseCourse._id,null,otherTeacher),403);
+ ok(await req('GET','/evaluations/'+f._id,null,teacher),403);
+ ok(await req('PUT',sharedUrl,saved.record,otherTeacher),404);
+ ok(await req('POST','/evaluations/defenses',{...defense,students:[]},otherTeacher),403);
+ ok(await req('PUT',sharedUrl,saved.record,teacher),404);
+ const teacherDraft=ok(await req('POST','/evaluations/defenses',{
+   course:defenseCourse._id,assessment:exam._id,assessmentType:'exam',groupName:'Final defense form',students:[],
+   customRubric:[{
+     key:'s'+require('node:crypto').randomUUID(),title:'System demo',marks:90,
+     questions:[{key:'q'+require('node:crypto').randomUUID(),title:'Demonstrate the final system',marks:90}],
+   }],appendCustomRubric:false,
+ },teacher),201).record;
+ const teacherUrl='/evaluations/defenses/'+teacherDraft._id;
+ assert.deepEqual(teacherDraft.ratings,{});
+ assert.deepEqual(teacherDraft.students,[]);
+ assert.equal(teacherDraft.summary,'');
+ const midterm=await require('../models/Exam').create({
+   title:'Midterm',type:'midterm',course:defenseCourse._id,totalMarks:50,examDate:new Date(),createdBy:teacher._id,
+ });
+ assert.ok(ok(await req('GET','/evaluations/defenses/assessments',null,teacher)).assessments.some(item=>item._id===String(midterm._id)));
+ const midtermForm=ok(await req('POST','/evaluations/defenses',{
+   ...teacherDraft,_id:undefined,assessment:String(midterm._id),
+ },teacher),201).record;
+ ok(await req('DELETE','/evaluations/defenses/'+midtermForm._id,{__v:midtermForm.__v},teacher),204);
+ const profile=await require('../models/Teacher').create({user:teacher._id,teacherId:'DEFENSE-TEACHER'});
+ await require('../models/CourseTeacher').create({teacher:profile._id,course:defenseCourse._id,academicYear:'2026'});
+ const assignedExam=await require('../models/Exam').create({
+   title:'Existing course exam',course:defenseCourse._id,totalMarks:50,examDate:new Date(),createdBy:admin._id,
+ });
+ assert.ok(ok(await req('GET','/evaluations/defenses/assessments',null,teacher)).assessments.some(item=>item._id===String(assignedExam._id)));
+ const assignedForm=ok(await req('POST','/evaluations/defenses',{
+   ...teacherDraft,_id:undefined,assessment:String(assignedExam._id),
+ },teacher),201).record;
+ ok(await req('DELETE','/evaluations/defenses/'+assignedForm._id,{__v:assignedForm.__v},teacher),204);
+ ok(await req('PUT',teacherUrl,{...teacherDraft,students:[students[0]._id]},teacher),403);
+ ok(await req('PUT',teacherUrl,{...teacherDraft,ratings:{b1:5}},teacher),403);
+ ok(await req('GET',teacherUrl),404);
+ assert.ok(!ok(await req('GET','/evaluations/defenses')).records.some(item=>item._id===teacherDraft._id));
+ ok(await req('POST',teacherUrl+'/submit',{__v:teacherDraft.__v},otherTeacher),404);
+ ok(await req('POST',teacherUrl+'/submit',{__v:teacherDraft.__v+1},teacher),409);
+ const sent=ok(await req('POST',teacherUrl+'/submit',{__v:teacherDraft.__v},teacher)).record;
+ assert.ok(sent.submittedAt);
+ assert.equal(ok(await req('GET',teacherUrl)).record._id,sent._id);
+ assert.ok(ok(await req('GET','/evaluations/defenses')).records.some(item=>item._id===sent._id));
+ assert.equal(ok(await req('POST',teacherUrl+'/submit',{__v:teacherDraft.__v},teacher)).record.submittedAt,sent.submittedAt);
+ ok(await req('PUT',teacherUrl,sent,teacher),409);
+ ok(await req('DELETE',teacherUrl,{__v:sent.__v},teacher),404);
+ const reviewed=ok(await req('PUT',teacherUrl,{
+   ...sent,groupName:'Admin group',students:[students[0]._id],summary:'Admin reviewed submission',
+   customRubric:sent.customRubric.map(section=>({...section,title:'Admin revised section'})),
+ })).record;
+ assert.deepEqual(reviewed.students,[String(students[0]._id)]);
+ assert.equal(reviewed.customRubric[0].title,'Admin revised section');
+ ok(await req('POST','/evaluations/defenses',{...defense,students:[students[0]._id]}),409);
+ ok(await req('DELETE',teacherUrl,{__v:reviewed.__v}),204);
+ assert.ok(ok(await req('GET','/evaluations/defenses/assessments',null,teacher)).assessments.some(item=>item._id===String(exam._id)));
+ assert.deepEqual(ok(await req('GET','/evaluations/defenses/assessments',null,otherTeacher)).assessments,[]);
  assert.deepEqual(saved.record.students,[String(students[1]._id)]);
  assert.equal(saved.record.additionalEvaluations[0].ratings.b1,4);
  const available=ok(await req('GET',`/evaluations/eligible/${defenseCourse._id}?cohortName=cohort%206&cohortYear=2026&assessment=${exam._id}&assessmentType=exam`));
  assert.deepEqual(available.students.map(s=>s._id),[String(students[0]._id)]);
  ok(await req('POST','/evaluations/defenses',{...defense,students:[students[1]._id]}),409);
- const ratings=Object.fromEntries(['b1','b2','b3','c1','d1','e1','f1','g1','g2','g3','g4'].map(key=>[key,5]));
- const finish={...saved.record,evaluatorName:'First evaluator',projectTitle:'Project',defenseDate:'2026-11-17',ratings,finalize:true};
+ const extraSection={
+   key:'s'+require('node:crypto').randomUUID(),title:'Project demo',marks:10,
+   questions:['Demonstrate the solution','Explain the results'].map(title=>({
+     key:'q'+require('node:crypto').randomUUID(),title,marks:5,
+   })),
+ };
+ const extendedDraft={...saved.record,appendCustomRubric:true,customRubric:[extraSection]};
+ const savedUrl='/evaluations/defenses/'+saved.record._id;
+ ok(await req('PUT',savedUrl,extendedDraft),400);
+ ok(await req('PUT',savedUrl,{...extendedDraft,projectTotalMarks:100}));
+ const extended=ok(await req('GET',savedUrl)).record;
+ assert.equal(extended.appendCustomRubric,true);
+ assert.deepEqual(extended.customRubric,[extraSection]);
+ assert.equal(extended.additionalEvaluations[0].ratings.b1,4);
+ assert.equal(extended.additionalEvaluations[0].notes.b1,'Good explanation');
+ const keys=['b1','b2','b3','c1','d1','e1','f1','g1','g2','g3','g4',...extraSection.questions.map(question=>question.key)];
+ const ratings=Object.fromEntries(keys.map(key=>[key,5]));
+ const finish={...extended,evaluatorName:'First evaluator',projectTitle:'Project',defenseDate:'2026-11-17',ratings,finalize:true};
  ok(await req('PUT','/evaluations/defenses/'+saved.record._id,finish),400);
  finish.additionalEvaluations[0].ratings=ratings;
+ const incompleteRatings={...ratings};
+ delete incompleteRatings[extraSection.questions[0].key];
+ ok(await req('PUT',savedUrl,{...finish,ratings:incompleteRatings}),400);
  const finalized=ok(await req('PUT','/evaluations/defenses/'+saved.record._id,finish)).record;
  assert.equal(finalized.status,'finalized');
  const updated=ok(await req('PATCH',`/evaluations/defenses/${finalized._id}/marks`,{
@@ -89,6 +218,9 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
  })).record;
  assert.equal(updated.ratings.b1,5);
  assert.equal(updated.additionalEvaluations[0].ratings.b1,3);
+ assert.equal(updated.additionalEvaluations[0].ratings[extraSection.questions[0].key],5);
+ ok(await req('PATCH',sharedUrl+'/marks',{__v:updated.__v,ratings},otherTeacher),404);
+ ok(await req('PATCH',sharedUrl+'/marks',{__v:updated.__v,ratings},teacher),404);
  const groupDraft={...defense,groupName:'Group 2',students:[students[0]._id],projectTotalMarks:100};
  ok(await req('POST','/evaluations/defenses',groupDraft),400);
  const rubricSectionMarks={B:15,C:20,D:20,E:15,F:10,G:20};

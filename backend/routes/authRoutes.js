@@ -20,6 +20,6 @@ const { authorizeRoles } = require('../middleware/roleMiddleware');
 const { changePassword, setStudentPassword } = require('../controllers/passwordController');
 router.get('/session', protect, currentSession);
 router.post('/logout', (req,res,next) => req.headers.authorization ? protect(req,res,next) : next(), logout);
-router.put('/password', protect, authorizeRoles('admin'), changePassword);
+router.put('/password', protect, authorizeRoles('admin', 'judge'), changePassword);
 router.put('/student/password', protect, authorizeRoles('student'), setStudentPassword);
 module.exports = router;

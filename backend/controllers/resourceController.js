@@ -53,6 +53,7 @@ const createResourceController = (Model, options) => {
     beforeCreate,
     beforeUpdate,
     scopeFilter,
+    searchFields=[],
     authorizeRead,
   } = options;
 
@@ -74,6 +75,7 @@ const createResourceController = (Model, options) => {
     }
 
     const scope = scopeFilter ? await scopeFilter(req) : null;
+    if(searchFields.length)Object.assign(filters,require('../services/pageSearch').textSearchFilter(query.search,searchFields));
     const scopedFilters = scope ? { $and: [filters, scope] } : filters;
 
     const page = parsePositiveInteger(query.page, 1, 'page');

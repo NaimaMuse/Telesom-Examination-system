@@ -49,6 +49,8 @@ Effective closed/expired status is calculated at read and write time. No schedul
 
 `frontend/src/components/Evaluations.jsx` and its scoped CSS implement both role interfaces. DashboardLayout adds menu entries and routes without changing existing navigation. The builder includes ten question types, sections, drag reorder plus keyboard-accessible arrow buttons, required fields, course/student selection, preview, settings and lifecycle actions. Students can save progress, submit, view, and explicitly edit their response. Reports include bar distributions, individual response details, pending students, search, pagination and CSV export. CSV is Excel-readable and protects cells beginning with formula characters.
 
+Administrators can create judge accounts from `/admin/judges` with an email and initial password, then assign each project defense form to one active judge. The administrator shares the credentials manually. Judges sign in at `/staff/login`, are redirected to `/judge/project-defenses`, and can only open and evaluate forms assigned to their account. Judge passwords are stored as Argon2id hashes; judge writes are limited to rubric scores, outcome, signature, and evaluator feedback.
+
 ## Verification
 
 - `npm --prefix frontend run build`
@@ -58,4 +60,3 @@ Effective closed/expired status is calculated at read and write time. No schedul
 The integration suite launches a temporary, isolated local MongoDB replica set on port 27931, creates synthetic test fixtures only inside that database, and stops it afterward. It never uses the application database. Set TEST_MONGOD to the mongod executable on other installations and TEST_MONGO_PORT if the default test port is occupied. Temporary log/data files are retained for diagnosis.
 
 Coverage includes role and assignment privacy, real enrollment lookup, publication notification idempotency/read state, required answers, draft progress, simultaneous submissions at a response limit, database uniqueness, response editing and original timestamps, disabled and closed editing, deadline/combined closure, structural protection, close/reopen, reports, duplication and deletion. Browser interaction and responsive visual QA have not been automated.
-

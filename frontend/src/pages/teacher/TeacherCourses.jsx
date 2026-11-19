@@ -1,4 +1,4 @@
-import { usePageSearch } from '../../context/PageSearchContext';
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 
@@ -23,8 +23,17 @@ export default function TeacherCourses() {
     fetch();
   }, []);
 
-  const filtered = courses.filter(c =>
-    !search || [c.name,c.code].some(v => v?.toLowerCase().includes(search.toLowerCase()))
+  const filtered = courses.filter(course =>
+    matchesPageSearch(
+      search,
+      course.title,
+      course.name,
+      course.courseCode,
+      course.code,
+      course.description,
+      course.semester,
+      course.schedule
+    )
   );
 
   return (
@@ -55,10 +64,10 @@ export default function TeacherCourses() {
                   <div style={{ display:'flex', alignItems:'flex-start', gap:'14px' }}>
                     <div style={{ width:52,height:52,background:'var(--primary-light)',color:'var(--primary)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.5rem',flexShrink:0 }}>📚</div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontWeight:800, fontSize:'1rem', color:'var(--text-primary)', marginBottom:2 }}>{c.name}</div>
+                      <div style={{ fontWeight:800, fontSize:'1rem', color:'var(--text-primary)', marginBottom:2 }}>{c.title || c.name}</div>
                       <div style={{ fontSize:'0.8rem', color:'var(--text-secondary)', marginBottom:8 }}>{c.description}</div>
                       <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
-                        <span className="badge badge-info">{c.code}</span>
+                        <span className="badge badge-info">{c.courseCode || c.code}</span>
                         <span className="badge badge-success">{c.semester}</span>
                         <span className="badge badge-muted">🎓 {c.students} students</span>
                       </div>

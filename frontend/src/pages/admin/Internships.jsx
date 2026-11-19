@@ -1,3 +1,4 @@
+import {usePageSearch} from '../../context/PageSearchContext';
 import { useEffect, useRef, useState } from 'react';
 import api from '../../services/api';
 import TeachingIcon from '../../components/TeachingIcon';
@@ -31,6 +32,8 @@ function AttendanceSlots({ schedule }) {
 }
 
 export default function Internships() {
+  const [search]=usePageSearch();
+  useEffect(()=>setPage(1),[search]);
   const [form, setForm] = useState(emptyForm);
   const [courses, setCourses] = useState(null);
   const [courseError, setCourseError] = useState('');
@@ -91,7 +94,7 @@ export default function Internships() {
     const { signal } = controller;
     setLoading(true);
     setListError('');
-    api.get('/internships', { params: { page }, signal })
+    api.get('/internships', { params: { page,search }, signal })
       .then(({data}) => {
         if (signal.aborted) return;
         setRecords(data.data);
@@ -100,7 +103,7 @@ export default function Internships() {
       .catch(() => { if (!signal.aborted) setListError('Could not load internship records.'); })
       .finally(() => { if (!signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [page, revision]);
+  }, [page, revision,search]);
 
   function loadRoster(courseId) {
     setStudents([]);

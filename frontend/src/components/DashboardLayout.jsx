@@ -1,4 +1,5 @@
 import TeacherAttendance from '../pages/admin/TeacherAttendance';
+import Judges from '../pages/admin/Judges';
 import TeacherStudents from '../pages/teacher/TeacherStudents';
 import Evaluations, { NewEvaluation } from './Evaluations';
 import {ProjectDefenseEditor,ProjectDefenseList} from './ProjectDefenses';
@@ -88,6 +89,7 @@ const NAV = {
         { to: '/admin/makeup', label: 'Makeup Classes', icon: 'reschedule' },
         { to: '/admin/internships', label: 'Internships', icon: 'briefcase' },
         { to: '/admin/certificates', label: 'Certificates', icon: 'graduate' },
+        { to: '/admin/judges', label: 'Judges', icon: 'users' },
       ],
     },
     {
@@ -130,12 +132,21 @@ const NAV = {
         { to: '/student/assessments', label: 'Exams & Quizzes', icon: 'chart' },
         { to: '/student/evaluations', label: 'Evaluation Forms', icon: 'clipboard' },
         { to: '/student/attendance',label: 'Attendance',      icon: 'calendar' },
+        { to: '/student/makeup', label: 'Makeup Classes', icon: 'reschedule' },
       ],
     },
     {
       section: 'Account',
       items: [
         { to: '/student/profile',   label: 'My Profile',      icon: 'profile' },
+      ],
+    },
+  ],
+  judge: [
+    {
+      section: 'Project Defense',
+      items: [
+        { to: '/judge/project-defenses', label: 'Assigned Evaluations', icon: 'clipboard' },
       ],
     },
   ],
@@ -172,6 +183,7 @@ const ROLE_ROUTES = {
       <Route path="attendance"element={<AttendanceMgmt />} />
       <Route path="teacher-attendance" element={<TeacherAttendance />} />
       <Route path="analytics" element={<AnalyticsPage />} />
+      <Route path="judges" element={<Judges />} />
       <Route path="*"         element={<Navigate to="/admin" replace />} />
     </Routes>
   ),
@@ -208,19 +220,30 @@ const ROLE_ROUTES = {
       <Route path="quizzes"     element={<Navigate to="/student/assessments?tab=quizzes" replace />} />
       <Route path="notes"       element={<StudentNotes />} />
       <Route path="attendance"  element={<StudentAttendance />} />
+      <Route path="makeup" element={<MakeupClasses role="student" />} />
       <Route path="outlines" element={<CourseOutlines role="student" />} />
       <Route path="profile"     element={<StudentProfile />} />
       <Route path="*"           element={<Navigate to="/student" replace />} />
     </Routes>
   ),
+  judge: (
+    <Routes>
+      <Route index element={<Navigate to="/judge/project-defenses" replace />} />
+      <Route path="project-defenses" element={<ProjectDefenseList />} />
+      <Route path="project-defenses/:id" element={<ProjectDefenseEditor />} />
+      <Route path="*" element={<Navigate to="/judge/project-defenses" replace />} />
+    </Routes>
+  ),
 };
 
 const PAGE_META = {
+  '/admin/judges': {title:'Judges',hint:'Create judge accounts and assign project defense evaluations.'},
   '/admin/evaluations': {title:'Evaluation Forms',hint:'Manage evaluations and review student feedback.'},
   '/admin/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/admin/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
   '/teacher/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/teacher/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
+  '/judge/project-defenses': {title:'Assigned Evaluations',hint:'Evaluate the project defenses assigned to you.'},
   '/student/evaluations': {title:'Evaluation Forms',hint:'Share feedback on your courses and learning experience.'},
   '/teacher/my-course/outline': {title:'Course Planner',hint:'Plan lessons, organize topics and track teaching progress.'},
   '/admin/reports': {title:'Reports Center',hint:'Filtered academy reports and exports.'},
@@ -230,6 +253,7 @@ const PAGE_META = {
   '/teacher/outlines': {title:'Teaching & Outlines',hint:'Your contract and course plan in one workspace.'},
   '/teacher/makeup': {title:'Makeup Classes',hint:'Your assigned replacement lessons.'},
   '/student/outlines': {title:'Course Outlines',hint:'Explore published lessons and track your course progress.'},
+  '/student/makeup': {title:'Makeup Classes',hint:'View course makeup notices and check the cohort listed on each class.'},
   '/admin': { title: 'Admin Dashboard', hint: 'Overview of students, courses, exams, and reports.' },
   '/admin/students': { title: 'Student Management', hint: 'Add, edit, and manage student records.' },
   '/admin/internships': { title: 'Internships', hint: 'Record internship students and their placement dates.' },
@@ -282,6 +306,7 @@ function getStudentPageMeta(pathname, search) {
     if (tab === 'quizzes') return {title:'Quizzes',hint:'Review your upcoming quizzes and prepare for each assessment.',variant:'assessments'};
     return {...page,variant:'assessments'};
   }
+  if (pathname === '/student/makeup') return {...page,variant:'makeup'};
   if (pathname === '/student/results') {
     if (tab === 'certificates') return {title:'My Certificates',hint:'View and download certificates you have earned.',variant:'results'};
     return {...page,variant:'results'};

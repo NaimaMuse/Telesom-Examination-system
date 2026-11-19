@@ -19,6 +19,7 @@ export default function RoleRedirect() {
     if (role === 'admin') navigate('/admin', { replace: true });
     else if (role === 'teacher') navigate('/teacher', { replace: true });
     else if (role === 'student') navigate('/student', { replace: true });
+    else if (role === 'judge') navigate('/judge', { replace: true });
     else navigate('/login', { replace: true });
   }, [user, navigate]);
 

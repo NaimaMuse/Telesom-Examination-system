@@ -5,15 +5,29 @@ const {protect}=require('../middleware/authMiddleware'),{authorizeRoles}=require
 const {fail,state,validateQuestions,validateAnswers}=require('../services/evaluationRules');
 const {enrollmentCohortFilter}=require('../services/batchService');
 const Defense=require('../models/ProjectDefense');
-const router=express.Router();router.use(protect,authorizeRoles('admin','student'));
+const router=express.Router();router.use(protect,authorizeRoles('admin','teacher','student','judge'));
 const admin=authorizeRoles('admin');
-router.use('/defenses',admin,require('./projectDefenseRoutes'));
+const defenseStaff=authorizeRoles('admin','teacher');
+router.use('/defenses',authorizeRoles('admin','teacher','judge'),require('./projectDefenseRoutes'));
 const page=req=>({skip:(Math.max(1,Number(req.query.page)||1)-1)*50,limit:50});
 async function transaction(fn){const s=await mongoose.startSession();try{const hello=await mongoose.connection.db.admin().command({hello:1});if(!hello.setName&&hello.msg!=='isdbgrid')fail('Evaluation writes require MongoDB replica-set transactions. Configure MONGODB_URI for a replica set; see docs/EVALUATIONS.md.',503);let result;await s.withTransaction(async()=>{result=await fn(s);});return result;}finally{await s.endSession();}}
 async function student(req){const s=await Student.findOne({user:req.user._id});if(!s)fail('Student profile not found',404);return s;}
 async function notices(f,event,title,session){if(!f.students.length)return;await Notice.bulkWrite(f.students.map(s=>({updateOne:{filter:{student:s,form:f._id,event},update:{$setOnInsert:{title,message:`${f.title} is available. ${f.deadline?'Deadline: '+new Date(f.deadline).toLocaleString('en-GB',{timeZone:'Africa/Nairobi'})+' (Africa/Nairobi)':''}`}},upsert:true}})),{session});}
-router.get('/courses',admin,asyncHandler(async(req,res)=>res.json({courses:await Course.find({}).select('name title courseCode').sort('name').lean()})));
-router.get('/eligible/:course',admin,asyncHandler(async(req,res)=>{
+router.get('/courses',defenseStaff,asyncHandler(async(req,res)=>{
+  let filter={};
+  if(req.user.role==='teacher'){
+    const models=[require('../models/Exam'),require('../models/Quiz')];
+    const courses=await Promise.all(models.map(Model=>Model.distinct('course',{createdBy:req.user._id})));
+    filter={_id:{$in:courses.flat()}};
+  }
+  res.json({courses:await Course.find(filter).select('name title courseCode').sort('name').lean()});
+}));
+router.get('/eligible/:course',defenseStaff,asyncHandler(async(req,res)=>{
+  if(req.user.role==='teacher'){
+    const filter={course:req.params.course,createdBy:req.user._id};
+    const [exam,quiz]=await Promise.all([require('../models/Exam').exists(filter),require('../models/Quiz').exists(filter)]);
+    if(!exam&&!quiz)fail('This course is outside your project defense access.',403);
+  }
   const {cohortName,cohortYear,assessment,assessmentType,defense}=req.query;
   const enrollment={...(req.params.course==='all'?{}:{course:req.params.course}),status:'enrolled'};
   if(cohortName!==undefined||cohortYear!==undefined){
@@ -31,12 +45,14 @@ router.get('/eligible/:course',admin,asyncHandler(async(req,res)=>{
       fail('Choose a valid defense assessment.');
     }
     const assigned=await Defense.distinct('students',{
+      ...(req.user.role==='teacher'?{teacherOwned:true,evaluator:req.user._id}:{$or:[{teacherOwned:{$ne:true}},{submittedAt:{$ne:null}}]}),
       course:req.params.course,assessment,assessmentType,...(defense?{_id:{$ne:defense}}:{}),
     });
     filter._id.$nin=assigned;
   }
   res.json({total:await Student.countDocuments(filter),students:await Student.find(filter).populate('user','name email').sort('studentId').skip(page(req).skip).limit(50)});
 }));
+router.use(authorizeRoles('admin','student'));
 router.get('/',asyncHandler(async(req,res)=>{const filter=req.user.role==='admin'?{}:{students:(await student(req))._id,status:{$ne:'draft'}};const forms=await Form.find(filter).select('-questions -students').populate('course','name title').sort('-createdAt').skip(page(req).skip).limit(50).lean();for(const f of forms){f.effectiveStatus=state(f);const original=await Form.findById(f._id).select('students');f.assignedCount=original.students.length;if(req.user.role==='admin')f.eligibleCount=(await Enrollment.distinct('student',{...(f.allCourses?{}:{course:f.course?._id}),status:'enrolled'})).length;if(req.user.role==='student')f.response=await Response.findOne({form:f._id,student:(await student(req))._id}).select('submittedAt editedAt');}res.json({forms,total:await Form.countDocuments(filter)});}));
 router.post('/',admin,asyncHandler(async(req,res)=>{const allCourses=req.body.allCourses===true;const c=allCourses?null:await Course.findById(req.body.course);if(!allCourses&&!c)fail('Select an existing course');if(req.body.questions)validateQuestions(req.body.questions);const f=await Form.create({questions:req.body.questions||[],description:req.body.description||'',title:req.body.title||'Untitled evaluation',allCourses,course:c?._id||null,createdBy:req.user._id});res.status(201).json({form:f});}));
 router.get('/:id',asyncHandler(async(req,res)=>{const f=await Form.findById(req.params.id).populate('course','name title').lean();if(!f)fail('Evaluation not found',404);let response=null;if(req.user.role==='student'){const s=await student(req);if(f.status==='draft'||!f.students.some(id=>String(id)===String(s._id)))fail('Evaluation not assigned',403);response=await Response.findOne({form:f._id,student:s._id});await Notice.updateMany({form:f._id,student:s._id,readAt:null},{$set:{readAt:new Date()}});delete f.students;}f.effectiveStatus=state(f);res.json({form:f,response});}));
@@ -70,8 +86,6 @@ const questionCounts=f.questions.filter(q=>q.type!=='section').map(q=>({
 }));
 if(state(f)==='expired')f.closedAt=f.deadline;res.json({courseCounts,questionCounts,assigned:f.students.length,submitted:submitted.length,pendingCount:pending.length,completion:f.students.length?Math.round(submitted.length/f.students.length*100):0,stats,responses:filtered.slice(page(req).skip,page(req).skip+50),total:filtered.length,pending:pending.slice(page(req).skip,page(req).skip+50),form:f});}));
 module.exports=router;
-
-
 
 
 

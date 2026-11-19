@@ -164,3 +164,36 @@
   .defense-criterion,.defense-matrix tr { break-inside:avoid; }
   .defense-section h3 { break-after:avoid; }
 }
+.defense-submission-dialog {
+  width:min(520px,calc(100vw - 32px));
+  max-height:85dvh;
+  margin:auto;
+  padding:0;
+  overflow:auto;
+  border:1px solid #d2b45e;
+  border-radius:18px;
+  background:#124b35;
+  box-shadow:0 24px 70px #0b302f50;
+}
+.defense-submission-dialog::backdrop { background:#102e285e; backdrop-filter:blur(5px); }
+dialog.defense-submission-dialog .defense-submission-success {
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  margin:0;
+  padding:30px 27px 25px;
+  border:0;
+  border-top:4px solid #e8b735;
+  border-radius:0;
+  color:#fff;
+  text-align:center;
+  background:#124b35;
+  box-shadow:none;
+}
+dialog.defense-submission-dialog .defense-submission-success strong { display:block; color:#fff; font-size:23px; line-height:1.3; }
+dialog.defense-submission-dialog .defense-submission-success p { margin:12px 0; color:#edf8f0; font-size:14px; line-height:1.6; }
+.defense-submission-dialog .defense-submission-dismiss { position:absolute; top:10px; right:12px; width:30px; height:30px; padding:0; border:1px solid #ffffff50; border-radius:50%; color:#fff; background:#ffffff12; font-size:23px; cursor:pointer; }
+.defense-submission-dialog .defense-submission-done { padding:9px 28px; border:1px solid #f1ce71; border-radius:8px; background:#ffe097; color:#123e2c; font-size:14px; font-weight:750; cursor:pointer; }
+.defense-submission-dialog button:focus-visible { outline:3px solid #ffe097; outline-offset:3px; }

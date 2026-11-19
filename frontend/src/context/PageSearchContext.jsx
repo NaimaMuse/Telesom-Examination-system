@@ -9,8 +9,4 @@ export function usePageSearch() {
   return shared || local;
 }
 
-export function matchesPageSearch(query, ...values) {
-  const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  const text = values.flat(Infinity).filter(value => value != null).join(' ').toLocaleLowerCase();
-  return terms.every(term => text.includes(term));
-}
+export {matchesPageSearch} from '../utils/pageSearch.mjs';

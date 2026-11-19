@@ -96,6 +96,7 @@ async function readFilter(req) {
 
 router.get('/', asyncHandler(async (req, res) => {
   const filter = await readFilter(req);
+  Object.assign(filter,require('../services/pageSearch').textSearchFilter(req.query.search,['studentName','courseTitle','certificateNo']));
   const page = Math.max(1, Math.min(100000, parseInt(req.query.page, 10) || 1));
   const limit = 25;
   const sort = req.user.role === 'admin' ? { _id: -1 } : { awardedAt: -1, _id: -1 };

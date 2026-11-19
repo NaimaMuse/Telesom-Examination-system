@@ -73,6 +73,14 @@ const runTests = () => {
     assert(result.nextCalled && !result.nextError, 'Teacher accessing a teacher-only resource');
   }
 
+  {
+    const judgeMiddleware = authorizeRoles('judge');
+    const {req,res,next,getResult}=createMock({role:'judge'});
+    judgeMiddleware(req,res,next);
+    const result=getResult();
+    assert(result.nextCalled&&!result.nextError,'Judge accessing an assigned-judge resource');
+  }
+
   // Test 3: Student denied access to an admin-only resource
   {
     const adminMiddleware = authorizeRoles('admin');

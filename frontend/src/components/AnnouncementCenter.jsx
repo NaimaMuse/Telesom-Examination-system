@@ -13,6 +13,15 @@ const dateFormat = new Intl.DateTimeFormat(undefined, {
 });
 const emptyDraft = {title:'', message:'', audience:[], teacherId:'', includeTeacher:true, studentIds:[]};
 
+function closeOnBackdrop(event,onClose) {
+  if(event.target!==event.currentTarget)return;
+  const bounds=event.currentTarget.getBoundingClientRect();
+  if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom){
+    event.stopPropagation();
+    onClose();
+  }
+}
+
 function AnnouncementMessage({ item, onClose }) {
   const dialog = useRef(null);
   useEffect(() => {
@@ -22,6 +31,7 @@ function AnnouncementMessage({ item, onClose }) {
   }, []);
 
   return <dialog ref={dialog} className="announcement-dialog announcement-message-dialog" aria-labelledby="announcement-message-title"
+    onClick={event=>closeOnBackdrop(event,onClose)}
     onCancel={event => { event.preventDefault(); event.stopPropagation(); onClose(); }}>
     <header className="announcement-header">
       <h2 id="announcement-message-title">{item.title}</h2>
@@ -165,6 +175,7 @@ export default function AnnouncementCenter({ role }) {
 
       {open && (
         <dialog ref={dialog} className="announcement-dialog" aria-labelledby="announcement-title"
+          onClick={event=>closeOnBackdrop(event,()=>{if(!saving&&!deleting)setOpen(false);})}
           onCancel={event => { event.preventDefault(); if (!saving && !deleting) setOpen(false); }}>
           <header className="announcement-header">
             <span className="announcement-header-icon"><TeachingIcon name="megaphone" size={21}/></span>

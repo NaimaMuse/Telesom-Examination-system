@@ -52,7 +52,7 @@ const login = asyncHandler(async (req, res) => {
   const studentLogin = role === 'student';
   const eligible = user?.isActive && (studentLogin
     ? user.role === 'student' && user.studentPasswordSet === true
-    : ['admin', 'teacher'].includes(user.role) && (!role || role === user.role));
+    : ['admin', 'teacher', 'judge'].includes(user.role) && (!role || role === user.role));
   const isMatch = await verifyPassword(password, (eligible && user.password) || dummyHash);
   if (!eligible || !isMatch) fail(401, 'Invalid credentials');
   const student = studentLogin ? await activeStudent(user) : null;

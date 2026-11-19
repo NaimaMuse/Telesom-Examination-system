@@ -1,4 +1,4 @@
-const VALID_ROLES = ['admin', 'teacher', 'student'];
+const VALID_ROLES = ['admin', 'teacher', 'student', 'judge'];
 
 /**
  * Role-based authorization middleware factory

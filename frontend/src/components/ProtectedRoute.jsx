@@ -29,6 +29,7 @@ export default function ProtectedRoute({ children, roles }) {
       admin:   '/admin',
       teacher: '/teacher',
       student: '/student',
+      judge:   '/judge',
     };
     return <Navigate to={roleHome[user.role] || '/login'} replace />;
   }

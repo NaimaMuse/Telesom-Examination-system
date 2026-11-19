@@ -1,13 +1,15 @@
 import {useEffect,useRef,useState} from 'react';
 import {Link,useLocation,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import api from '../services/api';
+import {useAuth} from '../context/AuthContext';
+import {usePageSearch} from '../context/PageSearchContext';
 import TeachingIcon from './TeachingIcon';
 import './ProjectDefenses.css';
 
 function useDefensePaths(){
   const {pathname}=useLocation();
-  const base=pathname.startsWith('/teacher')?'/teacher':'/admin';
-  return {route:base+'/project-defenses',defenseHome:base+'/evaluations/new',teacher:base==='/teacher'};
+  const base=pathname.startsWith('/teacher')?'/teacher':pathname.startsWith('/judge')?'/judge':'/admin';
+  return {route:base+'/project-defenses',defenseHome:base==='/judge'?base+'/project-defenses':base+'/evaluations/new',teacher:base==='/teacher',judge:base==='/judge'};
 }
 
 const endpoint='/evaluations/defenses';
@@ -279,23 +281,24 @@ function StudentPicker({course,cohort,cohortYear,assessment,assessmentType,defen
 
 export function ProjectDefenseList(){
   const {route,defenseHome}=useDefensePaths();
+  const [search]=usePageSearch();
   const [page,setPage]=useState(1);
   const [result,setResult]=useState(null);
   const [error,setError]=useState('');
   useEffect(()=>{
     const controller=new AbortController();
-    api.get(endpoint,{params:{page},signal:controller.signal})
+    api.get(endpoint,{params:{page,search},signal:controller.signal})
       .then(({data})=>{if(!controller.signal.aborted)setResult(data);})
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
-  },[page]);
+  },[page,search]);
   function changePage(next){
     setResult(null);
     setError('');
     setPage(next);
   }
   return <div className="evaluations">
-    <div className="ev-actions"><h2>Project Defense Evaluations</h2><Link to={defenseHome}>Back to Project Defense</Link></div>
+    <div className="ev-actions"><h2>{route.startsWith('/judge')?'Assigned Project Defenses':'Project Defense Evaluations'}</h2><Link to={defenseHome}>Back to Project Defense</Link></div>
     {error?<p role="alert">{error}</p>:!result?<p role="status">Loading evaluations…</p>:<>
       {result.records.length===0&&<p>No project defense evaluations yet.</p>}
       <div className="ev-grid ev-admin-grid">{result.records.map(record=><article className="ev-card ev-admin-card" key={record._id}>
@@ -323,8 +326,36 @@ export function ProjectDefenseEditor(){
     <DefenseForm key={id||'new:'+initialCourse} id={id} initialCourse={initialCourse}/>;
 }
 
+function SubmissionConfirmation({record,onClose}){
+  const dialogRef=useRef(null);
+  useEffect(()=>{
+    const dialog=dialogRef.current;
+    const previous=document.activeElement;
+    dialog.showModal();
+    return ()=>{dialog.close();if(previous?.isConnected)previous.focus();};
+  },[]);
+  return <dialog ref={dialogRef} className="defense-submission-dialog" aria-labelledby="defense-sent-title"
+    onCancel={event=>{event.preventDefault();onClose();}}
+    onClick={event=>{
+      if(event.target!==event.currentTarget)return;
+      const bounds=event.currentTarget.getBoundingClientRect();
+      if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)onClose();
+    }}>
+    <div className="defense-submission-success">
+      <button type="button" className="defense-submission-dismiss" aria-label="Close confirmation" onClick={onClose}>×</button>
+      <span className="defense-submission-success-icon" aria-hidden="true"><TeachingIcon name="check" size={34}/></span>
+      <div>
+        <strong id="defense-sent-title">Form successfully sent to Admin</strong>
+        <p>Your project defense form is ready for the admin to review and assign students to groups.</p>
+        <span className="defense-submission-success-date">Sent {new Date(record.submittedAt).toLocaleString('en-GB',{timeZone:'Africa/Nairobi',dateStyle:'medium',timeStyle:'short'})}</span>
+      </div>
+      <button type="button" className="defense-submission-done" onClick={onClose}>Done</button>
+    </div>
+  </dialog>;
+}
+
 function TeacherDefenseForm({id}){
-  const confirmationRef=useRef(null);
+  const [confirmation,setConfirmation]=useState(null);
   const [form,setForm]=useState(null);
   const [assessments,setAssessments]=useState([]);
   const [records,setRecords]=useState([]);
@@ -383,10 +414,7 @@ function TeacherDefenseForm({id}){
         record=data.record;
         setForm(record);
         setRecords(previous=>previous.map(item=>item._id===record._id?record:item));
-        requestAnimationFrame(()=>{
-          confirmationRef.current?.scrollIntoView({block:'center',behavior:'smooth'});
-          confirmationRef.current?.focus({preventScroll:true});
-        });
+        setConfirmation(record);
       }
       setNotice(send?'Form sent to the admin.':'Form saved.');
     }catch(error){setError(error.response?.data?.message||error.message);}
@@ -402,14 +430,7 @@ function TeacherDefenseForm({id}){
     </header>
     <section className="defense-section">
       {error&&<p className="ev-error" role="alert">{error}</p>}
-      {form?.submittedAt&&<div className="defense-submission-success" role="status" tabIndex={-1} ref={confirmationRef}>
-        <span className="defense-submission-success-icon" aria-hidden="true"><TeachingIcon name="check" size={34}/></span>
-        <div>
-          <strong>Form successfully sent to Admin</strong>
-          <p>Your project defense form is ready for the admin to review and assign students to groups.</p>
-          <span className="defense-submission-success-date">Sent {new Date(form.submittedAt).toLocaleString('en-GB',{timeZone:'Africa/Nairobi',dateStyle:'medium',timeStyle:'short'})}</span>
-        </div>
-      </div>}
+      {confirmation&&<SubmissionConfirmation record={confirmation} onClose={()=>setConfirmation(null)}/>}
       {notice&&!form?.submittedAt&&<p className="ev-notice" role="status">{notice}</p>}
       {!form?(!error&&<p role="status">Loading form…</p>):<>
         {records.length>0&&<label>Saved forms
@@ -445,7 +466,8 @@ function TeacherDefenseForm({id}){
 }
 
 function DefenseForm({id,initialCourse}){
-  const {route,teacher}=useDefensePaths();
+  const {route,teacher,judge}=useDefensePaths();
+  const {user}=useAuth();
   const navigate=useNavigate();
   const [groups,setGroups]=useState(()=>[{...empty,groupName:'Group 1'}]);
   const [activeGroup,setActiveGroup]=useState(0);
@@ -465,6 +487,37 @@ function DefenseForm({id,initialCourse}){
   useEffect(()=>{
     const controller=new AbortController();
     const options={signal:controller.signal};
+    if(judge){
+      Promise.all([api.get(endpoint,options),id?api.get(endpoint+'/'+id,options):null])
+        .then(([listResult,recordResult])=>{
+          if(controller.signal.aborted)return;
+          const records=listResult.data.records||[];
+          const opened=recordResult?.data.record;
+          if(opened){
+            const openedWithCourse={
+              ...opened,
+              course:{_id:opened.course,...(recordResult.data.course||{})},
+            };
+            const index=records.findIndex(record=>record._id===opened._id);
+            if(index<0)records.unshift(openedWithCourse);
+            else records[index]=openedWithCourse;
+          }
+          const normalized=records.map(record=>({
+            ...record,
+            courseName:record.course?.title||record.course?.name||'',
+            course:String(record.course?._id||record.course||''),
+            evaluatorName:user?.name||record.evaluatorName||'',
+          }));
+          setGroups(normalized.length?normalized:[{...empty,groupName:'Assigned evaluation'}]);
+          setActiveGroup(Math.max(0,normalized.findIndex(record=>record._id===id)));
+          setCourses([...new Map(normalized.filter(record=>record.course).map(record=>[
+            record.course,{_id:record.course,title:record.courseName,name:record.courseName},
+          ])).values()]);
+          setAssessments([]);
+        })
+        .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
+      return()=>controller.abort();
+    }
     Promise.all([api.get('/evaluations/courses',options),id?api.get(endpoint+'/'+id,options):null,
       api.get(endpoint+'/assessments',options)])
       .then(async ([courseResult,recordResult,assessmentResult])=>{
@@ -484,7 +537,7 @@ function DefenseForm({id,initialCourse}){
       })
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
-  },[id,initialCourse,teacher]);
+  },[id,initialCourse,teacher,judge,user?.name]);
 
   const form=groups[activeGroup];
   const customRubric=form.customRubric;
@@ -506,10 +559,10 @@ function DefenseForm({id,initialCourse}){
     rubric.length>0&&rubric.every(([section])=>validMarks(sectionMarks[section]))&&
     customSections.every(section=>section.title.trim()&&section.questions.length>0&&
       marksSum(section.questions)===section.marks&&section.questions.every(question=>question.title.trim()&&validMarks(question.marks)));
-  const additionalEvaluations=form.additionalEvaluations||[];
+  const additionalEvaluations=judge?[]:form.additionalEvaluations||[];
   const evaluation=additionalEvaluations[activeEvaluator-1];
-  const ratings=evaluation?.ratings||form.ratings;
-  const notes=evaluation?.notes||form.notes;
+  const ratings=judge?form.ratings:evaluation?.ratings||form.ratings;
+  const notes=judge?form.notes:evaluation?.notes||form.notes;
   const assigned=new Set(groups.flatMap((group,index)=>index!==activeGroup&&group.course===form.course&&
     group.assessment===form.assessment&&group.assessmentType===form.assessmentType?group.students:[]));
   const ratingOptions=form.ratingOptions||defaultRatingOptions;
@@ -610,7 +663,7 @@ function DefenseForm({id,initialCourse}){
     ? form.assessmentTotalMarks ?? currentAssessment?.totalMarks
     : currentAssessment?.totalMarks ?? form.assessmentTotalMarks;
   const assessmentMarks=!validAllocation||groupTotal===null?null:groupTotal/totalMarks*assessmentMax;
-  const courseLabel=course?.name||course?.title||'';
+  const courseLabel=course?.name||course?.title||form.courseName||'';
   async function save(finalize,continueToScoring=false){
     if(busy||finalized)return;
     if(!form._id&&(!form.groupName.trim()||!form.students.length)){
@@ -705,7 +758,9 @@ function DefenseForm({id,initialCourse}){
     }
   }
   return <div className="evaluations defense-page">
-    {!courses?(error?<p className="ev-error" role="alert">{error}</p>:<p role="status">Loading evaluation…</p>):<div className="defense-workspace">
+    {!courses?(error?<p className="ev-error" role="alert">{error}</p>:<p role="status">Loading evaluation…</p>)
+      :judge&&!groups.some(group=>group._id)?<section className="defense-section"><h2>No evaluations assigned</h2><p>Project defense forms assigned to you by the administrator will appear here.</p></section>
+      :<div className="defense-workspace">
       <aside className="defense-group-panel defense-group-sidebar defense-screen" aria-labelledby="defense-groups-title">
         <header className="defense-group-heading">
           <TeachingIcon name="users" size={19}/>
@@ -729,20 +784,20 @@ function DefenseForm({id,initialCourse}){
             </button>;
           })}
         </div>
-        <button type="button" disabled={busy||editing} onClick={addGroup}>+ Add Group</button>
+        {!judge&&<button type="button" disabled={busy||editing} onClick={addGroup}>+ Add Group</button>}
         <div className="defense-group-controls">
           <strong>Active group · {form.groupName||'Group '+(activeGroup+1)}</strong>
-          {form._id&&!finalized&&<>
+          {!judge&&form._id&&!finalized&&<>
             <button type="button" disabled={busy||editing} onClick={editGroup}><TeachingIcon name="edit" size={14}/> Edit Group</button>
             <button type="submit" form="defense-group-form" disabled={busy||editing}><TeachingIcon name="check" size={14}/> Save Group</button>
           </>}
           {teacher&&form._id&&!submitted&&<button type="button" className="btn-primary" disabled={busy||editing}
             onClick={sendToAdmin}>Send to Admin</button>}
           {submitted&&<p role="status">Sent to Admin · {new Date(form.submittedAt).toLocaleDateString('en-GB')}</p>}
-          {form._id&&!submitted&&<button type="button" className="defense-delete-group" disabled={busy||editing} onClick={deleteGroup}>
+          {!judge&&form._id&&!submitted&&<button type="button" className="defense-delete-group" disabled={busy||editing} onClick={deleteGroup}>
             <TeachingIcon name="trash" size={14}/> Delete Group
           </button>}
-          {form._id&&!finalized&&<button type="button" disabled={busy||editing}
+          {!judge&&form._id&&!finalized&&<button type="button" disabled={busy||editing}
             aria-expanded={showRubricSetup} aria-controls="defense-rubric-setup"
             onClick={()=>{
               setShowRubricSetup(!showRubricSetup);
@@ -752,24 +807,29 @@ function DefenseForm({id,initialCourse}){
             aria-controls="defense-scoring" onClick={()=>showScoring&&!finalized?setShowScoring(false):openScoring()}>
             {showScoring&&!finalized?'Hide Scoring':'Open Scoring'}
           </button>}
-          {form._id&&!finalized&&showScoring&&<button type="button" disabled={busy||editing||!form.course}
+          {!judge&&form._id&&!finalized&&showScoring&&<button type="button" disabled={busy||editing||!form.course}
             onClick={()=>save(true)}>Finalize Evaluation</button>}
-          {form._id&&<>
+          {!judge&&form._id&&<>
             {!finalized&&<button type="button" disabled={busy||editing} onClick={()=>setEditingWording(true)}>Edit Form</button>}
             {!submitted&&<button type="button" disabled={busy||editing} onClick={()=>{setError('');setNotice('');setEditingMarks(true);}}>Edit Marks</button>}
+            <button type="button" disabled={editing} onClick={()=>window.print()}><TeachingIcon name="file" size={15}/> Print / Save PDF</button>
+          </>}
+          {judge&&form._id&&!finalized&&<>
+            <button type="button" disabled={busy||editing} onClick={()=>save(false)}>{busy?'Saving…':'Save evaluation'}</button>
+            <button type="button" className="btn-primary" disabled={busy||editing} onClick={()=>save(true)}>Finalize evaluation</button>
             <button type="button" disabled={editing} onClick={()=>window.print()}><TeachingIcon name="file" size={15}/> Print / Save PDF</button>
           </>}
         </div>
       </aside>
       <div className="defense-workspace-form">
-      {(showScoring||finalized||editingMarks)&&(!finalized||additionalEvaluations.length>0)&&<div className="defense-group-panel defense-evaluator-picker defense-screen">
-        {additionalEvaluations.length>0&&<label>Evaluator
+      {(showScoring||finalized||editingMarks)&&(!finalized||additionalEvaluations.length>0||judge)&&<div className="defense-group-panel defense-evaluator-picker defense-screen">
+        {!judge&&additionalEvaluations.length>0&&<label>Evaluator
           <select value={activeEvaluator} disabled={busy||editing} onChange={event=>setActiveEvaluator(Number(event.target.value))}>
             <option value={0}>{form.evaluatorName||'Evaluator 1'}</option>
             {additionalEvaluations.map((item,index)=><option key={index} value={index+1}>{item.name||`Evaluator ${index+2}`}</option>)}
           </select>
         </label>}
-        {!finalized&&<div className="defense-group-tabs">
+        {!judge&&!finalized&&<div className="defense-group-tabs">
           <button type="button" disabled={busy||editing} onClick={()=>{
             patch('additionalEvaluations',[...additionalEvaluations,{name:'',ratings:{},notes:{}}]);
             setActiveEvaluator(additionalEvaluations.length+1);
@@ -802,7 +862,7 @@ function DefenseForm({id,initialCourse}){
           <section className="defense-section defense-group-details" ref={groupDetailsRef}>
             <DefenseSectionTitle icon="users">{form._id?wording('A',candidateTitle):'Group Creation'}</DefenseSectionTitle>
             <div className="defense-details">
-              <label className="defense-screen"><span className="defense-field-label"><TeachingIcon name="clipboard" size={15}/> Exam or quiz</span><select value={assessmentValue} required={!form._id} onChange={event=>{
+              {!judge&&<label className="defense-screen"><span className="defense-field-label"><TeachingIcon name="clipboard" size={15}/> Exam or quiz</span><select value={assessmentValue} required={!form._id} onChange={event=>{
                 const selected=courseAssessments.find(item=>assessmentKey(item)===event.target.value);
                 if(!selected)return;
                 setNotice('');
@@ -820,34 +880,34 @@ function DefenseForm({id,initialCourse}){
                     </option>)}
                   </optgroup>;
                 })}
-              </select></label>
+              </select></label>}
               {form.assessmentTitle&&<p className="defense-print">Assessment · {form.assessmentTitle}</p>}
               <p className="defense-print">Course · {courseLabel}</p>
               {details.map(([field,label,icon,placeholder,maxLength])=><label key={field}>
                 <span className="defense-field-label"><span className="defense-screen"><TeachingIcon name={icon} size={15}/></span>{label}</span>
-                <input className="defense-screen" placeholder={placeholder} maxLength={maxLength} value={form[field]}
+                <input className="defense-screen" placeholder={placeholder} maxLength={maxLength} value={form[field]} readOnly={judge}
                   onChange={event=>patch(field,event.target.value)}/>
                 <span className="defense-print">{form[field]||'—'}</span>
               </label>)}
-              <CohortPicker key={activeGroup+':'+form.course} course={form.course} cohort={form.cohort}
+              {judge?<p>Training cohort · {form.cohort||'—'} {form.cohortYear&&`(${form.cohortYear})`}</p>:<CohortPicker key={activeGroup+':'+form.course} course={form.course} cohort={form.cohort}
                 cohortYear={form.cohortYear} autoSelect={!finalized&&(!form._id||!form.students.length)} onChange={({name,academicYear})=>{
                   setNotice('');
                   setForm(previous=>({...previous,cohort:name,cohortYear:academicYear,students:[]}));
-                }}/>
+                }}/>}
               <label><span className="defense-field-label"><span className="defense-screen"><TeachingIcon name="calendar" size={15}/></span>Defense date</span>
-                <input className="defense-screen" type="date" value={form.defenseDate} onChange={event=>patch('defenseDate',event.target.value)}/>
+                <input className="defense-screen" type="date" value={form.defenseDate} readOnly={judge} onChange={event=>patch('defenseDate',event.target.value)}/>
                 <span className="defense-print">{form.defenseDate||'—'}</span>
               </label>
               <label><span className="defense-field-label"><span className="defense-screen"><TeachingIcon name="profile" size={15}/></span>Evaluator name</span>
-                <input className="defense-screen" placeholder="Enter evaluator name" maxLength={200} value={(evaluation?evaluation.name:form.evaluatorName)||''}
+                <input className="defense-screen" placeholder="Enter evaluator name" maxLength={200} value={(evaluation?evaluation.name:form.evaluatorName)||''} readOnly={judge}
                   onChange={event=>updateEvaluation(evaluation?'name':'evaluatorName',event.target.value)}/>
                 <span className="defense-print">{(evaluation?evaluation.name:form.evaluatorName)||'—'}</span>
               </label>
             </div>
-            <div className="defense-screen"><StudentPicker key={JSON.stringify([activeGroup,form.course,form.cohort,form.cohortYear])}
+            {!judge&&<div className="defense-screen"><StudentPicker key={JSON.stringify([activeGroup,form.course,form.cohort,form.cohortYear])}
               course={form.course} cohort={form.cohort} cohortYear={form.cohortYear}
               assessment={form.assessment} assessmentType={form.assessmentType} defense={form._id}
-              assigned={assigned} selected={form.students} onChange={value=>patch('students',value)}/></div>
+              assigned={assigned} selected={form.students} onChange={value=>patch('students',value)}/></div>}
           </section>
           {form._id&&!finalized&&showRubricSetup&&<section id="defense-rubric-setup" ref={rubricSetupRef} className="defense-section defense-mark-allocation defense-screen">
             <DefenseSectionTitle icon="clipboard">Step 2 · Set Up Rubric</DefenseSectionTitle>

@@ -96,6 +96,16 @@ export default function App() {
             }
           />
 
+          {/* Judge area */}
+          <Route
+            path="/judge/*"
+            element={
+              <ProtectedRoute roles={['judge']}>
+                <DashboardLayout role="judge" />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

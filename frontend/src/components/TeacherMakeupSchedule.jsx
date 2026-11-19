@@ -1,7 +1,9 @@
 import {useState,useEffect,useRef} from 'react';
 import TeachingIcon from './TeachingIcon';
+import {matchesPageSearch,usePageSearch} from '../context/PageSearchContext';
 import {teachingDateKey} from '../pages/teacher/teachingSchedule.mjs';
 import './TeachingPages.css';
+import './ClassDetails.css';
 
 const classDay=row=>row.date||teachingDateKey(row.start);
 const format=(value,options)=>{const date=new Date(value);return Number.isNaN(date.getTime())?'—':date.toLocaleString('en-GB',{timeZone:'Africa/Nairobi',...options});};
@@ -14,10 +16,65 @@ const summaryCards = [
 ];
 
 const emptyFilters={course:'',cohort:'',teacher:'',from:'',to:''};
+export function StudentMakeupSchedule({rows,loading,error}) {
+  const [search]=usePageSearch();
+  const visible=rows.filter(row=>matchesPageSearch(search,row.lesson?.title,row.course,row.cohort,row.originalDate,row.date,row.displayStatus));
+  const [selectedId,setSelectedId]=useState(null);
+  const selected=rows.find(row=>row._id===selectedId);
+  return <section className="ms-student-notices" aria-label="Makeup class notices">
+    {error&&<p className="academy-error" role="alert">{error}</p>}
+    {loading?<p role="status">Loading makeup classes…</p>:!visible.length?
+      <p className="ms-student-empty">{search?'No makeup classes match your search.':'No makeup classes have been scheduled for your enrolled courses.'}</p>:
+      visible.map(row=><article className="ms-student-notice" key={row._id}>
+        <header><span className="ms-student-notice-icon"><TeachingIcon name="graduate" size={25}/></span>
+          <div><h2>Makeup class</h2><p>{row.lesson?.title||'Replacement lesson'}</p></div>
+          <button type="button" className="ms-student-view" aria-label={'View details for '+(row.lesson?.title||'makeup class')}
+            onClick={()=>setSelectedId(row._id)}>View Details<TeachingIcon name="arrow" size={17}/></button>
+        </header>
+        <dl>{[
+          ['Course','book',row.course?.title||row.course?.name],
+          ['Cohort','layers',row.cohort],
+          ['Original date','calendar',row.originalDate],
+          ['Makeup date','reschedule',date(classDay(row))],
+          ['Status','clock',row.displayStatus],
+        ].map(([label,icon,value])=><div key={label}>
+          <dt><TeachingIcon name={icon} size={18}/>{label}</dt>
+          <dd>{label==='Status'?<span className="ms-class-status" data-status={String(value||'').toLowerCase()}>
+            <TeachingIcon name={value==='Cancelled'?'cross':'check'} size={16}/>{value||'—'}
+          </span>:value||'—'}</dd>
+        </div>)}</dl>
+      </article>)}
+    {selected&&<ClassDetails row={selected} onClose={()=>setSelectedId(null)}/>}
+  </section>;
+}
+
 function ClassDetails({row,onClose}) {
   const ref=useRef(null);
   useEffect(()=>{const previous=document.activeElement;ref.current.showModal();return()=>{ref.current?.close();previous?.focus();};},[]);
-  return <dialog ref={ref} className="ms-dialog" aria-label="Makeup class details" onCancel={onClose}><header><h2>Class details</h2><button type="button" aria-label="Close class details" onClick={onClose}>×</button></header><h3>{row.lesson?.title||'Replacement lesson'}</h3><p>{row.lesson?.description}</p><dl>{[['Course',row.course?.title||row.course?.name],['Cohort',row.cohort],['Original date',row.originalDate],['Makeup date',date(classDay(row))],['Status',row.displayStatus],['Reason',row.reason]].filter(([label,value])=>label!=='Reason'||value).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value||'—'}</dd></div>)}</dl><button type="button" className="btn btn-secondary" onClick={onClose}>Close details</button></dialog>;
+  const fields=[
+    ['Course','book',row.course?.title||row.course?.name],
+    ['Cohort','layers',row.cohort],
+    ['Original date','calendar',row.originalDate],
+    ['Makeup date','reschedule',date(classDay(row))],
+    ['Status','clock',row.displayStatus],
+    ['Reason','file',row.reason],
+  ];
+  return <dialog ref={ref} className="ms-dialog ms-class-details" aria-labelledby="ms-class-details-title" onCancel={onClose}>
+    <header>
+      <span className="ms-class-emblem" aria-hidden="true"><TeachingIcon name="graduate" size={37}/></span>
+      <div className="ms-class-heading"><h2 id="ms-class-details-title">Class details</h2><p>{row.lesson?.title||'Replacement lesson'}</p></div>
+      <button type="button" className="ms-class-dismiss" aria-label="Close class details" onClick={onClose}>×</button>
+    </header>
+    {row.lesson?.description&&<p className="ms-class-description">{row.lesson.description}</p>}
+    <dl>{fields.filter(([label,,value])=>label!=='Reason'||value).map(([label,icon,value])=>
+      <div key={label}>
+        <dt><TeachingIcon name={icon} size={21}/><span>{label}</span></dt>
+        <dd>{label==='Status'?<span className="ms-class-status" data-status={String(value||'').toLowerCase()}>
+          <TeachingIcon name={value==='Cancelled'?'cross':'check'} size={19}/>{value||'—'}
+        </span>:value||'—'}</dd>
+      </div>)}</dl>
+    <footer><button type="button" className="ms-class-close" onClick={onClose}>Close details</button></footer>
+  </dialog>;
 }
 export default function TeacherMakeupSchedule({rows,loading,error,busy,onComplete,search='',admin=false,student=false,filterOptions={},onCreate,onReschedule,onCancel}) {
   const [status,setStatus]=useState('All'),[query,setQuery]=useState(''),[filters,setFilters]=useState(emptyFilters),[selected,setSelected]=useState(null),[notice,setNotice]=useState(''),[now,setNow]=useState(()=>new Date());
@@ -33,7 +90,7 @@ export default function TeacherMakeupSchedule({rows,loading,error,busy,onComplet
   const cohorts=[...new Set([...(filterOptions.contracts||[]).filter(contract=>(!filters.teacher||String(contract.teacher?._id||contract.teacher)===filters.teacher)&&(!filters.course||String(contract.course?._id||contract.course)===filters.course)).map(contract=>contract.cohort),...rows.filter(row=>(!filters.teacher||String(row.teacher?._id)===filters.teacher)&&(!filters.course||String(row.course?._id)===filters.course)).map(row=>row.cohort)].filter(Boolean))].sort();
   const visible=rows.filter(row=>{
     const text=[row.lesson?.title,row.lesson?.description,row.course?.title,row.course?.name,row.course?.courseCode,row.cohort,row.displayStatus,row.teacher?.user?.name].join(' ').toLowerCase();
-    return (status==='All'||(status==='Today'?isToday(row):status==='Overdue'?needsReschedule(row):row.displayStatus===status))&&(!filters.course||String(row.course?._id||row.course?.title||row.course?.name)===filters.course)&&(!filters.cohort||row.cohort===filters.cohort)&&(!filters.teacher||String(row.teacher?._id)===filters.teacher)&&(!filters.from||classDay(row)>=filters.from)&&(!filters.to||classDay(row)<=filters.to)&&text.includes(query.trim().toLowerCase())&&text.includes(search.trim().toLowerCase());
+    return (status==='All'||(status==='Today'?isToday(row):status==='Overdue'?needsReschedule(row):row.displayStatus===status))&&(!filters.course||String(row.course?._id||row.course?.title||row.course?.name)===filters.course)&&(!filters.cohort||row.cohort===filters.cohort)&&(!filters.teacher||String(row.teacher?._id)===filters.teacher)&&(!filters.from||classDay(row)>=filters.from)&&(!filters.to||classDay(row)<=filters.to)&&matchesPageSearch(query,text)&&matchesPageSearch(search,text);
   }).sort((a,b)=>classDay(a).localeCompare(classDay(b)));
   const complete=async row=>{setNotice('');if(await onComplete(row))setNotice('Class completed. Teaching progress and contract balance updated.');};
   const nextDate = nextClass ? classDay(nextClass) : '';
@@ -57,11 +114,11 @@ export default function TeacherMakeupSchedule({rows,loading,error,busy,onComplet
       </div>
       <button type="button" className="btn btn-secondary" onClick={()=>setSelected(nextClass)}><TeachingIcon name="eye" size={15}/> View class</button>
     </aside>}
-    <section className="ms-filter-panel" aria-label="Filter makeup classes"><header><h2><TeachingIcon name="filter" size={18}/>Find scheduled classes</h2></header><div className="ms-filter-fields">{admin&&<label>Teacher<select value={filters.teacher} onChange={event=>{
+    {admin&&<section className="ms-filter-panel" aria-label="Filter makeup classes"><header><h2><TeachingIcon name="filter" size={18}/>Find scheduled classes</h2></header><div className="ms-filter-fields">{admin&&<label>Teacher<select value={filters.teacher} onChange={event=>{
       const teacher=event.target.value;
       const ids=[...new Set([...(filterOptions.assignments||[]).filter(assignment=>String(assignment.teacher?._id||assignment.teacher)===teacher).map(assignment=>String(assignment.course?._id||assignment.course)),...rows.filter(row=>String(row.teacher?._id)===teacher).map(row=>String(row.course?._id||''))].filter(Boolean))];
       setFilters({...filters,teacher,course:teacher&&ids.length===1?ids[0]:'',cohort:''});
-    }}><option value="">All teachers</option>{teachers.map(([key,name])=><option key={key} value={key}>{name}</option>)}</select></label>}<label>Course<select value={filters.course} onChange={event=>setFilters({...filters,course:event.target.value,cohort:''})}><option value="">All courses</option>{courses.map(([key,title])=><option key={key} value={key}>{title}</option>)}</select></label><label>Cohort<select value={filters.cohort} onChange={event=>setFilters({...filters,cohort:event.target.value})}><option value="">All cohorts</option>{cohorts.map(cohort=><option key={cohort}>{cohort}</option>)}</select></label><label>Search<input type="search" value={query} placeholder="Lesson, topic or course…" onChange={event=>setQuery(event.target.value)}/></label><label>Date from<input type="date" value={filters.from} max={filters.to||undefined} onChange={event=>setFilters({...filters,from:event.target.value})}/></label><label>Date to<input type="date" value={filters.to} min={filters.from||undefined} onChange={event=>setFilters({...filters,to:event.target.value})}/></label></div></section>
+    }}><option value="">All teachers</option>{teachers.map(([key,name])=><option key={key} value={key}>{name}</option>)}</select></label>}<label>Course<select value={filters.course} onChange={event=>setFilters({...filters,course:event.target.value,cohort:''})}><option value="">All courses</option>{courses.map(([key,title])=><option key={key} value={key}>{title}</option>)}</select></label><label>Cohort<select value={filters.cohort} onChange={event=>setFilters({...filters,cohort:event.target.value})}><option value="">All cohorts</option>{cohorts.map(cohort=><option key={cohort}>{cohort}</option>)}</select></label><label>Search<input type="search" value={query} placeholder="Lesson, topic or course…" onChange={event=>setQuery(event.target.value)}/></label><label>Date from<input type="date" value={filters.from} max={filters.to||undefined} onChange={event=>setFilters({...filters,from:event.target.value})}/></label><label>Date to<input type="date" value={filters.to} min={filters.from||undefined} onChange={event=>setFilters({...filters,to:event.target.value})}/></label></div></section>}
     <div className="ms-tabs" role="group" aria-label="Filter by class status">{['All','Scheduled','Today','Overdue','Completed','Cancelled'].map(value=><button type="button" key={value} aria-pressed={status===value} onClick={()=>setStatus(value)}>{value==='All'?'All Classes':value}<span>{count(value)}</span></button>)}</div>
     <section className="ms-table-panel" aria-label="Makeup class schedule">{loading?<p className="ms-empty" role="status">Loading your classes…</p>:!visible.length?<div className="ms-empty"><TeachingIcon name="calendar" size={32}/><h3>{rows.length?'No matching classes':'No makeup classes yet'}</h3><p>{rows.length?'Try another search, status or date range.':'Your assigned makeup lessons will appear here once scheduled.'}</p></div>:<div className="ms-table-scroll"><table><thead><tr>{['#','Lesson / Topic',...(admin?['Teacher']:[]),'Course','Cohort','Original Date','Makeup Date','Status','Action'].map(label=><th key={label}>{label}</th>)}</tr></thead><tbody>{visible.map((row,index)=>{const label=isToday(row)?'Today':needsReschedule(row)?'Overdue':row.displayStatus;const allowed=isToday(row);return <tr key={row._id}><td>{String(index+1).padStart(2,'0')}</td><td><div className="ms-topic"><span className={'tp-icon '+['blue','purple','amber','green'][index%4]}><TeachingIcon name="file"/></span><div><strong>{row.lesson?.title||'Replacement lesson'}</strong>{row.lesson?.description&&<small>{row.lesson.description}</small>}</div></div></td>{admin&&<td>{row.teacher?.user?.name||'—'}</td>}<td><strong className="ms-course-name">{row.course?.title||row.course?.name||'Assigned course'}</strong>{row.course?.courseCode&&<small className="ms-course-code">{row.course.courseCode}</small>}</td><td>{row.cohort||'—'}</td><td>{row.originalDate?date(row.originalDate+'T12:00:00+03:00'):'—'}</td><td>{row.status==='cancelled'?'—':date(classDay(row))}</td><td><span className={'ms-status '+label.toLowerCase()}><i/>{label}</span></td><td><div className="ms-row-actions"><button type="button" className="btn btn-secondary" onClick={()=>setSelected(row)}><TeachingIcon name="eye" size={15}/>View</button>{admin&&row.displayStatus!=='Completed'&&<><button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>onReschedule(row)}>{row.displayStatus==='Cancelled'?'Reschedule':'Edit / Reschedule'}</button>{row.displayStatus!=='Cancelled'&&<button type="button" className="btn ms-cancel-button" disabled={busy} onClick={()=>onCancel(row)}>Cancel class</button>}</>}{!admin&&!student&&<button type="button" className={'btn '+(allowed?'btn-primary':'btn-secondary')} disabled={busy||!allowed} title={row.displayStatus==='Scheduled'&&!allowed?(needsReschedule(row)?'Contact Admin to reschedule this overdue class.':'Complete this lesson on its scheduled day in Nairobi.'):undefined} onClick={()=>complete(row)}>{row.displayStatus==='Completed'?'✓ Completed':row.displayStatus==='Cancelled'?'Cancelled':'✓ Mark completed'}</button>}</div></td></tr>;})}</tbody></table></div>}</section>
     {!student && <p className="ms-help">{admin?'Admin schedules, reschedules and cancels classes. Only the assigned teacher can mark a class completed.':'Complete lessons after teaching on the scheduled date in Nairobi. For overdue classes, contact Admin to reschedule.'}</p>}

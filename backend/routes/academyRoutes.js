@@ -235,7 +235,10 @@ router.get('/makeup-classes',authorizeRoles('admin','teacher','student'),asyncHa
   if(req.user.role==='student'){
     const student=await Student.findOne({user:req.user._id});
     const enrollments=student?await Enrollment.find({student:student._id,status:'enrolled'}).populate('course','batch academicYear').lean():[];
-    const scopes=enrollments.filter(e=>e.course).map(e=>({course:e.course._id,batch:enrollmentBatch(e),academicYear:e.academicYear}));
+    const scopes=enrollments.filter(e=>e.course).map(e=>({
+      course:e.course._id,academicYear:e.academicYear,
+      ...(req.query.view==='course-notices'?{}:{batch:enrollmentBatch(e)}),
+    }));
     if(!scopes.length)return res.json({classes:[]});
     filter={$or:scopes};
   }

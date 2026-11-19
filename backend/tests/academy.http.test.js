@@ -132,7 +132,7 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   assert(cohortReport.body.options.yearCohorts.some(row=>row.cohort==='Batch 1'));
   assert.strictEqual((await request('POST','/enrollments',{student:student._id,course:course._id,academicYear:'2027',batch:'Batch 1'})).status,400);
   await request('POST','/academy/batches',{name:'Batch 2',academicYear:'2026'});
-  const batchOnlyCourse=await m.Course.create({name:'Batch dropdown course',courseCode:'BATCH-DROP',academicYear:'2026',batch:'Batch 2'});
+  const batchOnlyCourse=await m.Course.create({name:'Batch dropdown course',courseCode:'BATCH-DROP',academicYear:'2026',batch:'Batch 2',durationWeeks:16});
   await m.CourseTeacher.create({teacher:teacher._id,course:batchOnlyCourse._id,academicYear:'2026'});
   assert.deepStrictEqual((await request('GET','/academy/batches?courseId='+batchOnlyCourse._id,null,tu)).body.batches.map(batch=>batch.name),['Batch 2'],'Configured course batches load before enrollment');
   await m.Batch.create({name:'Contract only',academicYear:'2026'});
@@ -302,24 +302,29 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   await m.Enrollment.updateOne({student:student._id,course:course._id},{$set:{batch:'Different batch'}});
   assert.strictEqual((await request('GET','/student/courses',null,su)).body.classSchedules.length,0);
   assert.strictEqual((await request('GET','/academy/makeup-classes',null,su)).body.classes.length,0);
+  const courseNotices=(await request('GET','/academy/makeup-classes?view=course-notices',null,su)).body.classes;
+  assert(courseNotices.some(row=>row._id===replacementId),'Course notices include makeup classes from another cohort in the enrolled course');
+  assert(courseNotices.every(row=>String(row.course._id)===String(course._id)));
+  assert(courseNotices.every(row=>!row.reason&&!row.createdBy&&!row.teacher),'Student notices omit private staff details');
   await request('DELETE','/students/'+student._id);assert(await m.Student.exists({_id:student._id}));assert.strictEqual((await m.Enrollment.findOne({student:student._id})).status,'dropped');
+  assert.strictEqual((await request('GET','/academy/makeup-classes?view=course-notices',null,su)).status,403);
   response=await request('GET','/academy/reports/dropped');assert.strictEqual(response.body.cards['Total dropped students'],1);assert(response.body.rows[0].date);
   assert.deepStrictEqual((await request('GET',internshipRoster)).body.students,[]);
   assert.strictEqual((await request('POST','/internships',internship)).status,400,'A dropped student cannot be selected');
-  const firstCourse=await request('POST','/courses',{name:'Web Development'});
+  const firstCourse=await request('POST','/courses',{name:'Web Development',durationWeeks:16});
   assert.strictEqual(firstCourse.status,201);
   assert.strictEqual(firstCourse.body.data.courseCode,'TA-WD-101');
-  const secondCourse=await request('POST','/courses',{name:'CCNA'});
+  const secondCourse=await request('POST','/courses',{name:'CCNA',durationWeeks:16});
   assert.strictEqual(secondCourse.status,201);
   assert.strictEqual(secondCourse.body.data.courseCode,'TA-CCNA-102');
-  const thirdCourse=await request('POST','/courses',{name:'Graphic Design'});
+  const thirdCourse=await request('POST','/courses',{name:'Graphic Design',durationWeeks:16});
   assert.strictEqual(thirdCourse.status,201);
   assert.strictEqual(thirdCourse.body.data.courseCode,'TA-GD-103');
   await m.Sequence.deleteOne({_id:'course-code:TA'});
   await m.Sequence.create({_id:'course-code:TA-WD-',value:104});
   const resumed=await Promise.all([
-    request('POST','/courses',{name:'CCNA'}),
-    request('POST','/courses',{name:'Web Development'}),
+    request('POST','/courses',{name:'CCNA',durationWeeks:16}),
+    request('POST','/courses',{name:'Web Development',durationWeeks:16}),
   ]);
   assert(resumed.every(result=>result.status===201));
   assert.deepStrictEqual(resumed.map(result=>Number(result.body.data.courseCode.split('-').at(-1))).sort(),[105,106]);

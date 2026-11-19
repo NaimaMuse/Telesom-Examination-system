@@ -1,5 +1,5 @@
 import useAutoRefresh from '../../hooks/useAutoRefresh';
-import { usePageSearch } from '../../context/PageSearchContext';
+import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
@@ -58,8 +58,7 @@ export default function TeacherResults({scope,onEditingChange}) {
   };
 
   const visibleStudents = students.filter((student) => (
-    [student.name, student.studentId, student.email]
-      .some((value) => String(value || '').toLowerCase().includes(search.toLowerCase()))
+    matchesPageSearch(search,student.name,student.studentId,student.email,student.marksObtained)
   ));
   const pageCount = Math.max(1, Math.ceil(visibleStudents.length / STUDENTS_PER_PAGE));
   const currentPage = Math.min(page, pageCount);

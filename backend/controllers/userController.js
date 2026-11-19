@@ -315,8 +315,49 @@ const createTeacher = async (req, res, next) => {
   }
 };
 
+const createJudge = async (req, res, next) => {
+  try {
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const password = req.body.password;
+    if (!name || !email || !isValidTeacherPassword(password)) {
+      res.status(400);
+      return next(new Error('Enter a name, valid email, and password of 8–128 characters (maximum 72 UTF-8 bytes).'));
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password: await hashPassword(password),
+      role: 'judge',
+      isActive: true,
+    });
+    return res.status(201).json({
+      success: true,
+      judge: toSafeUser(user),
+      credentials: {email: user.email, temporaryPassword: password},
+    });
+  } catch (error) {
+    return handleAccountError(error, res, next, 'A judge account with this email already exists');
+  }
+};
+
+const listJudges = async (req, res, next) => {
+  try {
+    const judges = await User.find({role: 'judge'})
+      .select('name email isActive createdAt')
+      .sort({name: 1, _id: 1})
+      .lean();
+    return res.json({judges});
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   createStudent,
   createTeacher,
+  createJudge,
+  listJudges,
   isValidTeacherPassword,
 };

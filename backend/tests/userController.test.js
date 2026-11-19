@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const {verifyPassword} = require('../utils/passwords');
-const { createStudent, createTeacher } = require('../controllers/userController');
+const { createStudent, createTeacher, createJudge } = require('../controllers/userController');
 const User = require('../models/User');
 const Student = require('../models/Student');
 const Teacher = require('../models/Teacher');
@@ -281,6 +281,29 @@ const runTests = async () => {
     const {req,res,next,getResult}=createMock({name:'Teacher',email:'teacher@example.com',password:'short'});
     await createTeacher(req,res,next);
     assert(getResult().statusCode===400, 'Teacher creation rejects a short initial password');
+  }
+
+  {
+    let stored;
+    User.create=async data=>{
+      stored={_id:new mongoose.Types.ObjectId(),...data};
+      return stored;
+    };
+    const {req,res,next,getResult}=createMock({
+      name:'Defense Judge',email:'  JUDGE@EXAMPLE.COM  ',password:'JudgePassword123!',
+    });
+    await createJudge(req,res,next);
+    const result=getResult(),data=result.responseBody;
+    assert(result.statusCode===201&&stored.email==='judge@example.com'&&stored.role==='judge'&&
+      stored.password.startsWith('$argon2id$')&&await verifyPassword('JudgePassword123!',stored.password)&&
+      data.credentials.email==='judge@example.com'&&data.credentials.temporaryPassword==='JudgePassword123!'&&
+      !data.judge.password,
+      'Judge account returns shareable credentials and stores only an Argon2id password hash');
+  }
+  {
+    const {req,res,next,getResult}=createMock({name:'Judge',email:'judge@example.com',password:'short'});
+    await createJudge(req,res,next);
+    assert(getResult().statusCode===400,'Judge account creation rejects a short password');
   }
 
   User.findOne = origUserFindOne;

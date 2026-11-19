@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^node --check backend\\\\routes\\\\projectDefenseRoutes\\.js; node --check backend\\\\controllers\\\\userController\\.js; node --check backend\\\\controllers\\\\authController\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

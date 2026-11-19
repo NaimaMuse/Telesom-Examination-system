@@ -10,7 +10,10 @@ const schema = new Schema({
   students: [{type:Schema.Types.ObjectId,ref:'Student'}],
   groupAssignmentEnforced: {type:Boolean},
   evaluator: {type:Schema.Types.ObjectId,ref:'User',required:true},
+  assignedJudge: {type:Schema.Types.ObjectId,ref:'User',default:null,index:true},
   evaluatorName: {type:String,trim:true,maxlength:200,default:''},
+  teacherOwned: {type:Boolean,default:false},
+  submittedAt: {type:Date},
   additionalEvaluations: [{
     name: {type:String,trim:true,maxlength:200,default:''},
     ratings: {type:Map,of:{type:Number,min:1},default:{}},
@@ -22,6 +25,7 @@ const schema = new Schema({
   cohortYear: {type:String,trim:true,maxlength:30,default:''},
   defenseDate: {type:String,default:''},
   projectTotalMarks: {type:Number,default:90},
+  appendCustomRubric: {type:Boolean},
   customRubric: {type:[new Schema({
     key:String,title:String,marks:Number,
     questions:[new Schema({key:String,title:String,marks:Number},{_id:false})],

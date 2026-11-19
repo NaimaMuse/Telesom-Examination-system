@@ -50,8 +50,10 @@ const run = async () => {
       const response = await fetch(baseUrl + path, { method: 'POST' });
       assert.strictEqual(response.status, 401, `${path} must require auth`);
     }
+    const judgeList = await fetch(baseUrl + '/api/users/judges');
+    assert.strictEqual(judgeList.status, 401, 'Judge account listing must require admin authentication');
 
-    for (const role of ['admin','teacher','student']) {
+    for (const role of ['admin','teacher','student','judge']) {
       const registration = await fetch(baseUrl+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role,name:'Blocked',email:'blocked@example.com'})});
       assert.strictEqual(registration.status,403,'Public account creation must be disabled');
     }

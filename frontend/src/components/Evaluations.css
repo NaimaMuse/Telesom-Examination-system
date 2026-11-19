@@ -236,11 +236,12 @@
   isolation: isolate;
   display: flex;
   align-items: center;
-  gap: clamp(10px, 1.4cqw, 22px);
-  min-height: clamp(76px, 9.5cqw, 160px);
-  padding: 10px 30% 10px 3%;
+  gap: 13px;
+  min-height: 74px;
+  padding: 10px 27% 10px 2%;
   overflow: hidden;
-  background: linear-gradient(108deg, #f4faf7, #e7f7ee);
+  background: linear-gradient(108deg, #075237, #087343);
+  color: #fff;
 }
 .ev-student-hero::after {
   position: absolute;
@@ -254,17 +255,17 @@
 .ev-student-hero-icon {
   display: grid;
   flex: none;
-  width: clamp(36px, 4.5cqw, 68px);
+  width: 43px;
   aspect-ratio: 1;
   place-items: center;
   border-radius: 24%;
-  background: linear-gradient(145deg, #19784b, #005033);
+  background: #ffffff1a;
   color: #fff;
   box-shadow: 0 10px 24px #0a5f3626;
 }
 .ev-student-hero-icon svg { width: 62%; height: 62%; }
-.ev-student-hero h2 { margin: 0 0 .15em; color: #081e21; font-size: clamp(22px, 2.6cqw, 42px); line-height: 1.1; }
-.ev-student-hero p { margin: 0; color: #314052; font-size: clamp(12px, 1.15cqw, 18px); line-height: 1.38; }
+.ev-student-hero h2 { margin: 0 0 4px; color: #fff; font-size: clamp(19px, 1.6cqw, 24px); line-height: 1.15; }
+.ev-student-hero p { margin: 0; color: #edf8f1; font-size: 12px; line-height: 1.4; }
 .ev-student-list > :not(.ev-student-hero) { margin-inline: 2.3%; }
 .ev-student-list .ev-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: clamp(10px, 1.3cqw, 22px); }
 .ev-student-card {

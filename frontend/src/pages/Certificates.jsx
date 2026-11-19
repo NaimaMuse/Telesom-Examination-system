@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../services/api';
+import {usePageSearch,matchesPageSearch} from '../context/PageSearchContext';
 import TeachingIcon from '../components/TeachingIcon';
 import './Certificates.css';
 
@@ -40,6 +41,7 @@ function IssuedCertificateRow({ certificate }) {
 }
 
 function CourseCertificates() {
+  const [search]=usePageSearch();
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState('');
   const [rows, setRows] = useState([]);
@@ -58,8 +60,9 @@ function CourseCertificates() {
   const focusHistoryAfterIssue = useRef(false);
   const preparing = Boolean(draft);
   const course = courses.find(item => item._id === courseId);
-  const candidates = rows.filter(eligible);
-  const allSelected = candidates.length > 0 && candidates.length === selected.size;
+  const visibleRows=rows.filter(row=>matchesPageSearch(search,row.studentName,row.studentId,row.name,row.status,row.certificate,course?.title,course?.code));
+  const candidates = visibleRows.filter(eligible);
+  const allSelected = candidates.length > 0 && candidates.every(row=>selected.has(row._id));
   const totalCredit = course?.creditHours > 0 ? `${course.creditHours} hours` : 'Not set';
 
   useEffect(() => {
@@ -251,7 +254,7 @@ function CourseCertificates() {
             <input ref={selectAllRef} type="checkbox" checked={allSelected} disabled={busy || !candidates.length}
               onChange={() => setSelected(new Set(allSelected ? [] : candidates.map(row => row._id)))} /> Select all
           </label></th><th scope="col">Student</th><th scope="col">Year / Cohort</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
-          <tbody>{rows.map(row => <tr key={row._id} className={selected.has(row._id) ? 'certificates-row-selected' : undefined}>
+          <tbody>{visibleRows.map(row => <tr key={row._id} className={selected.has(row._id) ? 'certificates-row-selected' : undefined}>
             <td><input type="checkbox" aria-label={`Select ${row.studentName}`} checked={selected.has(row._id)}
               disabled={busy || !eligible(row)} onChange={() => toggle(row._id)} /></td>
             <td><strong>{row.studentName}</strong><small>{row.studentId}</small></td>
@@ -319,6 +322,7 @@ function CourseCertificates() {
 }
 
 function CertificateHistory({ admin = false, headingRef }) {
+  const [search]=usePageSearch();
   const [historyError, setHistoryError] = useState('');
   const [loading, setLoading] = useState(true);
   const [certificates, setCertificates] = useState([]);
@@ -330,7 +334,7 @@ function CertificateHistory({ admin = false, headingRef }) {
     const controller = new AbortController();
     setLoading(true);
     setHistoryError('');
-    api.get('/certificates', { params: { page }, signal: controller.signal }).then(({ data }) => {
+    api.get('/certificates', { params: { page,search }, signal: controller.signal }).then(({ data }) => {
       setCertificates(data.data);
       setPages(data.pages);
       setTotal(data.total ?? null);
@@ -340,7 +344,8 @@ function CertificateHistory({ admin = false, headingRef }) {
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [page]);
+  }, [page,search]);
+  useEffect(()=>setPage(1),[search]);
 
   return <section className={admin ? 'certificates-panel certificates-history' : 'certificates-panel student-achievement-panel'} aria-label={admin ? undefined : 'My Certificates'} aria-labelledby={admin ? 'issued-certificates' : undefined}>
       {admin && <header className="certificates-history-header">
@@ -351,7 +356,7 @@ function CertificateHistory({ admin = false, headingRef }) {
         </header>}
       {loading ? <p role="status">Loading certificates…</p> : historyError
         ? <p role="alert" className="certificates-error">{historyError}</p>
-        : !certificates.length ? <p>No certificates have been issued yet.</p>
+        : !certificates.length ? <p>{search?'No certificates match your search.':'No certificates have been issued yet.'}</p>
         : admin ? <ul className="certificates-issued-list">
           {certificates.map(certificate => <IssuedCertificateRow key={certificate._id} certificate={certificate} />)}
         </ul>

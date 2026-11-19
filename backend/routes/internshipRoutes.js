@@ -39,6 +39,7 @@ async function internshipDetails(req, record) {
 
 const { list, create, remove } = createResourceController(Internship, {
   fields: [],
+  searchFields:['studentName','courseName','startDate','endDate'],
   beforeCreate: internshipDetails,
 });
 
