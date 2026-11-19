@@ -1,18 +1,31 @@
 const {Form,Notice,Response}=require('../models/Evaluation');
 const Student=require('../models/Student');
+const Defense=require('../models/ProjectDefense');
 async function evaluationNotices(user){
  if(user.role==='admin'){
+  const defenses=await Defense.find({submittedAt:{$ne:null}})
+   .sort({submittedAt:-1,_id:-1}).limit(60)
+   .select('assessmentTitle groupName submittedAt evaluator course')
+   .populate('evaluator','name').populate('course','name title').lean();
+  const defenseNotices=defenses.map(record=>({
+   id:'defense-submission:'+record._id,
+   type:'evaluation',
+   title:(record.evaluator?.name||'A teacher')+' submitted '+(record.assessmentTitle||record.groupName||'a project defense form'),
+   message:record.course?.name||record.course?.title||'',
+   href:'/admin/project-defenses/'+record._id,
+   scheduledAt:record.submittedAt.toISOString(),
+  }));
   const submissions=await Response.find({submittedAt:{$ne:null}})
    .sort({submittedAt:-1,_id:-1}).limit(60)
    .populate('form','title')
    .populate({path:'student',populate:{path:'user',select:'name'}}).lean();
-  return submissions.filter(response=>response.form).map(response=>({
+  return [...defenseNotices,...submissions.filter(response=>response.form).map(response=>({
    id:'evaluation-submission:'+response._id,
    type:'evaluation',
    title:(response.student?.user?.name||'A student')+' submitted '+response.form.title,
    href:'/admin/evaluations/'+response.form._id+'?response='+response._id,
    scheduledAt:response.submittedAt.toISOString()
-  }));
+  }))].sort((a,b)=>b.scheduledAt.localeCompare(a.scheduledAt)).slice(0,60);
  }
  if(user.role!=='student')return [];
  const student=await Student.findOne({user:user._id}).lean();if(!student)return [];

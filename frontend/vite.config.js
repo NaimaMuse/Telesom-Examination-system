@@ -20,7 +20,7 @@ export default defineConfig(({mode}) => {
   }],
   server: {
     port: 3000,
-    open: '/staff/login',
+    open: '/',
     proxy: {
       // Proxy /api requests to the backend during development
       '/api': {

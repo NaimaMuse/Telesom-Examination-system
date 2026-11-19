@@ -126,11 +126,20 @@ const defaultSectionMarks={B:15,C:20,D:20,E:15,F:10,G:10};
 const defaultProjectTotal=90;
 const readMarks=event=>event.target.value===''?'':event.target.valueAsNumber;
 const validMarks=value=>Number.isSafeInteger(value)&&value>0;
+const validQuestionMarks=value=>Number.isFinite(value)&&value>0;
+const questionTotalMatches=section=>Math.abs(marksSum(section.questions)-section.marks)<0.000001;
 const marksSum=items=>items.reduce((sum,item)=>sum+Number(item.marks),0);
 const newQuestion=()=>({key:'q'+crypto.randomUUID(),title:'',marks:''});
 
 function CustomRubricEditor({sections,sectionOffset,onChange}){
-  const updateSection=(key,update)=>onChange(sections.map(section=>section.key===key?{...section,...update}:section));
+  const updateSection=(key,update)=>onChange(sections.map(section=>{
+    if(section.key!==key)return section;
+    const updated={...section,...update};
+    if(update.marks!==undefined||update.questions!==undefined){
+      updated.questions=updated.questions.map(question=>({...question,marks:Number(updated.marks)/updated.questions.length}));
+    }
+    return updated;
+  }));
   return <div className="defense-custom-rubric">
     {sections.map((section,index)=><fieldset className="defense-criterion" key={section.key}>
       <legend>Section {sectionOffset+index+1}</legend>
@@ -146,14 +155,11 @@ function CustomRubricEditor({sections,sectionOffset,onChange}){
         return <div className="defense-rubric-fields" key={question.key}>
           <label>Sub-question {questionIndex+1}<input maxLength={500} value={question.title}
             onChange={event=>updateQuestion({title:event.target.value})}/></label>
-          <label>Question marks<input type="number" min="1" value={question.marks}
-            onChange={event=>updateQuestion({marks:readMarks(event)})}/></label>
           <button type="button" onClick={()=>updateSection(section.key,{questions:section.questions.filter(item=>item.key!==question.key)})}>
             Remove question
           </button>
         </div>;
       })}
-      <p>Question marks · {marksSum(section.questions)} / {section.marks||'—'}</p>
       <div className="defense-group-tabs">
         <button type="button" disabled={section.questions.length>=50}
           onClick={()=>updateSection(section.key,{questions:[...section.questions,newQuestion()]})}>+ Add Sub-question</button>
@@ -306,7 +312,7 @@ export function ProjectDefenseList(){
           <span className="ev-status" data-state={record.status}>{record.submittedAt?'Sent to Admin':record.status}</span></header>
         <h3>{record.projectTitle||'Untitled project'}</h3>
         <p>{[record.groupName,record.cohort].filter(Boolean).join(' · ')}</p>
-        <div className="ev-card-links"><Link className="btn" to={route+'/'+record._id}>Open Evaluation</Link></div>
+        <div className="ev-card-links"><Link className="btn" to={route+'/'+record._id+'?view=scoring'}>Open Evaluation</Link></div>
       </article>)}</div>
       {result.total>50&&<div className="ev-actions">
         <button disabled={page<=1} onClick={()=>changePage(page-1)}>Previous</button>
@@ -317,13 +323,101 @@ export function ProjectDefenseList(){
   </div>;
 }
 
+export function EvaluationCenter({admin=false}){
+  const {route}=useDefensePaths();
+  const [result,setResult]=useState(null);
+  const [error,setError]=useState('');
+  const [attempt,setAttempt]=useState(0);
+  useEffect(()=>{
+    const controller=new AbortController();
+    api.get(endpoint,{params:{page:1},signal:controller.signal})
+      .then(({data})=>{if(!controller.signal.aborted)setResult(data);})
+      .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
+    return ()=>controller.abort();
+  },[attempt]);
+  const records=result?.records||[];
+  const awaitingReview=records.filter(record=>record.submittedAt&&record.status!=='finalized').length;
+  const finalized=records.filter(record=>record.status==='finalized').length;
+  const inProgress=records.filter(record=>!record.submittedAt&&record.status!=='finalized').length;
+  const steps=admin
+    ? [['1','Review submission','Open a teacher-submitted evaluation and check the group details and rubric.'],
+      ['2','Add your assessment','Complete your own ratings and notes as an additional evaluator.'],
+      ['3','Finalize results','Finalize the shared assessment to record the group marks.']]
+    : [['1','Create a group','Choose the course and assessment, then select the project group.'],
+      ['2','Evaluate the project','Use the rubric to add ratings, notes and an outcome recommendation.'],
+      ['3','Send to Admin','Submit your completed evaluation for the Admin’s review and finalization.']];
+  return <div className="evaluations evaluation-center">
+    <header className="defense-center-hero">
+      <div className="defense-center-copy">
+        <span className="defense-center-eyebrow">TELESOM ACADEMY · ACADEMIC EVALUATIONS</span>
+        <h2>Project Defense Evaluation</h2>
+        <p>{admin
+          ? 'Review teacher assessments, contribute evaluator ratings and finalize project marks.'
+          : 'Evaluate student projects, save your progress and submit completed assessments to Admin.'}</p>
+        <div className="defense-center-actions">
+          <Link className="btn btn-primary" to={admin?route:'/teacher/evaluations/new'}>
+            <TeachingIcon name={admin?'clipboard':'edit'} size={17}/>{admin?'Review project defenses':'Start a group evaluation'}
+          </Link>
+          {admin&&<Link className="btn" to="/admin/evaluations/new"><TeachingIcon name="file" size={17}/>Create defense setup</Link>}
+          {admin&&<Link className="btn" to="/admin/evaluations"><TeachingIcon name="clipboard" size={17}/>Course feedback forms</Link>}
+        </div>
+      </div>
+      <span className="defense-center-hero-icon" aria-hidden="true"><TeachingIcon name="clipboard" size={42}/></span>
+    </header>
+    <section className="defense-center-workflow" aria-labelledby="defense-center-workflow-title">
+      <div className="defense-center-section-heading">
+        <div><span className="ev-eyebrow">SHARED WORKFLOW</span><h3 id="defense-center-workflow-title">How Admin and Teachers work together</h3></div>
+        <span className="defense-center-role">{admin?'ADMIN WORKSPACE':'TEACHER WORKSPACE'}</span>
+      </div>
+      <div className="defense-center-steps">{steps.map(([number,title,description])=>
+        <article className="defense-center-step" key={number}>
+          <span>{number}</span><div><h4>{title}</h4><p>{description}</p></div>
+        </article>)}</div>
+    </section>
+    <section className="defense-center-records" aria-labelledby="defense-center-records-title">
+      <div className="defense-center-section-heading">
+        <div><span className="ev-eyebrow">RECENT ACTIVITY</span><h3 id="defense-center-records-title">Project evaluations</h3></div>
+        <Link className="btn" to={route}>View all evaluations</Link>
+      </div>
+      {error
+        ? <p className="ev-error" role="alert">{error} <button type="button" onClick={()=>{setError('');setResult(null);setAttempt(value=>value+1);}}>Retry</button></p>
+        : !result
+          ? <p role="status">Loading project evaluations…</p>
+          : <>
+            <div className="defense-center-stats">
+              <div><span>In progress</span><strong>{inProgress}</strong></div>
+              <div><span>Awaiting Admin review</span><strong>{awaitingReview}</strong></div>
+              <div><span>Finalized</span><strong>{finalized}</strong></div>
+            </div>
+            {records.length
+              ? <div className="defense-center-recent">{records.slice(0,4).map(record=>{
+                const status=record.submittedAt&&record.status!=='finalized'?'Awaiting Admin review':
+                  record.status==='finalized'?'Finalized':'In progress';
+                return <Link className="defense-center-record" key={record._id}
+                  to={route+'/'+record._id+(admin?'?view=scoring':'')}>
+                  <span className="defense-center-record-icon"><TeachingIcon name="file" size={18}/></span>
+                  <span className="defense-center-record-copy">
+                    <strong>{record.projectTitle||record.groupName||'Untitled project'}</strong>
+                    <small>{[record.course?.name||record.course?.title,record.groupName].filter(Boolean).join(' · ')}</small>
+                  </span>
+                  <span className="defense-center-record-status" data-state={status==='Finalized'?'done':status==='Awaiting Admin review'?'review':'active'}>{status}</span>
+                  <TeachingIcon name="arrow" size={17}/>
+                </Link>;
+              })}</div>
+              : <p className="defense-center-empty">No project evaluations yet. Start a group evaluation to begin the shared review process.</p>}
+          </>}
+    </section>
+  </div>;
+}
+
 export function ProjectDefenseEditor(){
   const {teacher}=useDefensePaths();
   const {id}=useParams();
   const [params]=useSearchParams();
   const initialCourse=id?'':params.get('course')||'';
+  const initialScoring=params.get('view')==='scoring';
   return teacher?<TeacherDefenseForm key={id||'new'} id={id}/>:
-    <DefenseForm key={id||'new:'+initialCourse} id={id} initialCourse={initialCourse}/>;
+    <DefenseForm key={id||'new:'+initialCourse} id={id} initialCourse={initialCourse} initialScoring={initialScoring}/>;
 }
 
 function SubmissionConfirmation({record,onClose}){
@@ -355,7 +449,16 @@ function SubmissionConfirmation({record,onClose}){
 }
 
 function TeacherDefenseForm({id}){
+<<<<<<< HEAD
   const [confirmation,setConfirmation]=useState(null);
+=======
+  const confirmationRef=useRef(null);
+  const [showConfirmation,setShowConfirmation]=useState(false);
+  useEffect(()=>{
+    const dialog=confirmationRef.current;
+    if(showConfirmation&&!dialog?.open)dialog?.showModal();
+  },[showConfirmation]);
+>>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
   const [form,setForm]=useState(null);
   const [assessments,setAssessments]=useState([]);
   const [records,setRecords]=useState([]);
@@ -379,9 +482,11 @@ function TeacherDefenseForm({id}){
   },[id]);
   const sections=form?.customRubric||[];
   const total=marksSum(sections);
-  const valid=sections.length>0&&sections.every(section=>section.title.trim()&&validMarks(section.marks)&&
-    section.questions.length>0&&marksSum(section.questions)===section.marks&&
-    section.questions.every(question=>question.title.trim()&&validMarks(question.marks)));
+  const selectedAssessment=assessments.find(item=>item._id===form?.assessment);
+  const assessmentMaximum=selectedAssessment?.totalMarks??form?.assessmentTotalMarks;
+  const valid=total===assessmentMaximum&&sections.length>0&&sections.every(section=>section.title.trim()&&validMarks(section.marks)&&
+    section.questions.length>0&&questionTotalMatches(section)&&
+    section.questions.every(question=>question.title.trim()&&validQuestionMarks(question.marks)));
   async function openForm(recordId){
     setError('');
     setNotice('');
@@ -401,10 +506,11 @@ function TeacherDefenseForm({id}){
     try{
       const selected=assessments.find(item=>item._id===form.assessment);
       if(!selected)throw new Error('Choose an exam.');
+      if(total!==selected.totalMarks)throw new Error(`Section marks must add up to ${selected.totalMarks}, the maximum marks for ${selected.title}.`);
       if(!valid)throw new Error('Complete the sections, sub-questions and marks before saving.');
       const payload={...form,course:selected.course._id,assessmentType:'exam',
         groupName:selected.title,students:[],ratings:{},notes:{},additionalEvaluations:[],
-        customRubric:sections,appendCustomRubric:false,projectTotalMarks:total,finalize:false};
+        customRubric:sections,appendCustomRubric:false,projectTotalMarks:selected.totalMarks,finalize:false};
       const saved=form._id?await api.put(endpoint+'/'+form._id,payload):await api.post(endpoint,payload);
       let record=saved.data.record;
       setForm(record);
@@ -414,7 +520,11 @@ function TeacherDefenseForm({id}){
         record=data.record;
         setForm(record);
         setRecords(previous=>previous.map(item=>item._id===record._id?record:item));
+<<<<<<< HEAD
         setConfirmation(record);
+=======
+        setShowConfirmation(true);
+>>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
       }
       setNotice(send?'Form sent to the admin.':'Form saved.');
     }catch(error){setError(error.response?.data?.message||error.message);}
@@ -428,9 +538,21 @@ function TeacherDefenseForm({id}){
         <span className="ev-create-hero-cap"><TeachingIcon name="graduate" size={37}/></span>
       </div>
     </header>
-    <section className="defense-section">
+    <section className="defense-section defense-teacher-builder">
       {error&&<p className="ev-error" role="alert">{error}</p>}
+<<<<<<< HEAD
       {confirmation&&<SubmissionConfirmation record={confirmation} onClose={()=>setConfirmation(null)}/>}
+=======
+      {showConfirmation&&<dialog className="defense-submission-popup" ref={confirmationRef}
+        aria-labelledby="defense-sent-title" aria-describedby="defense-sent-description"
+        onClose={()=>setShowConfirmation(false)}>
+        <button type="button" className="defense-popup-close" aria-label="Close confirmation"
+          autoFocus onClick={()=>confirmationRef.current?.close()}>×</button>
+        <span className="defense-popup-check"><TeachingIcon name="check" size={28}/></span>
+        <h3 id="defense-sent-title">Form sent to Admin</h3>
+        <p id="defense-sent-description">Your project defense form is ready for review.</p>
+      </dialog>}
+>>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
       {notice&&!form?.submittedAt&&<p className="ev-notice" role="status">{notice}</p>}
       {!form?(!error&&<p role="status">Loading form…</p>):<>
         {records.length>0&&<label>Saved forms
@@ -453,7 +575,10 @@ function TeacherDefenseForm({id}){
           {!assessments.length&&<p>No exams are available for your course yet.</p>}
           <CustomRubricEditor sections={sections} sectionOffset={0}
             onChange={customRubric=>setForm(previous=>({...previous,customRubric}))}/>
-          <p role="status">Total section marks · <strong>{total||0}</strong></p>
+          <p className="defense-builder-total" role="status">Total section marks <strong>{total||0} / {assessmentMaximum??'—'}</strong></p>
+          {selectedAssessment&&total!==assessmentMaximum&&<p role="status">
+            Allocate {assessmentMaximum} marks across your sections to match {selectedAssessment.title}.
+          </p>}
           {!form.submittedAt&&<div className="ev-actions">
             <button type="button" disabled={!valid||!form.assessment} onClick={()=>saveForm(false)}>Save Form</button>
             <button type="button" className="btn-primary" disabled={!valid||!form.assessment}
@@ -465,9 +590,14 @@ function TeacherDefenseForm({id}){
   </div>;
 }
 
+<<<<<<< HEAD
 function DefenseForm({id,initialCourse}){
   const {route,teacher,judge}=useDefensePaths();
   const {user}=useAuth();
+=======
+function DefenseForm({id,initialCourse,initialScoring=false}){
+  const {route,teacher}=useDefensePaths();
+>>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
   const navigate=useNavigate();
   const [groups,setGroups]=useState(()=>[{...empty,groupName:'Group 1'}]);
   const [activeGroup,setActiveGroup]=useState(0);
@@ -478,11 +608,9 @@ function DefenseForm({id,initialCourse}){
   const [busy,setBusy]=useState(false);
   const [editingWording,setEditingWording]=useState(false);
   const [editingMarks,setEditingMarks]=useState(false);
-  const [showScoring,setShowScoring]=useState(false);
+  const [showScoring,setShowScoring]=useState(initialScoring);
   const [activeEvaluator,setActiveEvaluator]=useState(0);
-  const [showRubricSetup,setShowRubricSetup]=useState(false);
   const scoringRef=useRef(null);
-  const rubricSetupRef=useRef(null);
   const groupDetailsRef=useRef(null);
   useEffect(()=>{
     const controller=new AbortController();
@@ -537,9 +665,20 @@ function DefenseForm({id,initialCourse}){
       })
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
+<<<<<<< HEAD
   },[id,initialCourse,teacher,judge,user?.name]);
 
+=======
+  },[id,initialCourse,teacher]);
+>>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
   const form=groups[activeGroup];
+
+  useEffect(()=>{
+    if(!initialScoring||!form?._id)return;
+    const frame=requestAnimationFrame(()=>scoringRef.current?.scrollIntoView({block:'start'}));
+    return ()=>cancelAnimationFrame(frame);
+  },[form?._id,initialScoring]);
+
   const customRubric=form.customRubric;
   const useStandardRubric=!customRubric||form.appendCustomRubric;
   const standardMarks=form.rubricSectionMarks||defaultSectionMarks;
@@ -558,8 +697,13 @@ function DefenseForm({id,initialCourse}){
   const validAllocation=validMarks(totalMarks)&&sectionTotal===totalMarks&&
     rubric.length>0&&rubric.every(([section])=>validMarks(sectionMarks[section]))&&
     customSections.every(section=>section.title.trim()&&section.questions.length>0&&
+<<<<<<< HEAD
       marksSum(section.questions)===section.marks&&section.questions.every(question=>question.title.trim()&&validMarks(question.marks)));
   const additionalEvaluations=judge?[]:form.additionalEvaluations||[];
+=======
+      questionTotalMatches(section)&&section.questions.every(question=>question.title.trim()&&validQuestionMarks(question.marks)));
+  const additionalEvaluations=form.additionalEvaluations||[];
+>>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
   const evaluation=additionalEvaluations[activeEvaluator-1];
   const ratings=judge?form.ratings:evaluation?.ratings||form.ratings;
   const notes=judge?form.notes:evaluation?.notes||form.notes;
@@ -580,43 +724,24 @@ function DefenseForm({id,initialCourse}){
     setActiveGroup(index);
     setActiveEvaluator(0);
     setShowScoring(false);
-    setShowRubricSetup(false);
     setNotice('');
     setError('');
   }
-  function addGroup(){
-    const groupNames=new Set(groups.map(group=>group.groupName.trim().toLowerCase()));
+  function freshGroup(existing,source){
+    const groupNames=new Set(existing.map(group=>group.groupName.trim().toLowerCase()));
     let number=1;
     while(groupNames.has('group '+number))number++;
-    setGroups(previous=>[...previous,{...empty,course:form.course,cohort:form.cohort,cohortYear:form.cohortYear,
-      assessment:form.assessment,assessmentType:form.assessmentType,assessmentTitle:form.assessmentTitle,
-      projectTotalMarks:totalMarks,rubricSectionMarks:form.rubricSectionMarks,customRubric,appendCustomRubric:form.appendCustomRubric,
-      groupName:'Group '+number}]);
+    return {...empty,course:source.course,cohort:source.cohort,cohortYear:source.cohortYear,
+      assessment:source.assessment,assessmentType:source.assessmentType,assessmentTitle:source.assessmentTitle,
+      projectTotalMarks:source.projectTotalMarks,rubricSectionMarks:source.rubricSectionMarks,
+      customRubric:source.customRubric,appendCustomRubric:source.appendCustomRubric,
+      groupName:'Group '+number};
+  }
+  function addGroup(){
+    setGroups(previous=>[...previous,freshGroup(previous,form)]);
     selectGroup(groups.length);
   }
-  function resetGroup(){
-    if(!window.confirm('Clear the active group’s students, project details, ratings, and notes?'))return;
-    setForm({...form,...empty,additionalEvaluations:[],course:form.course,cohort:form.cohort,cohortYear:form.cohortYear,groupName:form.groupName});
-    setActiveEvaluator(0);
-    setError('');
-    setNotice(form._id?'Group cleared. Save the draft to keep these changes.':'Group cleared.');
-  }
   const patch=(key,value)=>{setNotice('');setForm(previous=>({...previous,[key]:value}));};
-  function updateCustomRubric(sections,append=useStandardRubric){
-    const keys=new Set([
-      ...(append?defaultRubric.flatMap(([, ,questions])=>questions.map(([key])=>key)):[]),
-      ...sections.flatMap(section=>section.questions.map(question=>question.key)),
-    ]);
-    const evaluations=[form,...additionalEvaluations];
-    const dropsScores=evaluations.some(item=>[...Object.keys(item.ratings),...Object.keys(item.notes)].some(key=>!keys.has(key)));
-    if(dropsScores&&!window.confirm('This change removes existing ratings or notes for the removed questions. Continue?'))return;
-    const keepQuestions=values=>Object.fromEntries(Object.entries(values).filter(([key])=>keys.has(key)));
-    setNotice('');
-    setError('');
-    setForm(previous=>({...previous,customRubric:sections,appendCustomRubric:append,ratings:keepQuestions(previous.ratings),notes:keepQuestions(previous.notes),
-      additionalEvaluations:(previous.additionalEvaluations||[]).map(item=>({...item,
-        ratings:keepQuestions(item.ratings),notes:keepQuestions(item.notes)}))}));
-  }
   function updateEvaluation(key,value){
     if(!evaluation){patch(key,value);return;}
     patch('additionalEvaluations',additionalEvaluations.map((item,index)=>index===activeEvaluator-1?{...item,[key]:value}:item));
@@ -627,7 +752,6 @@ function DefenseForm({id,initialCourse}){
   }
   function editGroup(){
     setShowScoring(false);
-    setShowRubricSetup(false);
     groupDetailsRef.current?.querySelector('input')?.focus();
   }
   async function deleteGroup(){
@@ -663,8 +787,13 @@ function DefenseForm({id,initialCourse}){
     ? form.assessmentTotalMarks ?? currentAssessment?.totalMarks
     : currentAssessment?.totalMarks ?? form.assessmentTotalMarks;
   const assessmentMarks=!validAllocation||groupTotal===null?null:groupTotal/totalMarks*assessmentMax;
+<<<<<<< HEAD
   const courseLabel=course?.name||course?.title||form.courseName||'';
   async function save(finalize,continueToScoring=false){
+=======
+  const courseLabel=course?.name||course?.title||'';
+  async function save(finalize){
+>>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
     if(busy||finalized)return;
     if(!form._id&&(!form.groupName.trim()||!form.students.length)){
       setError('Enter a group name and select at least one student.');
@@ -704,17 +833,15 @@ function DefenseForm({id,initialCourse}){
       const response=form._id
         ? await api.put(endpoint+'/'+form._id,{...form,finalize})
         : await api.post(endpoint,{...form,finalize});
-      setForm(response.data.record);
       if(!form._id&&!finalize){
-        setShowRubricSetup(true);
-        requestAnimationFrame(()=>rubricSetupRef.current?.scrollIntoView({block:'start'}));
+        const savedGroups=groups.map((group,index)=>index===activeGroup?response.data.record:group);
+        setGroups([...savedGroups,freshGroup(savedGroups,response.data.record)]);
+        selectGroup(savedGroups.length);
+        requestAnimationFrame(()=>groupDetailsRef.current?.scrollIntoView({block:'start'}));
+      }else{
+        setForm(response.data.record);
       }
-      if(continueToScoring){
-        setShowRubricSetup(false);
-        openScoring();
-      }
-      setNotice(finalize?'Evaluation finalized.':form._id?'':'Group created. Set up its rubric before scoring.');
-      return response.data.record;
+      setNotice(finalize?'Evaluation finalized.':'');
     }catch(error){
       setError(message(error));
     }finally{
@@ -797,12 +924,15 @@ function DefenseForm({id,initialCourse}){
           {!judge&&form._id&&!submitted&&<button type="button" className="defense-delete-group" disabled={busy||editing} onClick={deleteGroup}>
             <TeachingIcon name="trash" size={14}/> Delete Group
           </button>}
+<<<<<<< HEAD
           {!judge&&form._id&&!finalized&&<button type="button" disabled={busy||editing}
             aria-expanded={showRubricSetup} aria-controls="defense-rubric-setup"
             onClick={()=>{
               setShowRubricSetup(!showRubricSetup);
               if(!showRubricSetup)requestAnimationFrame(()=>rubricSetupRef.current?.scrollIntoView({block:'start'}));
             }}>Set Up Rubric</button>}
+=======
+>>>>>>> a62c9862fa47d2e085d03a4b0a7872c2908cf748
           {form._id&&<button type="button" disabled={busy||editing} aria-expanded={showScoring||finalized}
             aria-controls="defense-scoring" onClick={()=>showScoring&&!finalized?setShowScoring(false):openScoring()}>
             {showScoring&&!finalized?'Hide Scoring':'Open Scoring'}
@@ -909,26 +1039,6 @@ function DefenseForm({id,initialCourse}){
               assessment={form.assessment} assessmentType={form.assessmentType} defense={form._id}
               assigned={assigned} selected={form.students} onChange={value=>patch('students',value)}/></div>}
           </section>
-          {form._id&&!finalized&&showRubricSetup&&<section id="defense-rubric-setup" ref={rubricSetupRef} className="defense-section defense-mark-allocation defense-screen">
-            <DefenseSectionTitle icon="clipboard">Step 2 · Set Up Rubric</DefenseSectionTitle>
-            <label>Project total marks
-              <input type="number" min="1" step="1" value={totalMarks}
-                onChange={event=>patch('projectTotalMarks',readMarks(event))}/>
-            </label>
-            {useStandardRubric&&<div className="defense-details">
-              {defaultRubric.map(([section,title])=><label key={section}>Section {section} · {wording(section,title)}
-                <input type="number" min="1" step="1" value={sectionMarks[section]}
-                  onChange={event=>patch('rubricSectionMarks',{...standardMarks,[section]:readMarks(event)})}/>
-              </label>)}
-            </div>}
-            <CustomRubricEditor sections={customSections} sectionOffset={useStandardRubric?defaultRubric.length:0}
-              onChange={updateCustomRubric}/>
-            {!customRubric&&<button type="button" onClick={()=>updateCustomRubric([],false)}>Create Custom Rubric</button>}
-            <p role="status">Section total · <strong>{sectionTotal}</strong> / {totalMarks||'—'}</p>
-            {!validAllocation&&<p>Complete the titles and marks. Questions must add up to their section, and sections must add up to the project total.</p>}
-            <button type="button" className="btn-primary" disabled={!validAllocation||busy}
-              onClick={()=>save(false,true)}>Save Rubric &amp; Open Scoring</button>
-          </section>}
           <div id="defense-scoring" ref={scoringRef} className={showScoring||finalized?'defense-scoring':'defense-scoring is-collapsed'}>
           {rubric.map(([section,title,criteria],index)=><section className="defense-section" key={section}>
             <DefenseSectionTitle icon={section==='G'?'users':'clipboard'}>Section {section.startsWith('s')?index+1:section} · {wording(section,title)} · {sectionMarks[section]||'—'} marks</DefenseSectionTitle>
@@ -983,7 +1093,6 @@ function DefenseForm({id,initialCourse}){
           {error&&<p className="ev-error defense-save-error" role="alert">{error}</p>}
           {notice&&<p className="ev-notice" role="status">{notice}</p>}
           {!form._id&&<div className="ev-actions">
-            <button type="button" disabled={busy} onClick={resetGroup}>Reset Group</button>
             <button type="submit" className="btn-primary" disabled={busy}>{busy?'Saving…':'Create Group'}</button>
           </div>}
         </footer>}

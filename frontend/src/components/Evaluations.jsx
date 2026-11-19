@@ -47,47 +47,6 @@ function CreateEvaluationForm({courses,busy,onCreate,onCancel}){
    </div>
  </form>;
 }
-const defenseDateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
-function RecentDefenses({course,base}){
- const courseId=course?._id;
- const [records,setRecords]=useState(null);
- const [error,setError]=useState('');
- const [attempt,setAttempt]=useState(0);
- useEffect(()=>{
-   const controller=new AbortController();
-   api.get('/evaluations/defenses/recent',{params:{course:courseId},signal:controller.signal})
-     .then(({data})=>{if(!controller.signal.aborted)setRecords(data.records);})
-     .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
-   return ()=>controller.abort();
- },[courseId,attempt]);
-
- return <section className="ev-card ev-recent-defenses" aria-label="Recent Defenses">
-   {error?<div className="ev-error" role="alert">{error} <button type="button" onClick={()=>{setError('');setAttempt(value=>value+1);}}>Retry</button></div>
-    :!records?<p className="ev-recent-empty" role="status">Loading defenses…</p>
-    :!records.length?<p className="ev-recent-empty">{course?'No saved defenses for this course yet.':'No saved defenses yet.'}</p>
-    :<ul className="ev-recent-list">
-       {records.map(record=>{
-         const finalized=record.status==='finalized';
-         const project=record.projectTitle||'Untitled project';
-         const defenseDate=Date.parse(record.defenseDate);
-         const details=[record.groupName,Number.isFinite(defenseDate)?defenseDateFormat.format(defenseDate):''].filter(Boolean);
-         return <li key={record._id}>
-           <div className="ev-recent-project">
-             <strong>{project}</strong>
-             {!course&&courseName(record.course)&&<p>{courseName(record.course)}</p>}
-             {details.length>0&&<p>{details.join(' · ')}</p>}
-           </div>
-           <div className="ev-recent-action">
-             <span className="ev-status" data-state={record.status}>{record.submittedAt?'Sent to Admin':finalized?'Finalized':'Draft'}</span>
-             <Link className="btn" to={base+'/project-defenses/'+record._id} aria-label={(finalized?'View ':'Continue ')+project}>
-             {finalized?'View':'Continue'}<TeachingIcon name="arrow" size={15}/>
-             </Link>
-           </div>
-         </li>;
-       })}
-    </ul>}
- </section>;
-}
 export function NewEvaluation(){
  const {pathname}=useLocation();
  const base=pathname.startsWith('/teacher')?'/teacher':'/admin';
@@ -139,7 +98,6 @@ export function NewEvaluation(){
    </section>
    {error&&<div className="ev-error" role="alert">{error} {!courses&&<button type="button" onClick={()=>{setError('');setAttempt(value=>value+1);}}>Retry</button>}</div>}
    {!courses&&!error&&<p role="status">Loading courses…</p>}
-   <RecentDefenses base={base} key={selectedDefenseCourse?._id||'all'} course={selectedDefenseCourse}/>
  </div>;
 }
 function AdminEvaluationCard({form,base,busy,onDelete}){
