@@ -10,7 +10,6 @@ export default function LoginPage({ staff = false, recovery = false }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const studentRecovery = recovery && !staff;
-  const linkToStaff = recovery ? staff : !staff;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -36,19 +35,16 @@ export default function LoginPage({ staff = false, recovery = false }) {
   const signInWithGoogle = useCallback(credential => signIn({credential}), [signIn]);
   const submit = event => {
     event.preventDefault();
-    signIn({email:email.trim().toLowerCase(),password,...(!staff ? {role:'student'} : {})});
+    signIn({email:email.trim().toLowerCase(),password,role:'portal'});
   };
 
   return (
-    <main className={`auth-page-wrapper portal-login${staff ? ' staff-login' : !recovery ? ' student-login' : ''}`}>
+    <main className={`auth-page-wrapper portal-login${!recovery ? ' unified-login' : ''}`}>
       <div className="auth-centered-container">
         <section className="auth-card" aria-labelledby="login-title">
           <header className="auth-card-header">
-            <div className="header-brand-wrap"><TelesomLogo size={staff || !recovery ? 'md' : 'sm'} /></div>
-            {staff && !recovery && <h1 id="login-title">Staff and judge sign in</h1>}
-            {!staff && !recovery && <>
-              <h1 id="login-title">Student sign in</h1>
-            </>}
+            <div className="header-brand-wrap"><TelesomLogo size={recovery ? (staff ? 'md' : 'sm') : 'lg'} /></div>
+            {!recovery&&<h1 id="login-title">Sign in</h1>}
             {recovery && <h1 id="login-title">{staff ? 'Staff password help' : 'Reset student password'}</h1>}
             {studentRecovery && <p>Use your registered Google account to reset your portal password.</p>}
           </header>
@@ -68,11 +64,10 @@ export default function LoginPage({ staff = false, recovery = false }) {
             </div>
           ) : (
             <>
-            {!staff && <div className="student-google-option">
-              <p>First time? Sign in with Google.</p>
-              <GoogleSignIn onCredential={signInWithGoogle} busy={loading} />
-            </div>}
-            <form className="auth-form" onSubmit={submit} aria-label={staff ? 'Staff sign in' : 'Student password sign in'} aria-busy={loading}>
+            <div className="student-google-option">
+              <GoogleSignIn onCredential={signInWithGoogle} busy={loading} compact />
+            </div>
+            <form className="auth-form" onSubmit={submit} aria-label="Email and password sign in" aria-busy={loading}>
               <div className="form-field-group">
                 <label htmlFor="login-username">Email</label>
                 <div className="input-with-icon">
@@ -113,7 +108,6 @@ export default function LoginPage({ staff = false, recovery = false }) {
                   </button>
                 </div>
               </div>
-              <Link className="portal-forgot-password" to={staff ? '/staff/forgot-password' : '/student/forgot-password'}>Forgot password?</Link>
               <button type="submit" className="btn-auth-primary green-btn" disabled={loading}>
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
@@ -121,11 +115,9 @@ export default function LoginPage({ staff = false, recovery = false }) {
             </>
           )}
 
-          <footer className="auth-card-footer">
-            <Link className="portal-login-switch" to={linkToStaff ? '/staff/login' : '/login'}>
-              {recovery ? (staff ? 'Back to staff sign in' : 'Back to student sign in') : staff ? 'Student sign in' : 'Staff sign in'}
-            </Link>
-          </footer>
+          {recovery&&<footer className="auth-card-footer">
+            <Link className="portal-login-switch" to="/login">Back to sign in</Link>
+          </footer>}
         </section>
       </div>
     </main>

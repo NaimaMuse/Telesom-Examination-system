@@ -158,7 +158,7 @@ export default function Judges(){
         <div><strong>Share these credentials with {credentials.name}</strong>
           <p>Email: <code>{credentials.email}</code></p>
           <p>Password: <code>{credentials.temporaryPassword}</code></p>
-          <small>Ask the judge to sign in at /staff/login. This password is shown here to share; it is not stored in readable form.</small>
+          <small>Ask the judge to sign in at /login. This password is shown here to share; it is not stored in readable form.</small>
         </div>
         <button type="button" onClick={copyCredentials}>Copy credentials</button>
       </div>}

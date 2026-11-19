@@ -616,13 +616,16 @@
 
 .student-google-option { margin-bottom: .6rem; }
 .student-google-option p { margin: 0 0 .3rem; color: var(--text-muted); font-size: .8rem; text-align: center; }
-.student-google-option .google-sign-in-button { max-width: 240px; margin-inline: auto; }
+.student-google-option .google-sign-in-button { max-width: 210px; margin-inline: auto; }
 
-.student-login .auth-card { padding: .85rem clamp(.8rem, 4vw, 1.2rem); }
-.student-login .auth-card-header { margin-bottom: .6rem; }
-.student-login .auth-form { gap: .4rem; }
-.student-login .btn-auth-primary { min-height: 38px; padding-block: .45rem; }
-.student-login .auth-card-footer { margin-top: .5rem; }
+.unified-login .auth-centered-container { max-width: 340px; }
+.unified-login .auth-card { padding: 1.25rem clamp(.8rem, 4vw, 1.2rem) 2.5rem; }
+.unified-login .auth-card-header { margin-bottom: .6rem; }
+.unified-login .header-brand-wrap { width: 100%; justify-content: center; text-align: center; }
+.unified-login .header-brand-wrap .telesom-logo { margin-right: 2rem; }
+.unified-login .auth-form { gap: .4rem; }
+.unified-login .auth-form > .btn-auth-primary { min-height: 38px; margin-block-start: 1.25rem; padding-block: .45rem; }
+.unified-login .student-google-option { margin: 0 0 .65rem; padding-bottom: .55rem; }
 
 .google-sign-in-button {
   width: 100%;

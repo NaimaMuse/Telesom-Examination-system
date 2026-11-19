@@ -22,7 +22,7 @@ function loadGoogleIdentity() {
   return scriptLoad;
 }
 
-export default function GoogleSignIn({ onCredential, busy }) {
+export default function GoogleSignIn({ onCredential, busy, compact = false }) {
   const button = useRef(null);
   const [message, setMessage] = useState('Loading Google sign-in…');
 
@@ -50,7 +50,8 @@ export default function GoogleSignIn({ onCredential, busy }) {
         },
       });
       google.renderButton(element, {
-        theme:'outline', size:'large', text:'signin_with', width:Math.floor(element.clientWidth),
+        theme:'outline', size:compact?'medium':'large', shape:compact?'pill':'rectangular',
+        text:'signin_with', width:Math.floor(element.clientWidth),
       });
       setMessage('');
     };
@@ -61,7 +62,7 @@ export default function GoogleSignIn({ onCredential, busy }) {
       controller.abort();
       element.replaceChildren();
     };
-  }, [onCredential]);
+  }, [onCredential, compact]);
 
   return <>
     {message && <p className="google-sign-in-message" role="status">{message}</p>}

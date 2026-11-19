@@ -28,8 +28,11 @@ router.use(asyncHandler(async(req,res,next)=>{
   req.defenseFilter.workflowForm={$exists:false};
   next();
 }));
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
 const criteria = ['b1','b2','b3','c1','d1','e1','f1','g1','g2','g3','g4'];
 const rubricSections = ['B','C','D','E','F','G'];
 const fields = ['groupName','projectTitle','cohort','cohortYear','evaluatorName','defenseDate','ratings','notes','wording','outcome','summary','signature','signatureDate'];
@@ -120,8 +123,11 @@ router.get('/',asyncHandler(async(req,res)=>{
       .populate('course','name title').populate('assignedJudge','name email')
       .sort({updatedAt:-1,_id:-1}).skip((page-1)*50).limit(50).lean(),
     Defense.countDocuments(filter),
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
   ]);
   res.json({records,total});
 }));
@@ -131,8 +137,11 @@ router.get('/recent',asyncHandler(async(req,res)=>{
   if(course!==undefined&&(typeof course!=='string'||!mongoose.isObjectIdOrHexString(course)))fail('Choose a valid course.');
   const records=await Defense.find({...req.defenseFilter,...(course?{course}:{})})
     .select('course groupName projectTitle defenseDate status submittedAt teacherOwned')
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
     .populate('course','name title')
     .sort({updatedAt:-1,_id:-1}).limit(5).lean();
   res.json({records});
@@ -170,8 +179,11 @@ router.get('/courses/:course/cohorts',asyncHandler(async(req,res)=>{
 router.get('/assessments',authorizeRoles('admin','teacher'),asyncHandler(async(req,res)=>{
   const teachers=await User.distinct('_id',{role:'teacher'});
   const filter=req.user.role==='teacher'?req.defenseAssessmentFilter:{createdBy:{$in:teachers}};
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
   const [exams,quizzes]=await Promise.all([Exam,Quiz].map(Model=>
     Model.find(filter).select('title course totalMarks type').populate('course','name title').sort({title:1,_id:1}).lean()));
   const assessments=[...exams.map(exam=>({...exam,type:'exam'})),
@@ -385,21 +397,31 @@ router.post('/:id/submit',asyncHandler(async(req,res)=>{
   if(record.submittedAt)return res.json({record});
   if(req.body.__v!==record.__v)fail('This form has changed. Reopen it before sending.',409);
   if(!record.customRubric?.length)fail('Create the sections and sub-questions before sending.');
+<<<<<<< HEAD
   validateCustomRubric(record.toObject().customRubric,record.projectTotalMarks);
+=======
+  customRubricMarks(record.toObject().customRubric,record.appendCustomRubric);
+>>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
   const Model=record.assessmentType==='exam'?Exam:Quiz;
   const assessment=await Model.findById(record.assessment).select('totalMarks').lean();
   if(!assessment)fail('Choose an existing assessment.');
   if(record.projectTotalMarks!==assessment.totalMarks)fail('Section marks must add up to the assessment maximum.');
   record.assessmentTotalMarks=assessment.totalMarks;
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
   record.submittedAt=new Date();
   await saveVersion(record);
   res.json({record});
 }));
 router.delete('/:id',authorizeRoles('admin','teacher'),asyncHandler(async(req,res)=>{
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
   if(!mongoose.isObjectIdOrHexString(req.params.id))fail('Choose a valid group.');
   if(!Number.isSafeInteger(req.body?.__v))fail('Reload this group before deleting it.',409);
   const filter={...req.defenseFilter,_id:req.params.id};

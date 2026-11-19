@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const { login } = require('../controllers/authController');
 const User = require('../models/User');
 const Teacher = require('../models/Teacher');
+const Student = require('../models/Student');
+const Session = require('../models/Session');
 
 process.env.JWT_SECRET = 'test_secret_for_login_tests_12345';
 process.env.JWT_ALGORITHM = 'HS256';
@@ -163,9 +165,13 @@ const runTests = async () => {
     const result=getResult();
     assert(result.statusCode===200&&result.responseBody?.user?.role==='judge',
       'Judge email + password login succeeds');
+    const portal=createMock({email:judge.email,password:plainPassword,role:'portal'});
+    await login(portal.req,portal.res,portal.next);
+    assert(portal.getResult().responseBody?.user?.role==='judge',
+      'Unified portal keeps the staff account role');
   }
 
-  // Students must use Google even after creating a portal password.
+  // Keep the legacy unscoped login staff-only.
   {
     const mockUser = {
       _id: new mongoose.Types.ObjectId(),
@@ -188,8 +194,31 @@ const runTests = async () => {
 
     assert(
       result.statusCode === 401 && result.responseBody === null,
-      'A valid student portal password cannot establish a session'
+      'Legacy unscoped login rejects a student password'
     );
+    const originalStudentLookup = Student.findOne;
+    const originalSessionCreate = Session.create;
+    try {
+      const student = {_id:new mongoose.Types.ObjectId(),studentId:'STD-1001',status:'active'};
+      let session;
+      Student.findOne = async () => student;
+      Session.create = async value => { session=value; };
+      const portal = createMock({email:mockUser.email,password:plainPassword,role:'portal'});
+      portal.req.get = () => undefined;
+      portal.res.cookie = () => {};
+      await login(portal.req,portal.res,portal.next);
+      assert(
+        portal.getResult().responseBody?.user?.role==='student'&&session?.studentPasswordVerified===true,
+        'Unified portal accepts an active student and creates a student session'
+      );
+      student.status='inactive';
+      const inactive = createMock({email:mockUser.email,password:plainPassword,role:'portal'});
+      await login(inactive.req,inactive.res,inactive.next);
+      assert(inactive.getResult().statusCode===401,'Unified portal rejects an inactive student profile');
+    } finally {
+      Student.findOne=originalStudentLookup;
+      Session.create=originalSessionCreate;
+    }
   }
 
   // Restore original methods

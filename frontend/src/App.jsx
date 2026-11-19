@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/Login';
-import AdminLoginPage from './pages/admin/AdminLogin';
 import RoleRedirect from './pages/RoleRedirect';
 import DashboardLayout from './components/DashboardLayout';
 import {HomePage} from './pages/PublicPages';
@@ -49,11 +48,11 @@ export default function App() {
           <Route path="/contact" element={<Navigate to="/#contact" replace />} />
 
           {/* Public Authentication Pages */}
-          <Route path="/login" element={<LoginPage key="student" />} />
+          <Route path="/login" element={<LoginPage key="portal" />} />
           <Route path="/student/forgot-password" element={<LoginPage key="student-recovery" recovery />} />
-          <Route path="/staff/login" element={<LoginPage key="staff" staff />} />
+          <Route path="/staff/login" element={<Navigate to="/login" replace />} />
           <Route path="/staff/forgot-password" element={<LoginPage key="staff-recovery" staff recovery />} />
-          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/login" element={<Navigate to="/login" replace />} />
           <Route path="/signup" element={<Navigate to="/login" replace />} />
 
           {/* Protected base redirect based on role */}
