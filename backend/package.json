@@ -17,11 +17,8 @@
     "migrate:batches": "node scripts/migrateBatchIndex.js",
     "test:my-course:integration": "node tests/myCourse.http.test.js",
     "test:evaluations:integration": "node tests/evaluations.http.test.js",
-<<<<<<< HEAD
-    "test:search": "node tests/pageSearch.test.js && node tests/teacherPerformanceRecords.test.js"
-=======
+    "test:search": "node tests/pageSearch.test.js && node tests/teacherPerformanceRecords.test.js",
     "test:defense-workflow": "node tests/defenseWorkflow.http.test.js"
->>>>>>> 5f873bb64ef893eb1994ac24dd6d874e94635027
   },
   "keywords": [
     "nodejs",

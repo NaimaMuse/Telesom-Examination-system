@@ -339,3 +339,72 @@
   .dw-assignment-cards .dw-pill { white-space:normal; }
   .dw-overview-hero .dw-button { margin-left:0; }
 }
+
+/* Project defense overview: academy green panels and ribbon headings. */
+.dw-staff-overview { position:relative; isolation:isolate; min-height:72vh; gap:22px; padding:12px 8px 90px; background:radial-gradient(ellipse at 0 20%,#dcf7e8 0,transparent 62%),#f7fcf9; }
+.dw-staff-overview::before { content:''; position:absolute; inset:auto -12px 0; height:64px; z-index:-1; border-radius:65% 45% 0 0/85% 85% 0 0; background:linear-gradient(110deg,#96d79b,#087a42); opacity:.65; }
+.dw-staff-overview .dw-overview-hero { position:relative; isolation:isolate; overflow:hidden; display:flex; flex-wrap:nowrap; gap:20px; padding:22px 28px; min-height:112px; border:1px solid #40a76c; border-radius:18px; background:linear-gradient(115deg,#00462a,#007541 68%,#003b24); box-shadow:0 8px 18px #07653620; }
+.dw-overview-hero::after { content:''; position:absolute; z-index:-1; width:65%; height:180px; right:9%; top:-130px; border-bottom:4px solid #d2b525; border-radius:50%; transform:rotate(-18deg); background:#18845166; }
+.dw-staff-overview .dw-overview-hero h1 { font-size:clamp(24px,3vw,36px); line-height:1.15; color:white; }
+.dw-staff-overview .dw-overview-hero p { font-size:15px; margin-top:8px; color:#edf9ef; }
+.dw-staff-overview .dw-overview-emblem { padding-right:22px; color:#e4efaf; }
+.dw-staff-overview .dw-overview-emblem svg { width:48px; height:48px; }
+.dw-staff-overview .dw-overview-art { right:23%; bottom:5px; color:#b3e0b9; opacity:.2; }
+.dw-staff-overview .dw-overview-hero .dw-button { padding:10px 20px; font-size:14px; white-space:nowrap; background:white; color:#005630; border-color:#c2df9d; }
+.dw-staff-overview .dw-overview-panel { overflow:hidden; padding:0 20px 20px; gap:14px; border:1px solid #379e60; border-radius:18px; background:#ffffffed; box-shadow:0 8px 20px #12674014; }
+.dw-staff-overview .dw-overview-heading { margin:0 -20px; padding:0; border:0; }
+.dw-staff-overview .dw-overview-heading h2 { position:relative; display:inline-flex; gap:15px; align-items:center; padding:13px 32px 13px 22px; min-width:240px; width:max-content; max-width:95%; font-size:22px; color:white; background:linear-gradient(110deg,#00502e,#087a42); border-radius:0 0 38px 0; border-right:22px solid #60bd72; }
+.dw-staff-overview .dw-overview-heading svg { width:25px; height:25px; flex-shrink:0; }
+.dw-staff-overview .dw-overview-panel label { font-size:16px; font-weight:750; gap:8px; color:#075732; }
+.dw-staff-overview .dw-overview-panel select { min-height:42px; padding:8px 14px; border:1px solid #268750; border-radius:10px; background:white; color:#153f2b; font-size:16px; }
+.dw-staff-overview .dw-overview-panel > .dw-empty { padding:16px 20px; border:0; border-radius:10px; background:#e0f5e5; color:#075c31; font-size:16px; font-weight:650; }
+.dw-staff-overview .dw-overview-panel > .dw-empty::before { content:'ⓘ'; margin-right:12px; font-size:22px; vertical-align:middle; }
+@media(max-width:700px) { .dw-staff-overview .dw-overview-hero { flex-wrap:wrap; padding:18px; gap:12px; } .dw-staff-overview .dw-overview-heading h2 { font-size:18px; min-width:180px; } .dw-staff-overview .dw-overview-emblem { padding-right:12px; } .dw-staff-overview .dw-overview-hero p { font-size:13px; } }
+.dw-staff-overview::before { width:auto; mask-image:none; pointer-events:none; }
+
+/* Compact overview with restrained academy yellow accents. */
+.dw-staff-overview { gap:14px; padding:8px 6px 65px; }
+.dw-staff-overview .dw-overview-hero { min-height:88px; padding:16px 20px; gap:16px; border-bottom:3px solid #ecc64a; border-radius:14px; }
+.dw-staff-overview .dw-overview-hero h1 { font-size:clamp(22px,2.5vw,29px); }
+.dw-staff-overview .dw-overview-hero p { font-size:13px; margin-top:5px; }
+.dw-staff-overview .dw-overview-emblem { color:#f3d76b; padding-right:16px; }
+.dw-staff-overview .dw-overview-emblem svg { width:36px; height:36px; }
+.dw-staff-overview .dw-overview-hero .dw-button { padding:8px 15px; font-size:12px; background:#fff8dc; border-color:#edce64; }
+.dw-staff-overview .dw-overview-panel { padding:0 16px 14px; gap:10px; border-radius:13px; }
+.dw-staff-overview .dw-overview-heading { margin:0 -16px; }
+.dw-staff-overview .dw-overview-heading h2 { padding:10px 25px 10px 17px; min-width:190px; gap:11px; font-size:18px; border-right:15px solid #e6c651; }
+.dw-staff-overview .dw-overview-heading svg { width:21px; height:21px; }
+.dw-staff-overview .dw-overview-panel label { font-size:14px; gap:6px; }
+.dw-staff-overview .dw-overview-panel select { min-height:36px; padding:6px 11px; font-size:14px; border-color:#b5cda9; background:#fffef8; }
+.dw-staff-overview .dw-overview-panel > .dw-empty { padding:11px 15px; font-size:14px; border-left:3px solid #e8c54e; background:linear-gradient(100deg,#e4f5e8,#fff9e5); }
+.dw-staff-overview .dw-overview-panel > .dw-empty::before { font-size:18px; margin-right:9px; }
+@media(max-width:700px) { .dw-staff-overview .dw-overview-hero { padding:14px; gap:10px; } .dw-staff-overview .dw-overview-heading h2 { font-size:16px; } }
+
+/* Smaller overview; no top padding. */
+.dw-staff-overview { padding-top:0; gap:10px; }
+.dw-staff-overview .dw-overview-hero { min-height:70px; padding:11px 15px; gap:12px; border-radius:11px; }
+.dw-staff-overview .dw-overview-hero h1 { font-size:23px; }
+.dw-staff-overview .dw-overview-hero p { font-size:12px; margin-top:3px; }
+.dw-staff-overview .dw-overview-emblem { padding-right:12px; }
+.dw-staff-overview .dw-overview-emblem svg { width:29px; height:29px; }
+.dw-staff-overview .dw-overview-hero .dw-button { min-height:28px; padding:5px 12px; font-size:11px; }
+.dw-staff-overview .dw-overview-panel { padding:0 12px 10px; gap:8px; border-radius:10px; }
+.dw-staff-overview .dw-overview-heading { margin:0 -12px; }
+.dw-staff-overview .dw-overview-heading h2 { min-width:155px; padding:7px 20px 7px 13px; font-size:15px; gap:8px; border-right-width:12px; }
+.dw-staff-overview .dw-overview-heading svg { width:18px; height:18px; }
+.dw-staff-overview .dw-overview-panel label { font-size:12px; gap:4px; }
+.dw-staff-overview .dw-overview-panel select { min-height:31px; padding:4px 9px; font-size:12px; }
+.dw-staff-overview .dw-overview-panel > .dw-empty { padding:8px 11px; font-size:12px; }
+.dw-staff-overview .dw-overview-panel > .dw-empty::before { font-size:16px; }
+@media(max-width:700px) { .dw-staff-overview .dw-overview-hero { padding:10px 12px; } .dw-staff-overview .dw-overview-hero h1 { font-size:21px; } }
+
+.dash-content:has(.dw-group-create-page) { padding-top:0; }
+.dw-group-create-page { padding-top:0; gap:10px; align-content:start; }
+.dw .dw-back { display:inline-flex; align-items:center; gap:8px; min-height:34px; padding:7px 14px; border:1px solid #ddc063; border-radius:9px; background:linear-gradient(110deg,#075735,#0d7045); color:#fff8da; box-shadow:0 3px 8px #0d58331a; font-size:13px; font-weight:700; text-decoration:none; transition:background .15s; }
+.dw .dw-back svg { transform:rotate(180deg); }
+.dw .dw-back:hover { background:#06482d; color:#ffe18a; }
+.dw .dw-back:focus-visible { outline:3px solid #e7c450; outline-offset:3px; }
+.dw-group-create-page .dw-create-group { border-color:#c9dfcf; border-radius:12px; box-shadow:0 5px 16px #145d3310; }
+.dw-group-create-page .dw-create-group-header { background:linear-gradient(105deg,#005533,#18774b); border-bottom:2px solid #e7c450; }
+.dw-group-create-page .dw-create-group-body { padding:12px 15px; }
+@media(prefers-reduced-motion:reduce) { .dw .dw-back { transition:none; } }
