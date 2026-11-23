@@ -38,4 +38,24 @@ function environment() {
   const stop=createRefreshLoop(async()=>{calls++;},{environment:fixture.env,immediate:false});
   assert.equal(calls,0);fixture.listeners.window.get('focus')();await flush();assert.equal(calls,1);stop();
 }
-console.log('Auto-refresh tests passed: 10-second polling, focus/visibility refresh, no overlapping requests, abort/stale-response protection, cleanup and failure recovery.');
+{
+  const fixture = environment();
+  let calls = 0, complete;
+  const stop = createRefreshLoop(async () => {
+    calls++;
+    await new Promise(resolve => { complete = resolve; });
+  }, {environment: fixture.env});
+  fixture.listeners.window.get('data:changed')();
+  fixture.listeners.window.get('data:changed')();
+  assert.equal(calls, 1);
+  complete(); await flush();
+  assert.equal(calls, 2, 'A mutation during loading must trigger a fresh request afterward');
+  complete(); await flush();
+  fixture.listeners.window.get('storage')({key:'unrelated'});
+  assert.equal(calls, 2);
+  fixture.listeners.window.get('storage')({key:'data:last-change'});
+  assert.equal(calls, 3, 'Other tabs must refresh after a successful mutation');
+  stop(); complete(); await flush();
+  assert.equal(fixture.listeners.window.size, 0);
+}
+console.log('Auto-refresh tests passed, including mutation updates, cross-tab updates and queued refreshes.');

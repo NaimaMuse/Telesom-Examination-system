@@ -252,11 +252,6 @@ const PAGE_META = {
   '/admin/judges': {title:'Judges',hint:'Create judge accounts and assign project defense evaluations.'},
   '/admin/evaluation-center': {title:'Evaluation Center',hint:'Coordinate project defense reviews between teachers and Admin.'},
   '/admin/evaluations': {title:'Course Feedback Forms',hint:'Manage course evaluations and review student feedback.'},
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
   '/admin/evaluations/new': {title:'Project Defense',hint:'Create or open a project defense evaluation.'},
   '/admin/project-defenses': {title:'Project Defenses',hint:'Evaluate student project presentations.'},
   '/teacher/evaluation-center': {title:'Project Defense',hint:'Evaluate student projects and submit completed assessments to Admin.'},

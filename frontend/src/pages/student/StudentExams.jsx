@@ -1,6 +1,7 @@
 import {AssessmentProgress} from '../../components/AcademyWorkspace';
 import { usePageSearch, matchesPageSearch } from '../../context/PageSearchContext';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import api from '../../services/api';
 import TeachingIcon from '../../components/TeachingIcon';
 import StudentQuizzes from './StudentQuizzes';
@@ -15,38 +16,16 @@ export default function StudentResults() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    let busy = false;
-    const controller = new AbortController();
-    const loadResults = async () => {
-      if (busy || !active) return;
-      busy = true;
-      try {
-        const { data } = await api.get('/student/results', { signal: controller.signal });
-        if (!active) return;
-        setResults(data.results || []);
-        setError('');
-      } catch (err) {
-        if (active) setError(err.response?.data?.message || 'Results could not refresh. Retrying automatically.');
-      } finally {
-        busy = false;
-        if (active) setLoading(false);
-      }
-    };
-    const refresh = () => { if (!document.hidden) loadResults(); };
-    loadResults();
-    const timer = setInterval(refresh, 10000);
-    window.addEventListener('focus', refresh);
-    document.addEventListener('visibilitychange', refresh);
-    return () => {
-      active = false;
-      controller.abort();
-      clearInterval(timer);
-      window.removeEventListener('focus', refresh);
-      document.removeEventListener('visibilitychange', refresh);
-    };
-  }, []);
+  useAutoRefresh(async ({signal, isCurrent}) => {
+    try {
+      const {data} = await api.get('/student/results', {signal});
+      if (isCurrent()) { setResults(data.results || []); setError(''); }
+    } catch (err) {
+      if (isCurrent()) setError(err.response?.data?.message || 'Results could not refresh. Retrying automatically.');
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
+  });
 
   const visibleResults = results.filter(result => matchesPageSearch(
     search, result.course, result.exam, result.date, result.grade, result.marks

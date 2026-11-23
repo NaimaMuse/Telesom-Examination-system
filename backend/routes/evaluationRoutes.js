@@ -10,11 +10,6 @@ const admin=authorizeRoles('admin');
 const defenseStaff=authorizeRoles('admin','teacher');
 router.use('/defenses/workflow',authorizeRoles('admin','teacher','judge'),require('./defenseWorkflowRoutes'));
 router.use('/defenses',authorizeRoles('admin','teacher','judge'),require('./projectDefenseRoutes'));
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
 const page=req=>({skip:(Math.max(1,Number(req.query.page)||1)-1)*50,limit:50});
 async function transaction(fn){const s=await mongoose.startSession();try{const hello=await mongoose.connection.db.admin().command({hello:1});if(!hello.setName&&hello.msg!=='isdbgrid')fail('Evaluation writes require MongoDB replica-set transactions. Configure MONGODB_URI for a replica set; see docs/EVALUATIONS.md.',503);let result;await s.withTransaction(async()=>{result=await fn(s);});return result;}finally{await s.endSession();}}
 async function student(req){const s=await Student.findOne({user:req.user._id});if(!s)fail('Student profile not found',404);return s;}
@@ -34,11 +29,6 @@ router.get('/eligible/:course',defenseStaff,asyncHandler(async(req,res)=>{
     const [exam,quiz]=await Promise.all([require('../models/Exam').exists(filter),require('../models/Quiz').exists(filter)]);
     if(!exam&&!quiz)fail('This course is outside your project defense access.',403);
   }
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 668f8b4a1f2d2f48fbacfcf8adb97e754711ee91
   const {cohortName,cohortYear,assessment,assessmentType,defense}=req.query;
   const enrollment={...(req.params.course==='all'?{}:{course:req.params.course}),status:'enrolled'};
   if(cohortName!==undefined||cohortYear!==undefined){
