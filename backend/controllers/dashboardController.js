@@ -114,7 +114,7 @@ module.exports = {
 };
 
 module.exports.getAdminDashboard = asyncHandler(async (req,res) => {
-  const currentStudentFilter = { status: { $ne: 'dropped' } };
+  const currentStudentFilter = { status: { $nin: ['dropped', 'archived'] } };
   const currentTeacherFilter = User.distinct('_id', {role:'teacher', isActive:{$ne:false}})
     .then(ids => ({user:{$in:ids}, status:{$ne:'inactive'}}));
   const [students,teachers,courses,exams,quizzes,recent,recentTeachers,recentCourses,recentExams,recentQuizzes,history] = await Promise.all([

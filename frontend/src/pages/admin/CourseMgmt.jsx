@@ -182,7 +182,7 @@ function ConfirmModal({ course, error, onConfirm, onCancel, loading }) {
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <section className="modal-box" role="dialog" aria-modal="true" aria-labelledby="delete-course-title" onClick={(event) => event.stopPropagation()} style={{ maxWidth: 390 }}>
-        <div className="modal-body confirm-content"><div className="confirm-icon">!</div><h3 id="delete-course-title">Remove course?</h3><p>This will remove <strong>{course.name || course.title}</strong> from the course catalog.</p>{error && <p className="course-page-error" role="alert">{error}</p>}</div>
+        <div className="modal-body confirm-content"><div className="confirm-icon">!</div><h3 id="delete-course-title">Permanently delete course?</h3><p>Delete <strong>{course.name || course.title}</strong> and its linked teaching and assessment records? Delete enrolled students first. This cannot be undone.</p>{error && <p className="course-page-error" role="alert">{error}</p>}</div>
         <footer className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button><button type="button" className="btn btn-danger" onClick={onConfirm} disabled={loading}>{loading ? 'Removing…' : 'Remove course'}</button></footer>
       </section>
     </div>

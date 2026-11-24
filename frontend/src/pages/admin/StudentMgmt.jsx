@@ -12,7 +12,7 @@ import { findImportCourses } from '../../utils/studentImportCourse.mjs';
 import TeachingIcon from '../../components/TeachingIcon';
 
 // ─────────────────── STUDENT MANAGEMENT ────────────────────────
-const STUDENT_STATUSES = ['active', 'inactive', 'graduated', 'suspended', 'dropped', 'waiting'];
+const STUDENT_STATUSES = ['active', 'inactive', 'graduated', 'suspended', 'dropped', 'waiting', 'archived'];
 const STUDENT_FIELDS = [
   { key: 'name', label: 'Name', type: 'text', required: true, example: 'Amina Hassan', guidance: 'Required. Enter the full name (2–100 characters).' },
   { key: 'studentId', label: 'Student ID (automatic)', type: 'text', readOnly: true },
@@ -218,19 +218,19 @@ function CrudModal({ title, fields, initial, courses, coursesLoading, onSave, on
   );
 }
 
-function ConfirmModal({ message, onConfirm, onCancel, loading }) {
+function ConfirmModal({ message, onConfirm, onCancel, loading, title = 'Confirm Delete', actionLabel = 'Delete' }) {
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
         <div className="modal-body confirm-content">
           <div className="confirm-icon">⚠️</div>
-          <h3>Confirm Delete</h3>
+          <h3>{title}</h3>
           <p>{message}</p>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-secondary" onClick={onCancel} disabled={loading}>Cancel</button>
           <button className="btn btn-danger" onClick={onConfirm} disabled={loading}>
-            {loading ? 'Deleting…' : 'Delete'}
+            {loading ? 'Processing…' : actionLabel}
           </button>
         </div>
       </div>
@@ -411,6 +411,11 @@ export default function StudentMgmt() {
   const [importReport, setImportReport] = useState(null);
   const [createdStudentLogin, setCreatedStudentLogin] = useState(null);
   const [showAllDetails, setShowAllDetails] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState(new Set());
+  const [bulkAction, setBulkAction] = useState(null);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState('');
 
   const fetchCourses = useCallback(async (background = false, context = {}) => {
     if (!background) setCoursesLoading(true);
@@ -476,7 +481,7 @@ export default function StudentMgmt() {
 
   useAutoRefresh(async context => {
     await Promise.all([fetchStudents(!context.initial, context), fetchCourses(!context.initial, context), fetchEnrollments(!context.initial, context)]);
-  }, { enabled: !showModal && !showImportModal && !importing && !deleting });
+  }, { enabled: !showModal && !showImportModal && !importing && !deleting && !bulkBusy });
 
   const getStudentEnrollment = (student) => enrollments.find((enrollment) => {
     const enrolledStudentId = enrollment.student?._id || enrollment.student;
@@ -521,6 +526,23 @@ export default function StudentMgmt() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const selectedRows = filtered.filter(student => selectedStudents.has(student._id));
+  const selectedCount = selectedRows.length;
+  const allSelected = filtered.length > 0 && selectedCount === filtered.length;
+  const toggleStudent = id => setSelectedStudents(current => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+  const toggleAllStudents = () => setSelectedStudents(current => {
+    const next = new Set(current);
+    for (const student of filtered) {
+      if (allSelected) next.delete(student._id);
+      else next.add(student._id);
+    }
+    return next;
+  });
 
   const handleSave = async (form) => {
     const selectedCourse = courses.find(course => String(course._id) === String(form.course));
@@ -651,7 +673,8 @@ export default function StudentMgmt() {
     setDeleting(true);
     setDeleteError('');
     try {
-      await api.delete(`/students/${deleteTarget._id}`);
+      const {data} = await api.delete(`/students/${deleteTarget._id}`);
+      setBulkNotice(data.message);
       await Promise.all([fetchStudents(), fetchEnrollments()]);
     } catch (error) {
       setDeleteError(error.response?.data?.message || 'Could not delete the student. Please try again.');
@@ -661,9 +684,40 @@ export default function StudentMgmt() {
     }
   };
 
+  const runBulkAction = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    setDeleteError('');
+    setBulkNotice('');
+    const succeeded = [];
+    const failures = [];
+    let archived = 0;
+    for (const student of bulkAction.students) {
+      try {
+        if (bulkAction.type === 'delete') {
+          const {data} = await api.delete(`/students/${student._id}`);
+          if (data.action === 'archived') archived++;
+        }
+        else await api.put(`/students/${student._id}`, {status:bulkAction.status});
+        succeeded.push(student._id);
+      } catch (error) {
+        failures.push(`${student.name || student.studentId}: ${error.response?.data?.message || 'Request failed'}`);
+      }
+    }
+    setSelectedStudents(current => new Set([...current].filter(id => !succeeded.includes(id))));
+    setBulkAction(null);
+    setBulkBusy(false);
+    setBulkNotice(bulkAction.type === 'delete'
+      ? `${succeeded.length - archived} deleted · ${archived} archived because linked records exist.`
+      : `${succeeded.length} students updated.`);
+    if (failures.length) setDeleteError(`${failures.length} failed. ${failures.slice(0, 3).join(' · ')}. Failed students remain selected for retry.`);
+    await Promise.all([fetchStudents(), fetchEnrollments()]);
+  };
+
   return (
     <>
       {deleteError && <div className="student-form-error" role="alert">{deleteError}</div>}
+      {bulkNotice && <p role="status">{bulkNotice}</p>}
       {createdStudentLogin && <div className="card card-body" role="status" style={{marginBottom:16,display:'flex',gap:12,alignItems:'center',justifyContent:'space-between'}}><div><strong>{createdStudentLogin.name}: account created</strong><p>Student ID: <strong>{createdStudentLogin.studentId}</strong>. {createdStudentLogin.email ? `Sign in with the Google account for ${createdStudentLogin.email}.` : 'Add the student’s Google account email to enable sign-in.'}</p></div><button type="button" className="btn btn-sm btn-secondary" aria-label="Dismiss student sign-in details" onClick={()=>setCreatedStudentLogin(null)}>×</button></div>}
       <div className="page-header student-management-header">
         <div className="student-management-actions">
@@ -699,6 +753,7 @@ export default function StudentMgmt() {
               <option value="suspended">Suspended</option>
               <option value="waiting">Waiting</option>
               <option value="dropped">Dropped</option>
+              <option value="archived">Archived</option>
             </select>
             <select aria-label="Filter students by academic year" className="form-control student-filter-select" value={filterAcademicYear} onChange={event => { setFilterAcademicYear(event.target.value); setPage(1); }}>
               <option value="">All academic years</option>
@@ -708,6 +763,27 @@ export default function StudentMgmt() {
           </div>
         </div>
 
+        {selectedCount > 0 && <div className="student-selection-toolbar" role="group" aria-label="Selected student actions">
+          <span className="student-selection-count"><TeachingIcon name="check" size={16}/><strong>{selectedCount}</strong> selected</span>
+          {selectedCount === 1 && <>
+            <button type="button" className="btn btn-sm btn-secondary" disabled={bulkBusy} onClick={() => setViewStudentId(selectedRows[0]._id)}>View selected</button>
+            <button type="button" className="btn btn-sm btn-secondary" disabled={bulkBusy} onClick={() => {
+              const student = selectedRows[0];
+              const enrollment = getStudentEnrollment(student);
+              setEditTarget({...student,course:enrollment?.course?._id || enrollment?.course || ''});
+              setShowModal(true);
+            }}>Edit selected</button>
+          </>}
+          <div className="student-selection-status">
+          <select aria-label="Status for selected students" className="form-control" disabled={bulkBusy} value={bulkStatus} onChange={event => setBulkStatus(event.target.value)}>
+            <option value="">Change status…</option>
+            {STUDENT_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
+          </select>
+          <button type="button" className="btn btn-sm btn-secondary" disabled={bulkBusy || !bulkStatus} onClick={() => setBulkAction({type:'update',status:bulkStatus,students:[...selectedRows]})}>Apply status</button>
+          </div>
+          <button type="button" className="btn btn-sm student-selection-delete" disabled={bulkBusy} onClick={() => setBulkAction({type:'delete',students:[...selectedRows]})}><TeachingIcon name="trash" size={15}/>Delete selected</button>
+          <button type="button" className="student-selection-clear" disabled={bulkBusy} onClick={() => setSelectedStudents(new Set())}>Clear selection <span aria-hidden="true">×</span></button>
+        </div>}
         {loading ? (
           <div className="spinner-wrap"><div className="spinner" /></div>
         ) : paginated.length === 0 ? (
@@ -721,6 +797,12 @@ export default function StudentMgmt() {
             <table className="data-table student-management-table">
               <thead>
                 <tr>
+                  <th scope="col"><label style={{display:'inline-flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>
+                    <input type="checkbox" aria-label="Select all filtered students" checked={allSelected}
+                      ref={element => { if (element) element.indeterminate = selectedCount > 0 && !allSelected; }}
+                      onChange={toggleAllStudents}/>
+                    Select all
+                  </label></th>
                   <th>#</th>
                   <th>Name</th>
                   <th>Phone</th>
@@ -733,7 +815,9 @@ export default function StudentMgmt() {
               </thead>
               <tbody>
                 {paginated.map((s, i) => (
-                  <tr key={s._id}>
+                  <tr key={s._id} aria-selected={selectedStudents.has(s._id)}>
+                    <td><input type="checkbox" aria-label={`Select ${s.name || 'student'}`}
+                      checked={selectedStudents.has(s._id)} onChange={() => toggleStudent(s._id)}/></td>
                     <td>{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td><div className="student-record-person"><span aria-hidden="true">{(s.name || 'S').split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span><strong>{s.name || 'Student'}</strong></div></td>
                     <td>{s.phone || '—'}</td>
@@ -764,7 +848,7 @@ export default function StudentMgmt() {
 
         {/* Pagination */}
         <div className="pagination">
-          <span className="page-info">Showing {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
+          <span className="page-info">Showing {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}{selectedCount > 0 ? ` · ${selectedCount} selected` : ''}</span>
           <button className="page-btn" disabled={page === 1} onClick={() => setPage(p => p - 1)}>‹</button>
           {Array.from({ length: totalPages }, (_, i) => (
             <button key={i} className={`page-btn ${page === i + 1 ? 'active' : ''}`} onClick={() => setPage(i + 1)}>{i + 1}</button>
@@ -792,12 +876,22 @@ export default function StudentMgmt() {
       )}
       {deleteTarget && (
         <ConfirmModal
-          message={`Delete "${deleteTarget.name}"? This disables their login and frees their email for a new registration. Academic records are kept.`}
+          message={`Permanently delete "${deleteTarget.name}" and all their records, including their account, enrollments, attendance, results and certificates? This cannot be undone.`}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
           loading={deleting}
         />
       )}
+      {bulkAction && <ConfirmModal
+        title={bulkAction.type === 'delete' ? 'Confirm Delete' : 'Confirm status change'}
+        actionLabel={bulkAction.type === 'delete' ? 'Delete' : 'Apply status'}
+        message={bulkAction.type === 'delete'
+          ? `Permanently delete ${bulkAction.students.length} selected students and all their linked records? This cannot be undone.`
+          : `Change the status of ${bulkAction.students.length} selected students to "${bulkAction.status}"?`}
+        onConfirm={runBulkAction}
+        onCancel={() => { if (!bulkBusy) setBulkAction(null); }}
+        loading={bulkBusy}
+      />}
       {showImportModal && (
         <ImportStudentsModal
           courses={courses}

@@ -475,10 +475,10 @@ const run = async () => {
   );
   assert(
     deactivatedStudent.status === 200 &&
-      deactivatedStudent.json?.data?.status === 'dropped' &&
-      studentAccountAfterDeactivation?.isActive === false &&
-      studentAccountAfterDeactivation.email === undefined,
-    'Student deactivation preserves records, disables account access and releases the email'
+      deactivatedStudent.json?.action === 'deleted' &&
+      !await Student.exists({_id:createdIds.studentProfile}) &&
+      studentAccountAfterDeactivation === null,
+    'Student with linked academic records is permanently deleted'
   );
 
   const deletedTeacher = await requestJson(

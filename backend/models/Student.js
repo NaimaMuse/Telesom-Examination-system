@@ -42,10 +42,11 @@ const studentSchema = new mongoose.Schema(
     },
     batch: {type:String,trim:true,default:''},
     droppedAt: {type:Date,default:null},
+    archivedAt: {type:Date,default:null},
     status: {
       type: String,
       enum: {
-        values: ['active', 'graduated', 'suspended', 'inactive', 'dropped', 'waiting'],
+        values: ['active', 'graduated', 'suspended', 'inactive', 'dropped', 'waiting', 'archived'],
         message: '{VALUE} is not a valid status',
       },
       default: 'active',
