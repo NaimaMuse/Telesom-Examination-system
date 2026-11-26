@@ -399,6 +399,7 @@ export default function StudentMgmt() {
   const [filterAcademicYear, setFilterAcademicYear] = useState('');
   const [filterCohort,setFilterCohort]=useState('');
   const [page, setPage]             = useState(1);
+  const [selectedStudentIds, setSelectedStudentIds] = useState(() => new Set());
   useEffect(() => { setPage(1); }, [search]);
   const [showModal, setShowModal]   = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -521,6 +522,20 @@ export default function StudentMgmt() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const matchingSelectedCount = filtered.filter(student => selectedStudentIds.has(student._id)).length;
+  const allMatchingSelected = filtered.length > 0 && matchingSelectedCount === filtered.length;
+  const someMatchingSelected = matchingSelectedCount > 0 && !allMatchingSelected;
+
+  const updateSelection = (studentIds, checked) => {
+    setSelectedStudentIds(current => {
+      const next = new Set(current);
+      for (const id of studentIds) {
+        if (checked) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  };
 
   const handleSave = async (form) => {
     const selectedCourse = courses.find(course => String(course._id) === String(form.course));
@@ -652,6 +667,7 @@ export default function StudentMgmt() {
     setDeleteError('');
     try {
       await api.delete(`/students/${deleteTarget._id}`);
+      updateSelection([deleteTarget._id], false);
       await Promise.all([fetchStudents(), fetchEnrollments()]);
     } catch (error) {
       setDeleteError(error.response?.data?.message || 'Could not delete the student. Please try again.');
@@ -708,6 +724,15 @@ export default function StudentMgmt() {
           </div>
         </div>
 
+        {selectedStudentIds.size > 0 && (
+          <div className="student-selection-summary">
+            <span role="status">{selectedStudentIds.size} selected</span>
+            <button type="button" className="btn btn-sm btn-secondary" onClick={() => setSelectedStudentIds(new Set())}>
+              Clear selection
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="spinner-wrap"><div className="spinner" /></div>
         ) : paginated.length === 0 ? (
@@ -721,6 +746,18 @@ export default function StudentMgmt() {
             <table className="data-table student-management-table">
               <thead>
                 <tr>
+                  <th scope="col" className="student-selection-cell">
+                    <label>
+                      <input
+                        ref={input => { if (input) input.indeterminate = someMatchingSelected; }}
+                        type="checkbox"
+                        checked={allMatchingSelected}
+                        aria-label="Select all students matching the current filters"
+                        onChange={event => updateSelection(filtered.map(student => student._id), event.target.checked)}
+                      />
+                      Select all
+                    </label>
+                  </th>
                   <th>#</th>
                   <th>Name</th>
                   <th>Phone</th>
@@ -734,6 +771,14 @@ export default function StudentMgmt() {
               <tbody>
                 {paginated.map((s, i) => (
                   <tr key={s._id}>
+                    <td className="student-selection-cell">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${s.name || 'student'}${s.studentId ? ` (${s.studentId})` : ''}`}
+                        checked={selectedStudentIds.has(s._id)}
+                        onChange={event => updateSelection([s._id], event.target.checked)}
+                      />
+                    </td>
                     <td>{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td><div className="student-record-person"><span aria-hidden="true">{(s.name || 'S').split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span><strong>{s.name || 'Student'}</strong></div></td>
                     <td>{s.phone || '—'}</td>

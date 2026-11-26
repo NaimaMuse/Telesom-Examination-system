@@ -23,7 +23,12 @@
 .dash-shell .dash-content .student-management-panel .student-management-table tbody td{padding:15px 17px;background:#fff;border:0;border-bottom:1px solid #edf1ed;color:#607568;font-size:12px;line-height:1.5;transition:background .15s}
 .dash-shell .dash-content .student-management-panel .student-management-table tbody tr:nth-child(even)>td{background:#fbfcfa}
 .dash-shell .dash-content .student-management-panel .student-management-table tbody tr:hover>td{background:#f2f8f3}
-.dash-shell .dash-content .student-management-panel .student-management-table tbody td:first-child{color:#9eac9f;font-size:11px}
+.dash-shell .dash-content .student-management-panel .student-management-table tbody td:nth-child(2){color:#9eac9f;font-size:11px}
+.student-selection-cell{width:1%;text-align:left}
+.student-selection-cell label,.student-selection-summary{display:flex;align-items:center;gap:8px}
+.student-selection-cell label,.student-selection-cell input{cursor:pointer}
+.student-selection-cell input{width:16px;height:16px;margin:0;vertical-align:middle;accent-color:#21733d}
+.student-selection-summary{padding:10px 17px;gap:12px}
 .dash-shell .dash-content .student-management-panel .student-record-person{gap:11px}
 .dash-shell .dash-content .student-management-panel .student-record-person>span{width:36px;height:36px;border-radius:11px;background:#edf5ef;border:1px solid #dceade;color:#215c3b;font-size:11px;font-weight:750}
 .dash-shell .dash-content .student-management-panel .student-management-table tbody tr:nth-child(even) .student-record-person>span{background:#fff6e5;border-color:#edddbe;color:#96712c}
