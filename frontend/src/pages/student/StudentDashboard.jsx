@@ -1,6 +1,6 @@
 import {usePageSearch,matchesPageSearch} from '../../context/PageSearchContext';
 import {useState} from 'react';
-import {Link} from 'react-router-dom';
+import {Link, useSearchParams} from 'react-router-dom';
 import TeachingIcon from '../../components/TeachingIcon';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import api from '../../services/api';
@@ -85,6 +85,7 @@ const dashboardRequests = {
 
 export default function StudentDashboard() {
   const [search]=usePageSearch();
+  const [params] = useSearchParams();
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
 
@@ -103,14 +104,21 @@ export default function StudentDashboard() {
 
   if (!data) return <div className="spinner-wrap" role="status" aria-label="Loading student dashboard"><div className="spinner"/></div>;
 
-  const courses=(data.courseData?.courses||[]).filter(row=>matchesPageSearch(search,row));
-  const classSchedules=(data.courseData?.classSchedules||[]).filter(row=>matchesPageSearch(search,row));
-  const upcoming = (data.assessments?.exams || []).filter(row=>matchesPageSearch(search,row));
-  const results = data.results?.results || [];
-  const attendance = data.attendance;
+  const enrolledCourses = data.courseData?.courses || [];
+  const selectedCourse = enrolledCourses.find(course => String(course._id) === params.get('course'));
+  const courseId = selectedCourse && String(selectedCourse._id);
+  const inSelectedCourse = id => !courseId || String(id) === courseId;
+  const courses = enrolledCourses.filter(row => inSelectedCourse(row._id) && matchesPageSearch(search,row));
+  const classSchedules = (data.courseData?.classSchedules || []).filter(row =>
+    inSelectedCourse(row.course?._id) && matchesPageSearch(search,row));
+  const upcoming = (data.assessments?.exams || []).filter(row =>
+    inSelectedCourse(row.courseId) && matchesPageSearch(search,row));
+  const results = (data.results?.results || []).filter(row => inSelectedCourse(row.courseId));
+  const attendance = courseId ? data.attendance?.byCourse?.[courseId] : data.attendance;
   const now = new Date();
   const makeup = (data.makeup?.classes || []).filter(item =>
-    matchesPageSearch(search,item) && item.displayStatus === 'Scheduled' && Date.parse(item.end) >= now.getTime()
+    inSelectedCourse(item.course?._id) && matchesPageSearch(search,item) &&
+    item.displayStatus === 'Scheduled' && Date.parse(item.end) >= now.getTime()
   );
   const nextClass = getNextClass(classSchedules, makeup, now);
   const avgPct = results.length ? Math.round(results.reduce((sum, result) => sum + result.marks / result.totalMarks * 100, 0) / results.length) + '%' : '—';
@@ -124,6 +132,10 @@ export default function StudentDashboard() {
   ];
 
   return <div className="student-home">
+    {selectedCourse && <div className="student-home-course-filter">
+      <strong>{selectedCourse.name}</strong>
+      <Link to="/student">All courses dashboard</Link>
+    </div>}
     {search.trim() && <p role="status">Showing dashboard matches for “{search.trim()}”. Clear search to see all records.</p>}
     {error && <p className="student-home-alert" role="status">Some dashboard data could not refresh.</p>}
     <dl className="student-home-stats">
@@ -132,8 +144,9 @@ export default function StudentDashboard() {
         <div><dt>{label}</dt><dd>{value}</dd></div>
       </div>)}
     </dl>
-    <StudentClassCalendar schedules={classSchedules} makeupClasses={makeup}
-      sidebar={<ContinueLearning course={courses[0]} outlines={data.outlines?.outlines || []}/>}/>
+    <StudentClassCalendar key={courseId || 'all-courses'} schedules={classSchedules} makeupClasses={makeup}
+      initialDate={courseId ? nextClass?.date : undefined}
+      sidebar={<ContinueLearning course={selectedCourse || courses[0]} outlines={data.outlines?.outlines || []}/>}/>
     <div className="student-home-bottom">
       <DashboardPanel title="Upcoming Classes" icon="calendar" to="/student/courses" linkLabel="View schedule">
         {nextClass ? <div className="student-home-next">

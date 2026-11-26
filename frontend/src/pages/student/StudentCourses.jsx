@@ -47,7 +47,9 @@ function CourseCard({course, nextClass}) {
         <time dateTime={nextClass.date}>{new Date(nextClass.date + 'T12:00:00Z').toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',timeZone:'Africa/Nairobi'})}</time>
         <span>{nextClass.time}</span>
       </> : <strong>No upcoming class</strong>}
-      <Link to="/student"><TeachingIcon name="calendar" size={16}/> View calendar</Link>
+      <Link to={{pathname: '/student', search: new URLSearchParams({course: course._id}).toString()}}>
+        <TeachingIcon name="calendar" size={16}/> View calendar
+      </Link>
     </div>
   </article>;
 }

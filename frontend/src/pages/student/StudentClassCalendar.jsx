@@ -34,9 +34,9 @@ function StudentCourseDuration({schedules, makeupClasses}) {
   </section>;
 }
 
-export default function StudentClassCalendar({schedules, makeupClasses, sidebar}) {
+export default function StudentClassCalendar({schedules, makeupClasses, sidebar, initialDate}) {
   const today = teachingDateKey();
-  const [selected, setSelected] = useState(today);
+  const [selected, setSelected] = useState(initialDate || today);
   const [view, setView] = useState('month');
   const current = new Date(selected + 'T12:00:00Z');
   const year = current.getUTCFullYear();

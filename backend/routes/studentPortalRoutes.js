@@ -77,11 +77,11 @@ router.get('/exams/upcoming', asyncHandler(async (req, res) => {
   const today = new Date(); today.setUTCHours(0, 0, 0, 0);
   const exams = scopes.length ? await Exam.find({ $or: scopes, visibleToStudents:true, status: { $in: ['scheduled', 'upcoming', 'ongoing'] }, examDate: { $gte: today } }).populate('course').sort({ examDate: 1 }).lean() : [];
   const quizzes = scopes.length ? await Quiz.find({ $or: scopes, visibleToStudents:true, status: {$in:['published','scheduled','upcoming']}, quizDate: { $gte: today } }).populate('course').lean() : [];
-  res.json({ exams: [...exams.map(e => ({ ...e, date: date(e.examDate), course: courseLabel(e.course) })), ...quizzes.map(q => ({ ...q, _id: 'quiz-' + q._id, type: 'quiz', date: date(q.quizDate), course: courseLabel(q.course) }))].sort((a,b) => a.date.localeCompare(b.date)) });
+  res.json({ exams: [...exams.map(e => ({ ...e, date: date(e.examDate), courseId: e.course?._id, course: courseLabel(e.course) })), ...quizzes.map(q => ({ ...q, _id: 'quiz-' + q._id, type: 'quiz', date: date(q.quizDate), courseId: q.course?._id, course: courseLabel(q.course) }))].sort((a,b) => a.date.localeCompare(b.date)) });
 }));
 router.get('/results', asyncHandler(async (req, res) => {
   const rows = await ExamResult.find({ student: req.student._id }).populate({ path: 'exam', populate: { path: 'course' } }).sort({ createdAt: -1 }).lean();
-  res.json({ results: rows.filter(r => r.exam && r.exam.visibleToStudents === true && r.exam.marksPublished === true && !['draft','cancelled'].includes(r.exam.status) && r.exam.totalMarks > 0 && Number.isFinite(r.marksObtained) && r.marksObtained >= 0 && r.marksObtained <= r.exam.totalMarks).map(r => ({ _id: r._id, course: courseLabel(r.exam.course), exam: r.exam.title, date: date(r.exam.examDate), marks: r.marksObtained, totalMarks: r.exam.totalMarks, grade: gradeFor(r.marksObtained / r.exam.totalMarks * 100), isPassed: r.marksObtained >= r.exam.passingMarks, status: 'published' })) });
+  res.json({ results: rows.filter(r => r.exam && r.exam.visibleToStudents === true && r.exam.marksPublished === true && !['draft','cancelled'].includes(r.exam.status) && r.exam.totalMarks > 0 && Number.isFinite(r.marksObtained) && r.marksObtained >= 0 && r.marksObtained <= r.exam.totalMarks).map(r => ({ _id: r._id, courseId: r.exam.course?._id, course: courseLabel(r.exam.course), exam: r.exam.title, date: date(r.exam.examDate), marks: r.marksObtained, totalMarks: r.exam.totalMarks, grade: gradeFor(r.marksObtained / r.exam.totalMarks * 100), isPassed: r.marksObtained >= r.exam.passingMarks, status: 'published' })) });
 }));
 router.get('/quizzes', asyncHandler(async (req, res) => {
   const scopes = await enrolledScopes(req.student._id);
@@ -100,7 +100,18 @@ router.get('/attendance', asyncHandler(async (req, res) => {
 }));
 router.get('/attendance/summary', asyncHandler(async (req, res) => {
   const rows = await Attendance.find({ student: req.student._id }).lean();
-  res.json({ total: rows.length, present: rows.filter(r => r.status === 'present').length });
+  const byCourse = Object.create(null);
+  let present = 0;
+  for (const row of rows) {
+    const attended = Number(row.status === 'present');
+    present += attended;
+    if (row.course) {
+      const course = byCourse[row.course] ??= { total: 0, present: 0 };
+      course.total++;
+      course.present += attended;
+    }
+  }
+  res.json({ total: rows.length, present, byCourse });
 }));
 async function enrolledMaterialScopes(student){const rows=await Enrollment.find({student,status:'enrolled'}).lean();return rows.map(e=>({course:e.course,academicYear:e.academicYear,batch:e.batch||''}));}
 router.get('/notes', asyncHandler(async (req, res) => {
