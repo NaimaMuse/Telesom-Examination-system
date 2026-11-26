@@ -42,35 +42,69 @@ const controller = createResourceController(Student, {
   },
 });
 
-const deactivateStudent = asyncHandler(async (req, res) => {
+const deleteStudent = asyncHandler(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     res.status(400);
     throw new Error('Invalid student ID');
   }
-  const student = await Student.findById(req.params.id);
-  if (!student) {
-    res.status(404);
-    throw new Error('Student not found');
-  }
-  student.status = 'dropped';
-  student.droppedAt ||= new Date();
-  await require('../models/Enrollment').updateMany({student:student._id,status:'enrolled'},{$set:{status:'dropped',droppedAt:student.droppedAt}});
-  await student.save();
-  if (student.user) {
-    await User.updateOne(
-      { _id: student.user, role: 'student' },
-      {
-        $set: { isActive: false, studentPasswordSet: false },
-        $unset: { email: 1, password: 1 },
-        $inc: { authVersion: 1 },
+
+  let outcome;
+  const remove = async session => {
+    const options = session ? {session} : {};
+    const student = await Student.findById(req.params.id, null, options);
+    if (!student) throw Object.assign(new Error('Student not found'), {statusCode:404});
+
+    const {Form, Response, Notice} = require('../models/Evaluation');
+    const responses = await Response.find({student:student._id}, 'form submittedAt', options).lean();
+    for (const response of responses) {
+      if (response.submittedAt) {
+        await Form.updateOne(
+          {_id:response.form, responseCount:{$gt:0}},
+          {$inc:{responseCount:-1}},
+          options
+        );
       }
-    );
+    }
+    await Form.updateMany({students:student._id}, {$pull:{students:student._id}}, options);
+    for (const Model of [
+      require('../models/Attendance'), require('../models/ExamResult'),
+      require('../models/QuizResult'), require('../models/Certificate'),
+      require('../models/Internship'), require('../models/Enrollment'), Response, Notice,
+    ]) {
+      await Model.deleteMany({student:student._id}, options);
+    }
+    await require('../models/Note').deleteMany({
+      $or:[{student:student._id}, {createdBy:student.user}],
+    }, options);
+
+    const Defense = require('../models/ProjectDefense');
+    await Defense.deleteMany({students:student._id, $expr:{$eq:[{$size:'$students'},1]}}, options);
+    await Defense.updateMany({students:student._id}, {$pull:{students:student._id}}, options);
+
+    if (student.user) {
+      const Announcement = require('../models/Announcement');
+      await Announcement.deleteMany({sender:student.user}, options);
+      await Announcement.updateMany(
+        {$or:[{studentRecipients:student.user},{readBy:student.user},{dismissedBy:student.user}]},
+        {$pull:{studentRecipients:student.user,readBy:student.user,dismissedBy:student.user}},
+        options
+      );
+      await require('../models/Session').deleteMany({user:student.user}, options);
+      await User.deleteOne({_id:student.user,role:'student'}, options);
+    }
+    await Student.deleteOne({_id:student._id}, options);
+    outcome = 'deleted';
+  };
+
+  try {
+    await mongoose.connection.transaction(remove);
+  } catch (error) {
+    if (error.code !== 20 && error.codeName !== 'IllegalOperation' &&
+        !error.message?.includes('Transaction numbers are only allowed')) throw error;
+    // Keep the student profile until cleanup succeeds so standalone retries can finish.
+    await remove();
   }
-  return res.status(200).json({
-    success: true,
-    message: 'Student account deactivated',
-    data: student,
-  });
+  res.json({success:true,action:outcome});
 });
 
 module.exports = {
@@ -78,5 +112,5 @@ module.exports = {
   getStudentById: controller.getById,
   createStudent,
   updateStudent: controller.update,
-  deleteStudent: deactivateStudent,
+  deleteStudent,
 };

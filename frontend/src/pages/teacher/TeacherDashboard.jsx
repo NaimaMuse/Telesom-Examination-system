@@ -93,10 +93,10 @@ export default function TeacherDashboard() {
     load(true);
     const refresh = () => { if (!document.hidden) load(); };
     const interval = setInterval(refresh, 3000);
-    const storageRefresh = event => { if(event.key === 'assessments:last-change') refresh(); };
+    const storageRefresh = event => { if(event.key === 'data:last-change') refresh(); };
     window.addEventListener('focus', refresh);
     window.addEventListener('online', refresh);
-    window.addEventListener('assessments:changed', refresh);
+    window.addEventListener('data:changed', refresh);
     window.addEventListener('storage', storageRefresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
@@ -106,7 +106,7 @@ export default function TeacherDashboard() {
       clearInterval(interval);
       window.removeEventListener('focus', refresh);
       window.removeEventListener('online', refresh);
-      window.removeEventListener('assessments:changed', refresh);
+      window.removeEventListener('data:changed', refresh);
       window.removeEventListener('storage', storageRefresh);
       document.removeEventListener('visibilitychange', refresh);
     };

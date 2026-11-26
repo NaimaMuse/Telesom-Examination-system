@@ -114,16 +114,17 @@ module.exports = {
 };
 
 module.exports.getAdminDashboard = asyncHandler(async (req,res) => {
+  const currentStudentFilter = { status: { $nin: ['dropped', 'archived'] } };
   const currentTeacherFilter = User.distinct('_id', {role:'teacher', isActive:{$ne:false}})
     .then(ids => ({user:{$in:ids}, status:{$ne:'inactive'}}));
   const [students,teachers,courses,exams,quizzes,recent,recentTeachers,recentCourses,recentExams,recentQuizzes,history] = await Promise.all([
-    Student.countDocuments(),currentTeacherFilter.then(filter => Teacher.countDocuments(filter)),Course.countDocuments(),Exam.countDocuments(),Quiz.countDocuments(),
-    Student.find().populate('user','name email isActive').sort({createdAt:-1,_id:-1}).limit(8).lean(),
+    Student.countDocuments(currentStudentFilter),currentTeacherFilter.then(filter => Teacher.countDocuments(filter)),Course.countDocuments(),Exam.countDocuments(),Quiz.countDocuments(),
+    Student.find(currentStudentFilter).populate('user','name email isActive').sort({createdAt:-1,_id:-1}).limit(8).lean(),
     Teacher.find().select('user createdAt').populate('user','name').sort({createdAt:-1,_id:-1}).limit(5).lean(),
     Course.find().select('title name createdAt').sort({createdAt:-1,_id:-1}).limit(5).lean(),
     Exam.find().select('title createdAt').sort({createdAt:-1,_id:-1}).limit(5).lean(),
     Quiz.find().select('title createdAt').sort({createdAt:-1,_id:-1}).limit(5).lean(),
-    currentTeacherFilter.then(filter => loadDashboardHistory(new Date(),filter)),
+    currentTeacherFilter.then(filter => loadDashboardHistory(new Date(),filter,currentStudentFilter)),
   ]);
   const groups = [
     [recent, 'student', 'Student registered', '/admin/students'],

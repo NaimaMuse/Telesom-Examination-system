@@ -209,8 +209,9 @@ router.get('/groups',asyncHandler(async(req,res)=>{
 
 router.post('/groups',staff,asyncHandler(async(req,res)=>{
   const exam = await findExam(req,req.body.exam);
-  const form = isId(req.body.form) && await Rubric.findOne({_id:req.body.form,exam:exam._id,status:'approved'});
-  if (!form || form.maximum!==exam.totalMarks) fail('Choose an approved form matching this exam maximum.');
+  const form = isId(req.body.form) && await Rubric.findOne({_id:req.body.form,exam:exam._id});
+  if (!form || form.maximum!==exam.totalMarks) fail('Choose an evaluation form matching this exam maximum.');
+  validateSections(form.sections,exam.totalMarks);
   const students = ids(req.body.students,'enrolled students',250);
   const enrollment = await enrollmentFilter(exam);
   if ((await Enrollment.distinct('student',{...enrollment,student:{$in:students}})).length!==students.length) fail('Every member must be enrolled in this exam’s course and cohort.');

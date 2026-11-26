@@ -1,10 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('node:os');
 const { randomUUID } = require('crypto');
 const multer = require('multer');
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const uploadDirectory = path.join(__dirname, '..', 'uploads', 'attendance');
+const uploadDirectory = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'telesom-attendance')
+  : path.join(__dirname, '..', 'uploads', 'attendance');
 const acceptedMimeTypes = {
   '.csv': [
     'text/csv',

@@ -252,3 +252,55 @@ dialog.defense-submission-dialog .defense-submission-success p { margin:12px 0; 
 .defense-submission-dialog .defense-submission-dismiss { position:absolute; top:10px; right:12px; width:30px; height:30px; padding:0; border:1px solid #ffffff50; border-radius:50%; color:#fff; background:#ffffff12; font-size:23px; cursor:pointer; }
 .defense-submission-dialog .defense-submission-done { padding:9px 28px; border:1px solid #f1ce71; border-radius:8px; background:#ffe097; color:#123e2c; font-size:14px; font-weight:750; cursor:pointer; }
 .defense-submission-dialog button:focus-visible { outline:3px solid #ffe097; outline-offset:3px; }
+
+.defense-history-page { position:relative; isolation:isolate; min-height:65vh; padding:0 0 65px; background:radial-gradient(ellipse at bottom left,#def5e4,transparent 65%); }
+.defense-history-hero { position:relative; overflow:hidden; display:flex; align-items:center; gap:15px; padding:17px 22px; border:1px solid #3a9b5e; border-radius:14px; background:linear-gradient(110deg,#00432a,#00743c 65%,#00462a); color:white; box-shadow:0 5px 14px #12673715; margin-bottom:16px; }
+.defense-history-hero::after { content:''; position:absolute; width:50%; height:110px; right:18%; top:-87px; border-bottom:3px solid #eacb49; border-radius:50%; transform:rotate(-16deg); pointer-events:none; }
+.defense-history-hero h2 { margin:0; color:white; font-size:24px; line-height:1.2; }
+.defense-history-shield { display:flex; padding-right:14px; border-right:1px solid #a0d6a26b; color:#e4dc78; }
+.defense-history-cap { margin-left:auto; color:#a9dcaf; opacity:.4; }
+.defense-history-hero a { flex-shrink:0; padding:8px 17px; border:1px solid #d0e3ab; border-radius:24px; background:#f4fff3; color:#07532e; font-size:13px; font-weight:750; text-decoration:none; }
+.defense-history-hero a:hover { background:#fff3c3; }
+.defense-history-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:300px; padding:25px 20px; border:1px solid #8fc9a0; border-radius:17px; background:linear-gradient(150deg,white 65%,#f0faf1); text-align:center; box-shadow:0 6px 20px #1267370d; }
+.defense-history-empty img { width:190px; height:140px; object-fit:contain; }
+.defense-history-empty h3 { margin:0; font-size:22px; color:#075932; }
+.defense-history-empty p { margin:0; font-size:14px; color:#607067; }
+@media(max-width:650px) { .defense-history-hero { flex-wrap:wrap; padding:14px; gap:10px; } .defense-history-hero h2 { font-size:19px; } .defense-history-cap { display:none; } .defense-history-hero a { margin-left:auto; } .defense-history-empty { min-height:250px; } .defense-history-empty h3 { font-size:18px; } }
+
+/* Legacy evaluations: green academy banner and illustrated empty state. */
+.dash-content:has(.defense-history-page) { padding-top:0; }
+.defense-history-page { overflow:hidden; min-height:72vh; padding:0 0 85px; background:radial-gradient(ellipse at 10% 0,#e4f8eb,transparent 65%),#f8fcf9; }
+.defense-history-page::before { content:''; position:absolute; z-index:-1; width:100%; height:80px; bottom:-30px; left:0; background:linear-gradient(115deg,#72c981,#007c40); border-top:12px solid #b7e4bd; border-radius:55% 70% 0 0/80% 90% 0 0; transform:rotate(1deg); pointer-events:none; }
+.defense-history-page::after { content:''; position:absolute; bottom:35px; right:0; width:180px; height:85px; background:radial-gradient(circle,#63b67a 1.4px,transparent 1.8px) 0 0/12px 12px; opacity:.45; z-index:-1; pointer-events:none; }
+.defense-history-hero { min-height:80px; margin-bottom:16px; border-radius:16px; }
+.defense-history-hero::after { width:60%; height:170px; top:-135px; background:#1ba65c38; }
+.defense-history-empty { min-height:330px; border-color:#62b97b; background:radial-gradient(ellipse at bottom,#edf9ef,transparent 70%),#fff; }
+.defense-history-empty img { width:220px; height:165px; }
+.defense-history-empty h3 { font-size:24px; }
+@media(max-width:650px) { .defense-history-hero { min-height:70px; } .defense-history-empty { min-height:280px; } .defense-history-empty img { width:180px; height:135px; } .defense-history-empty h3 { font-size:19px; } }
+
+/* Compact legacy evaluations layout. */
+.defense-history-page { min-height:0; padding-bottom:45px; }
+.defense-history-page .defense-history-hero { min-height:58px; padding:10px 16px; gap:11px; margin-bottom:10px; border-radius:11px; }
+.defense-history-page .defense-history-hero h2 { font-size:20px; }
+.defense-history-page .defense-history-shield { padding-right:10px; }
+.defense-history-page .defense-history-shield svg { width:25px; height:25px; }
+.defense-history-page .defense-history-cap svg { width:43px; height:43px; }
+.defense-history-page .defense-history-hero a { padding:6px 12px; font-size:12px; }
+.defense-history-page .defense-history-empty { min-height:175px; padding:20px 15px; gap:8px; border-radius:12px; }
+.defense-history-page .defense-history-empty h3 { font-size:19px; }
+.defense-history-page .defense-history-empty p { font-size:13px; }
+.defense-history-page::before { height:45px; bottom:-20px; border-top-width:7px; }
+.defense-history-page::after { height:45px; width:125px; bottom:12px; }
+@media(max-width:650px) { .defense-history-page .defense-history-hero h2 { font-size:17px; } .defense-history-page .defense-history-empty { min-height:150px; } .defense-history-page .defense-history-empty h3 { font-size:17px; } }
+
+/* Slim, balanced history banner. */
+.defense-history-page .defense-history-hero { min-height:48px; padding:8px 13px; gap:10px; border-radius:10px; border-color:#2d8c58; box-shadow:0 3px 10px #075b3010; background:linear-gradient(105deg,#00492e,#07663e 65%,#004a2d); }
+.defense-history-page .defense-history-hero h2 { font-size:17px; font-weight:750; letter-spacing:-.2px; }
+.defense-history-page .defense-history-hero::after { width:36%; height:95px; right:24%; top:-83px; border-bottom-width:2px; opacity:.65; }
+.defense-history-page .defense-history-shield { padding-right:10px; }
+.defense-history-page .defense-history-shield svg { width:22px; height:22px; }
+.defense-history-page .defense-history-cap { opacity:.25; }
+.defense-history-page .defense-history-cap svg { width:33px; height:33px; }
+.defense-history-page .defense-history-hero a { padding:5px 11px; font-size:11px; line-height:1.5; border-radius:18px; background:#f5fff4; border-color:#d5e5b3; }
+@media(max-width:650px) { .defense-history-page .defense-history-hero h2 { font-size:15px; } .defense-history-page .defense-history-hero { gap:8px; } }

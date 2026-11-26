@@ -76,7 +76,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const startServer = async () => {
+const initializeDatabase = async () => {
   if (process.env.NODE_ENV === 'production' &&
       (Buffer.byteLength(process.env.JWT_SECRET || '') < 32 || /^replace_/i.test(process.env.JWT_SECRET))) {
     throw new Error('Set a strong production JWT_SECRET of at least 32 bytes.');
@@ -88,6 +88,10 @@ const startServer = async () => {
   await require('./models/Session').init();
   await require('./models/Certificate').init();
   await require('./models/Enrollment').init();
+};
+
+const startServer = async () => {
+  await initializeDatabase();
   const server = app.listen(PORT, () => {
     console.log(
       `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`
@@ -105,4 +109,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, startServer };
+module.exports = { app, initializeDatabase, startServer };

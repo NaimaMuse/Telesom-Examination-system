@@ -1,3 +1,4 @@
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import { useEffect, useRef, useState } from 'react';
 import api from '../services/api';
 import {usePageSearch,matchesPageSearch} from '../context/PageSearchContext';
@@ -331,22 +332,20 @@ function CertificateHistory({ admin = false, headingRef }) {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setHistoryError('');
-    api.get('/certificates', { params: { page,search }, signal: controller.signal }).then(({ data }) => {
+  useAutoRefresh(async ({signal, isCurrent}) => {
+    try {
+      const {data} = await api.get('/certificates', {params:{page}, signal});
+      if (!isCurrent()) return;
       setCertificates(data.data);
       setPages(data.pages);
       setTotal(data.total ?? null);
-    }).catch(err => {
-      if (!controller.signal.aborted) setHistoryError(message(err, 'Could not load certificates.'));
-    }).finally(() => {
-      if (!controller.signal.aborted) setLoading(false);
-    });
-    return () => controller.abort();
-  }, [page,search]);
-  useEffect(()=>setPage(1),[search]);
+      setHistoryError('');
+    } catch (err) {
+      if (isCurrent()) setHistoryError(message(err, 'Could not load certificates.'));
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
+  }, {deps:[page]});
 
   return <section className={admin ? 'certificates-panel certificates-history' : 'certificates-panel student-achievement-panel'} aria-label={admin ? undefined : 'My Certificates'} aria-labelledby={admin ? 'issued-certificates' : undefined}>
       {admin && <header className="certificates-history-header">

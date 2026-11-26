@@ -289,6 +289,14 @@ function StudentPicker({course,cohort,cohortYear,assessment,assessmentType,defen
 export function ProjectDefenseList(){
   const {route,defenseHome}=useDefensePaths();
   const [search]=usePageSearch();
+  const [deleting,setDeleting]=useState(null);
+  const [revision,setRevision]=useState(0);
+  async function remove(record){
+    if(!window.confirm('Delete '+(record.projectTitle||record.groupName||'this evaluation')+'? This cannot be undone.'))return;
+    setDeleting(record._id);
+    try{await api.delete(endpoint+'/'+record._id,{data:{__v:record.__v}});setRevision(value=>value+1);setError('');}
+    catch(error){setError(message(error));}finally{setDeleting(null);}
+  }
   const [page,setPage]=useState(1);
   const [result,setResult]=useState(null);
   const [error,setError]=useState('');
@@ -298,23 +306,23 @@ export function ProjectDefenseList(){
       .then(({data})=>{if(!controller.signal.aborted)setResult(data);})
       .catch(error=>{if(!controller.signal.aborted)setError(message(error));});
     return ()=>controller.abort();
-  },[page,search]);
+  },[page,search,revision]);
   useEffect(()=>{setPage(1);},[search]);
   function changePage(next){
     setResult(null);
     setError('');
     setPage(next);
   }
-  return <div className="evaluations">
-    <div className="ev-actions"><h2>{route.startsWith('/judge')?'Assigned Project Defenses':'Project Defense Evaluations'}</h2><Link to={defenseHome}>Back to Project Defense</Link></div>
+  return <div className="evaluations defense-history-page">
+    <header className="defense-history-hero"><span className="defense-history-shield"><TeachingIcon name="shield" size={32}/></span><h2>{route.startsWith('/judge')?'Assigned Project Defenses':'Project Defense Evaluations'}</h2><span className="defense-history-cap" aria-hidden="true"><TeachingIcon name="graduate" size={60}/></span><Link to={route.startsWith('/judge')?defenseHome:route+'/workflow'}>← Back to Project Defense</Link></header>
     {error?<p role="alert">{error}</p>:!result?<p role="status">Loading evaluations…</p>:<>
-      {result.records.length===0&&<p>{search.trim()?'No project defenses match your search.':'No project defense evaluations yet.'}</p>}
+      {result.records.length===0&&<section className="defense-history-empty" role="status"><h3>{search.trim()?'No project defenses match your search.':'No project defense evaluations yet.'}</h3><p>{search.trim()?'Try another search or clear the search field.':'Evaluations will appear here once they are created.'}</p></section>}
       <div className="ev-grid ev-admin-grid">{result.records.map(record=><article className="ev-card ev-admin-card" key={record._id}>
         <header className="ev-admin-card-heading"><span>{record.course?.name||record.course?.title}</span>
           <span className="ev-status" data-state={record.status}>{record.submittedAt?'Sent to Admin':record.status}</span></header>
         <h3>{record.projectTitle||'Untitled project'}</h3>
         <p>{[record.groupName,record.cohort].filter(Boolean).join(' · ')}</p>
-        <div className="ev-card-links"><Link className="btn" to={route+'/'+record._id+'?view=scoring'}>Open Evaluation</Link></div>
+        <div className="ev-card-links"><Link className="btn" to={route+'/'+record._id+'?view=scoring'}>Open Evaluation</Link>{!route.startsWith('/judge')&&(!route.startsWith('/teacher')||!record.submittedAt)&&<button type="button" className="btn" style={{color:'#b42318'}} disabled={!!deleting} onClick={()=>remove(record)}>{deleting===record._id?'Deleting…':'Delete'}</button>}</div>
       </article>)}</div>
       {result.total>50&&<div className="ev-actions">
         <button disabled={page<=1} onClick={()=>changePage(page-1)}>Previous</button>
@@ -894,6 +902,10 @@ function DefenseForm({id,initialCourse,initialScoring=false}){
           {!judge&&form._id&&!submitted&&<button type="button" className="defense-delete-group" disabled={busy||editing} onClick={deleteGroup}>
             <TeachingIcon name="trash" size={14}/> Delete Group
           </button>}
+          {!judge&&form._id&&!finalized&&<button type="button" disabled={busy||editing}
+            onClick={()=>{setError('');setEditingMarks(true);}}>Set Up Rubric</button>}
+
+
           {form._id&&<button type="button" disabled={busy||editing} aria-expanded={showScoring||finalized}
             aria-controls="defense-scoring" onClick={()=>showScoring&&!finalized?setShowScoring(false):openScoring()}>
             {showScoring&&!finalized?'Hide Scoring':'Open Scoring'}

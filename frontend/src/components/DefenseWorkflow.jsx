@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react';
 import {Link,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {useAuth} from '../context/AuthContext';
 import api from '../services/api';
+import {getAllPages} from '../services/paginatedApi';
 import TeachingIcon from './TeachingIcon';
 import './DefenseWorkflow.css';
 
@@ -73,7 +74,7 @@ export default function DefenseWorkflow(){
   const exam=exams.data?.exams.find(exam=>exam._id===examId);
   const creatingGroup=kind==='groups'&&id==='new';
   const staffOverview=role!=='judge'&&!kind;
-  return <main className={staffOverview?'dw dw-staff-overview':'dw'}>
+  return <main className={staffOverview?'dw dw-staff-overview':creatingGroup?'dw dw-group-create-page':'dw'}>
     {!kind&&<header className={staffOverview?'dw-hero dw-overview-hero':'dw-hero'}>
       {staffOverview&&<span className="dw-overview-emblem"><TeachingIcon name="shield" size={40}/></span>}
       <div>
@@ -84,7 +85,7 @@ export default function DefenseWorkflow(){
       {staffOverview&&<span className="dw-overview-art"><TeachingIcon name="graduate" size={84}/></span>}
       <Link className="dw-button dw-secondary" to={'/'+role+'/project-defenses/legacy'}>{staffOverview?'← Previous Evaluations':'Previous evaluations'}</Link>
     </header>}
-    {kind&&kind!=='forms'&&<Link className="dw-back" to={home}>← Back to Project Defense</Link>}
+    {kind&&kind!=='forms'&&<Link className="dw-back" to={home}><TeachingIcon name="arrow" size={16}/><span>Back to Project Defense</span></Link>}
     {!kind&&<Workspace role={role} exams={exams} exam={exam} examId={examId} setExam={value=>setSearch(value?{exam:value}:{})} base={base}/>}
     {kind==='forms'&&role!=='judge'&&<FormPage key={id+examId} id={id} exam={exam} examId={examId} examError={exams.error} loadingExams={!exams.data} base={base} user={user}/>}
     {creatingGroup&&role!=='judge'&&<CreateGroup key={examId} exam={exam} examId={examId} base={base}
@@ -110,6 +111,17 @@ function GroupList({groups,base,examId,empty,assignmentCards=false}){
 }
 
 function Workspace({role,exams,exam,examId,setExam,base}){
+  const [courses,setCourses]=useState([]);
+  const [courseId,setCourseId]=useState('');
+  const [courseError,setCourseError]=useState('');
+  useEffect(()=>{
+    if(role!=='admin')return;
+    const controller=new AbortController();
+    getAllPages('/courses',{signal:controller.signal}).then(({data})=>{if(!controller.signal.aborted)setCourses(data.data||[]);}).catch(error=>{if(!controller.signal.aborted)setCourseError(message(error));});
+    return()=>controller.abort();
+  },[role]);
+  const effectiveCourse=courseId||String(exam?.course?._id||exam?.course||'');
+  const visibleExams=(exams.data?.exams||[]).filter(item=>role!=='admin'||!effectiveCourse||String(item.course?._id||item.course)===effectiveCourse);
   const assigned=useData('/groups');
   const groups=useData(exam?'/groups?exam='+examId:null);
   const forms=useData(exam?'/forms?exam='+examId:null);
@@ -120,10 +132,17 @@ function Workspace({role,exams,exam,examId,setExam,base}){
       <div className="dw-overview-heading">
         <h2><TeachingIcon name="graduate" size={24}/> Exam</h2>
       </div>
+      {role==='admin'&&<label>Choose a course
+        <select value={effectiveCourse} onChange={event=>{setCourseId(event.target.value);setExam('');}}>
+          <option value="">All courses</option>
+          {courses.map(course=><option key={course._id} value={course._id}>{course.title||course.name}</option>)}
+        </select>
+      </label>}
+      <Feedback error={courseError}/>
       <label>Choose an exam
         <select value={examId} onChange={event=>setExam(event.target.value)} disabled={!exams.data}>
           <option value="">{exams.data?'Select an exam':'Loading exams…'}</option>
-          {exams.data?.exams.map(item=><option key={item._id} value={item._id}>
+          {visibleExams.map(item=><option key={item._id} value={item._id}>
             {item.title}
           </option>)}
         </select>
@@ -310,8 +329,7 @@ function FormEditor({original,exam,examId,base,user}){
           </button>
           <button className="dw-button dw-builder-send" type="button" disabled={busy||!recipient||!readyToSend}
             onClick={()=>action('send')}><TeachingIcon name="arrow" size={17}/>{sendLabel}</button>
-          {!dirty&&form.status==='review'&&form.handoff?.recipient===user._id&&
-            <button className="dw-button" type="button" disabled={busy} onClick={()=>action('approve')}>Approve Form</button>}
+
         </div>
       </footer>}
     </div>
@@ -330,7 +348,7 @@ function CreateGroup({exam,examId,base,loadingExam,examError}){
   const [error,setError]=useState('');
   const [created,setCreated]=useState(null);
   const [resetCount,setResetCount]=useState(0);
-  const approved=forms.data?.forms.filter(item=>item.status==='approved'&&item.maximum===exam?.totalMarks)||[];
+  const approved=forms.data?.forms.filter(item=>item.maximum===exam?.totalMarks)||[];
   async function save(event){
     event.preventDefault();
     const openGroup=event.nativeEvent.submitter?.value==='open';
@@ -362,12 +380,12 @@ function CreateGroup({exam,examId,base,loadingExam,examError}){
         <label><span><TeachingIcon name="file" size={15}/> Project title</span><input maxLength={200} placeholder="Enter project title"
           value={names.projectTitle} onChange={event=>setNames({...names,projectTitle:event.target.value})}/></label>
       </div>
-      <label><span><TeachingIcon name="clipboard" size={15}/> Approved evaluation form</span>
+      <label><span><TeachingIcon name="clipboard" size={15}/> Evaluation form</span>
         <select className="dw-create-group-form-select" required value={form} disabled={!forms.data} onChange={event=>setForm(event.target.value)}>
-        <option value="">{!forms.data?'Loading forms…':approved.length?'Choose a form':'No approved forms available'}</option>
+        <option value="">{!forms.data?'Loading forms…':approved.length?'Choose a form':'No evaluation forms available'}</option>
         {approved.map(item=><option key={item._id} value={item._id}>{item.title} · {item.maximum} marks</option>)}
       </select></label>
-      {forms.data&&!approved.length&&<p>Approve an evaluation form for this exam before creating a group.</p>}
+      {forms.data&&!approved.length&&<p>Create and save an evaluation form for this exam before creating a group.</p>}
       {options.data?<div className="dw-grid" key={resetCount}>
         <Choices label="Students" icon="graduate" items={options.data.students} selected={students} onChange={setStudents} describe={studentLabel}/>
         <Choices label="Evaluators" icon="check" items={options.data.people} selected={evaluators} onChange={setEvaluators} describe={personLabel}/>

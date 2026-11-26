@@ -16,7 +16,17 @@ const api = axios.create({
 });
 
 api.interceptors.response.use(
-  (response) => publishAssessmentChange(response),
+  (response) => {
+    const method = String(response.config?.method || 'get').toLowerCase();
+    if (response.status < 400 && ['post', 'put', 'patch', 'delete'].includes(method) &&
+        !/^\/?auth(?:\/|$)/.test(response.config?.url || '')) {
+      window.dispatchEvent(new Event('data:changed'));
+      try {
+        localStorage.setItem('data:last-change', Date.now() + ':' + Math.random());
+      } catch {}
+    }
+    return publishAssessmentChange(response);
+  },
   (error) => {
     if (error.response?.status === 401 && !['/auth/login','/auth/google','/auth/session'].includes(error.config?.url)) {
       window.dispatchEvent(new Event('auth:unauthorized'));
