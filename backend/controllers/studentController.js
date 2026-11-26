@@ -104,9 +104,7 @@ const deleteStudent = asyncHandler(async (req, res) => {
     // Keep the student profile until cleanup succeeds so standalone retries can finish.
     await remove();
   }
-  res.json({success:true,action:outcome,message:outcome === 'archived'
-    ? 'Student archived because linked records exist'
-    : 'Student and account permanently deleted'});
+  res.json({success:true,action:outcome});
 });
 
 module.exports = {

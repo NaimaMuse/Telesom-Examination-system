@@ -13,6 +13,29 @@ import TeachingIcon from '../../components/TeachingIcon';
 
 // ─────────────────── STUDENT MANAGEMENT ────────────────────────
 const STUDENT_STATUSES = ['active', 'inactive', 'graduated', 'suspended', 'dropped', 'waiting', 'archived'];
+
+function StudentCreatedPopup({student, onClose}) {
+  const dialog = useRef(null);
+  useEffect(() => {
+    const element = dialog.current;
+    element.showModal();
+    return () => element.close();
+  }, []);
+
+  return <dialog ref={dialog} className="student-created-popup" aria-labelledby="student-created-title"
+    onCancel={event => { event.preventDefault(); onClose(); }}>
+    <button type="button" className="student-created-close" aria-label="Close account confirmation" onClick={onClose}>×</button>
+    <span className="student-created-icon"><TeachingIcon name="check" size={27}/></span>
+    <h2 id="student-created-title">Student added</h2>
+    <p className="student-created-name">{student.name}</p>
+    <div className="student-created-id"><span>Student ID</span><strong>{student.studentId}</strong></div>
+    <p className="student-created-instructions">{student.email
+      ? <>Sign in with the Google account<br/><strong>{student.email}</strong></>
+      : 'Add the student’s Google account email to enable sign-in.'}</p>
+    <button type="button" className="student-created-done" autoFocus onClick={onClose}>Done</button>
+  </dialog>;
+}
+
 const STUDENT_FIELDS = [
   { key: 'name', label: 'Name', type: 'text', required: true, example: 'Amina Hassan', guidance: 'Required. Enter the full name (2–100 characters).' },
   { key: 'studentId', label: 'Student ID (automatic)', type: 'text', readOnly: true },
@@ -672,9 +695,11 @@ export default function StudentMgmt() {
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError('');
+    setBulkNotice('');
+    setCreatedStudentLogin(null);
     try {
-      const {data} = await api.delete(`/students/${deleteTarget._id}`);
-      setBulkNotice(data.message);
+      await api.delete(`/students/${deleteTarget._id}`);
+      setBulkNotice('');
       await Promise.all([fetchStudents(), fetchEnrollments()]);
     } catch (error) {
       setDeleteError(error.response?.data?.message || 'Could not delete the student. Please try again.');
@@ -689,14 +714,13 @@ export default function StudentMgmt() {
     setBulkBusy(true);
     setDeleteError('');
     setBulkNotice('');
+    if (bulkAction.type === 'delete') setCreatedStudentLogin(null);
     const succeeded = [];
     const failures = [];
-    let archived = 0;
     for (const student of bulkAction.students) {
       try {
         if (bulkAction.type === 'delete') {
-          const {data} = await api.delete(`/students/${student._id}`);
-          if (data.action === 'archived') archived++;
+          await api.delete(`/students/${student._id}`);
         }
         else await api.put(`/students/${student._id}`, {status:bulkAction.status});
         succeeded.push(student._id);
@@ -707,9 +731,7 @@ export default function StudentMgmt() {
     setSelectedStudents(current => new Set([...current].filter(id => !succeeded.includes(id))));
     setBulkAction(null);
     setBulkBusy(false);
-    setBulkNotice(bulkAction.type === 'delete'
-      ? `${succeeded.length - archived} deleted · ${archived} archived because linked records exist.`
-      : `${succeeded.length} students updated.`);
+    setBulkNotice(bulkAction.type === 'delete' ? '' : `${succeeded.length} students updated.`);
     if (failures.length) setDeleteError(`${failures.length} failed. ${failures.slice(0, 3).join(' · ')}. Failed students remain selected for retry.`);
     await Promise.all([fetchStudents(), fetchEnrollments()]);
   };
@@ -718,7 +740,7 @@ export default function StudentMgmt() {
     <>
       {deleteError && <div className="student-form-error" role="alert">{deleteError}</div>}
       {bulkNotice && <p role="status">{bulkNotice}</p>}
-      {createdStudentLogin && <div className="card card-body" role="status" style={{marginBottom:16,display:'flex',gap:12,alignItems:'center',justifyContent:'space-between'}}><div><strong>{createdStudentLogin.name}: account created</strong><p>Student ID: <strong>{createdStudentLogin.studentId}</strong>. {createdStudentLogin.email ? `Sign in with the Google account for ${createdStudentLogin.email}.` : 'Add the student’s Google account email to enable sign-in.'}</p></div><button type="button" className="btn btn-sm btn-secondary" aria-label="Dismiss student sign-in details" onClick={()=>setCreatedStudentLogin(null)}>×</button></div>}
+      {createdStudentLogin && !showModal && <StudentCreatedPopup student={createdStudentLogin} onClose={() => setCreatedStudentLogin(null)}/>}
       <div className="page-header student-management-header">
         <div className="student-management-actions">
         <button type="button" className="btn btn-sm btn-secondary student-view-toggle" aria-pressed={showAllDetails} onClick={() => setShowAllDetails(current => !current)}>
@@ -876,7 +898,7 @@ export default function StudentMgmt() {
       )}
       {deleteTarget && (
         <ConfirmModal
-          message={`Permanently delete "${deleteTarget.name}" and all their records, including their account, enrollments, attendance, results and certificates? This cannot be undone.`}
+          message={`Delete "${deleteTarget.name}" permanently?`}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
           loading={deleting}
@@ -886,7 +908,7 @@ export default function StudentMgmt() {
         title={bulkAction.type === 'delete' ? 'Confirm Delete' : 'Confirm status change'}
         actionLabel={bulkAction.type === 'delete' ? 'Delete' : 'Apply status'}
         message={bulkAction.type === 'delete'
-          ? `Permanently delete ${bulkAction.students.length} selected students and all their linked records? This cannot be undone.`
+          ? `Delete ${bulkAction.students.length} students permanently?`
           : `Change the status of ${bulkAction.students.length} selected students to "${bulkAction.status}"?`}
         onConfirm={runBulkAction}
         onCancel={() => { if (!bulkBusy) setBulkAction(null); }}

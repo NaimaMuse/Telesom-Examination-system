@@ -337,3 +337,45 @@
   .student-selection-status { flex: 1 1 100%; }
   .student-selection-toolbar .student-selection-status .form-control { flex: 1; min-width: 120px; }
 }
+
+.student-created-popup {
+  position: fixed;
+  inset: 0;
+  width: min(350px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 24px;
+  border: 1px solid #cde2d4;
+  border-top: 4px solid #d7982f;
+  border-radius: 16px;
+  background: #fff;
+  color: #174d35;
+  text-align: center;
+  box-shadow: 0 20px 70px #06382440;
+}
+.student-created-popup::backdrop { background: #10392b66; backdrop-filter: blur(3px); }
+.student-created-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: #f1f7f3;
+  color: #37664d;
+  font-size: 21px;
+  cursor: pointer;
+}
+.student-created-icon { display: grid; place-items: center; width: 50px; height: 50px; margin: 0 auto 12px; border-radius: 50%; border: 1px solid #d4e9d9; background: #e6f5eb; color: #08743f; }
+.student-created-popup h2 { margin: 0; font-size: 20px; color: #0e4b31; }
+.student-created-name { margin: 4px 0 14px; color: #526b5d; font-size: 14px; overflow-wrap: anywhere; }
+.student-created-id { display: grid; gap: 3px; padding: 10px; border: 1px solid #edd7a7; border-radius: 9px; background: #fff8e8; }
+.student-created-id span { color: #806126; font-size: 11px; }
+.student-created-id strong { color: #174d35; font-size: 19px; letter-spacing: .04em; }
+.student-created-instructions { margin: 14px 0; color: #526b5d; font-size: 12px; line-height: 1.6; }
+.student-created-instructions strong { color: #174d35; overflow-wrap: anywhere; }
+.student-created-done { width: 100%; min-height: 36px; border: 1px solid #075a36; border-radius: 8px; background: #075a36; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.student-created-done:hover { background: #087442; }
+.student-created-popup button:focus-visible { outline: 2px solid #d7982f; outline-offset: 3px; }
