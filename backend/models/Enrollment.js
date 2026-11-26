@@ -20,6 +20,7 @@ const enrollmentSchema = new mongoose.Schema(
     },
     batch: {type:String,trim:true,default:''},
     droppedAt: {type:Date,default:null},
+    fromStudentRegistration: Boolean,
     semester: {
       type: String,
       trim: true,
@@ -44,6 +45,10 @@ const enrollmentSchema = new mongoose.Schema(
 
 // Prevent duplicate enrollment for the same student in the same course within an academic year
 enrollmentSchema.index({ student: 1, course: 1, academicYear: 1, batch:1 }, { unique: true });
+enrollmentSchema.index({ student: 1, course: 1 }, {
+  unique: true,
+  partialFilterExpression: { fromStudentRegistration: true },
+});
 enrollmentSchema.index({ student: 1 });
 enrollmentSchema.index({ course: 1 });
 

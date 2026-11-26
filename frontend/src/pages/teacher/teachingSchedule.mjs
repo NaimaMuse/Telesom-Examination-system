@@ -44,6 +44,30 @@ export function makeupClassesByDate(classes) {
   return days;
 }
 
+export function remainingStudentClasses(contract, makeupClasses = [], now = new Date()) {
+  if (!contract) return null;
+  const end = contract.endDate || (contract.dayBasis === 'calendar'
+    ? contractEndDate(contract.startDate, contract.totalContractDays || contract.totalDays)
+    : '');
+  if (!end) return null;
+  const today = teachingDateKey(now);
+  const start = today > contract.startDate ? today : contract.startDate;
+  const makeupCount = makeupClasses.filter(item =>
+    String(item.contract?._id || item.contract) === String(contract._id) &&
+    item.status !== 'cancelled' && item.displayStatus === 'Scheduled' &&
+    Date.parse(item.end) > now.getTime()
+  ).length;
+  let count = makeupCount;
+  for (const date = new Date(start + 'T12:00:00Z'); Number.isFinite(+date); date.setUTCDate(date.getUTCDate() + 1)) {
+    const key = date.toISOString().slice(0, 10);
+    if (key > end) break;
+    count += studentClassesOnDate([contract], key).filter(({slot}) =>
+      key !== today || Date.parse(key + 'T' + slot.endTime + ':00+03:00') > now.getTime()
+    ).length;
+  }
+  return count;
+}
+
 export function contractDurationDays(start, duration, unit = 'days') {
   const count = Number(duration);
   if (unit === 'days') return contractEndDate(start, count) ? count : 0;

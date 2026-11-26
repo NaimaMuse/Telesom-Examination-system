@@ -87,6 +87,7 @@ const startServer = async () => {
   await Promise.all([require('./models/ProjectDefense').init(), require('./models/ExamResult').init()]);
   await require('./models/Session').init();
   await require('./models/Certificate').init();
+  await require('./models/Enrollment').init();
   const server = app.listen(PORT, () => {
     console.log(
       `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`

@@ -70,7 +70,7 @@ function StudentDetailsDialog({ studentId, onClose }) {
   const enrollmentDetails = (enrollment) => {
     const course = enrollment?.course;
     const academicYear = enrollment?.academicYear || student.academicYear;
-    const cohort = enrollment?.cohort ||
+    const cohort = enrollment?.batch || enrollment?.cohort ||
       (academicYear === student.academicYear ? student.cohort : '') ||
       (course?.academicYear === academicYear ? course?.cohort : '');
     return [
@@ -479,17 +479,25 @@ export default function StudentMgmt() {
     await Promise.all([fetchStudents(!context.initial, context), fetchCourses(!context.initial, context), fetchEnrollments(!context.initial, context)]);
   }, { enabled: !showModal && !showImportModal && !importing && !deleting });
 
-  const getStudentEnrollment = (student) => enrollments.find((enrollment) => {
+  const getStudentEnrollments = (student) => enrollments.filter((enrollment) => {
     const enrolledStudentId = enrollment.student?._id || enrollment.student;
     return String(enrolledStudentId) === String(student._id) && enrollment.status !== 'dropped';
   });
+  const getStudentEnrollment = (student) => {
+    const records = getStudentEnrollments(student);
+    return records.find(enrollment =>
+      (!filterCourse || String(enrollment.course?._id || enrollment.course) === String(filterCourse)) &&
+      (!filterAcademicYear || enrollment.academicYear === filterAcademicYear) &&
+      (!filterCohort || (enrollment.batch || enrollment.cohort) === filterCohort)
+    ) || records[0];
+  };
 
-  const getStudentAcademicYear = (student) => student.academicYear || getStudentEnrollment(student)?.academicYear || '';
+  const getStudentAcademicYear = (student) => getStudentEnrollment(student)?.academicYear || student.academicYear || '';
   const getStudentCohort = (student) => {
     const enrollment = getStudentEnrollment(student);
     const course = enrollment?.course;
     const courseCohort = course?.academicYear === enrollment?.academicYear ? course?.cohort : '';
-    return enrollment?.cohort || student.cohort || courseCohort || '';
+    return enrollment?.batch || enrollment?.cohort || student.batch || student.cohort || courseCohort || '';
   };
   const academicYears = [...new Set([
     ...students.map(getStudentAcademicYear),
@@ -501,11 +509,12 @@ export default function StudentMgmt() {
     .filter(Boolean))].sort();
 
   const getStudentCourseName = (student) => {
-    const enrollment = getStudentEnrollment(student);
-    const course = enrollment?.course;
-    return typeof course === 'object' && course
-      ? course.title || course.name || 'Course'
-      : courses.find((item) => String(item._id) === String(course))?.title || student.courseName || student.program || '—';
+    const titles = getStudentEnrollments(student).map(({ course }) =>
+      typeof course === 'object' && course
+        ? course.title || course.name || 'Course'
+        : courses.find((item) => String(item._id) === String(course))?.title
+    ).filter(Boolean);
+    return [...new Set(titles)].join(', ') || student.courseName || student.program || '—';
   };
 
   const filtered = students.filter(s => {
@@ -540,32 +549,28 @@ export default function StudentMgmt() {
   const handleSave = async (form) => {
     const selectedCourse = courses.find(course => String(course._id) === String(form.course));
     const academicYear = form.academicYear || selectedCourse?.academicYear || String(new Date().getFullYear());
-    const { course: courseId, ...studentFields } = form;
+    const { course: courseId, cohort, ...studentFields } = form;
     delete studentFields.studentId;
     studentFields.academicYear = academicYear;
-    let studentId = editTarget?._id;
+    studentFields.batch = cohort || '';
 
     if (editTarget?._id && !String(editTarget._id).startsWith('s')) {
       await api.put(`/students/${editTarget._id}`, studentFields);
+      const enrollmentPayload = {
+        student: editTarget._id,
+        course: courseId,
+        academicYear,
+        batch: studentFields.batch,
+        semester: selectedCourse?.semester || '',
+        status: 'enrolled',
+      };
+      if (editTarget.enrollmentId) await api.put(`/enrollments/${editTarget.enrollmentId}`, enrollmentPayload);
+      else await api.post('/enrollments', enrollmentPayload);
     } else {
-      const response = await api.post('/users/students', studentFields);
-      const createdStudent = response.data?.data?.student;
-      if (createdStudent?.studentId) setCreatedStudentLogin({ name: form.name, studentId: createdStudent.studentId, email: form.email });
-      studentId = response.data?.data?.student?._id || response.data?.student?._id;
-      if (!studentId) throw new Error('Student was created, but the server did not return a student ID.');
+      const { data } = await api.post('/users/students', { ...studentFields, course: courseId });
+      const { student, user, accountCreated } = data.data;
+      setCreatedStudentLogin({ name: user.name, studentId: student.studentId, email: user.email, accountCreated });
     }
-
-    const existingEnrollment = enrollments.find((enrollment) => String(enrollment.student?._id || enrollment.student) === String(studentId) && enrollment.status !== 'dropped');
-    const enrollmentPayload = {
-      student: studentId,
-      course: courseId,
-      academicYear,
-      cohort:form.cohort||'',
-      semester: selectedCourse?.semester || '',
-      status: 'enrolled',
-    };
-    if (existingEnrollment?._id) await api.put(`/enrollments/${existingEnrollment._id}`, enrollmentPayload);
-    else await api.post('/enrollments', enrollmentPayload);
 
     await Promise.all([fetchStudents(), fetchEnrollments()]);
     setShowModal(false);
@@ -580,13 +585,11 @@ export default function StudentMgmt() {
     try {
       const normalizeName = value => String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
       const normalizeEmail = value => String(value || '').trim().toLowerCase();
-      const emails = new Set();
       const names = new Set();
       const namesWithoutEmail = new Set();
       const rememberStudent = (name, email) => {
         names.add(name);
-        if (email) emails.add(email);
-        else namesWithoutEmail.add(name);
+        if (!email) namesWithoutEmail.add(name);
       };
       let pages = 1;
       for (let page = 1; page <= pages; page++) {
@@ -607,7 +610,7 @@ export default function StudentMgmt() {
         }
         const name = normalizeName(payload.name);
         const email = normalizeEmail(payload.email);
-        if ((email && emails.has(email)) || namesWithoutEmail.has(name) || (!email && names.has(name))) {
+        if (namesWithoutEmail.has(name) || (!email && names.has(name))) {
           skippedCount++;
           continue;
         }
@@ -626,25 +629,23 @@ export default function StudentMgmt() {
             errors.push({ row, message: `Course "${payload.course}" matches multiple courses. Use the matching academic year and cohort, or use the full course code.` });
             continue;
           }
-          const { course: ignoredCourse, ...studentPayload } = payload;
+          const { course: ignoredCourse, cohort, ...studentPayload } = payload;
           delete studentPayload.studentId;
           studentPayload.academicYear = studentPayload.academicYear || selectedCourse.academicYear || new Intl.DateTimeFormat('en-US', {timeZone:'Africa/Nairobi', year:'numeric'}).format(new Date());
           studentPayload.status = String(studentPayload.status || 'active').trim().toLowerCase();
           if (!STUDENT_STATUSES.includes(studentPayload.status)) { errors.push({ row, message: `Allowed status values are ${STUDENT_STATUSES.join(', ')}.` }); continue; }
-          const response = await api.post('/users/students', studentPayload);
-          const createdStudentId = response.data?.data?.student?._id || response.data?.student?._id;
-          if (!createdStudentId) throw new Error('Student was created, but the server did not return its ID.');
-          await api.post('/enrollments', {
-            student: createdStudentId,
+          await api.post('/users/students', {
+            ...studentPayload,
             course: selectedCourse._id,
-            academicYear: studentPayload.academicYear,
-            cohort:studentPayload.cohort||'',
-            semester: selectedCourse.semester || '',
-            status: 'enrolled',
+            batch: cohort || '',
           });
           rememberStudent(name, email);
           successCount += 1;
         } catch (error) {
+          if (error.response?.status === 409 && error.response.data?.message === 'This email is already registered for this course') {
+            skippedCount++;
+            continue;
+          }
           errors.push({ row, message: error.response?.data?.message || error.message || 'Student could not be created.' });
         }
       }
@@ -680,7 +681,7 @@ export default function StudentMgmt() {
   return (
     <>
       {deleteError && <div className="student-form-error" role="alert">{deleteError}</div>}
-      {createdStudentLogin && <div className="card card-body" role="status" style={{marginBottom:16,display:'flex',gap:12,alignItems:'center',justifyContent:'space-between'}}><div><strong>{createdStudentLogin.name}: account created</strong><p>Student ID: <strong>{createdStudentLogin.studentId}</strong>. {createdStudentLogin.email ? `Sign in with the Google account for ${createdStudentLogin.email}.` : 'Add the student’s Google account email to enable sign-in.'}</p></div><button type="button" className="btn btn-sm btn-secondary" aria-label="Dismiss student sign-in details" onClick={()=>setCreatedStudentLogin(null)}>×</button></div>}
+      {createdStudentLogin && <div className="card card-body" role="status" style={{marginBottom:16,display:'flex',gap:12,alignItems:'center',justifyContent:'space-between'}}><div><strong>{createdStudentLogin.name}{createdStudentLogin.accountCreated ? ' — account created' : ' — enrolled in an additional course'}</strong><p>Student ID: <strong>{createdStudentLogin.studentId}</strong>. {createdStudentLogin.email ? `Sign in with the Google account for ${createdStudentLogin.email}.` : 'Add the student’s Google account email to enable sign-in.'}</p></div><button type="button" className="btn btn-sm btn-secondary" aria-label="Dismiss student sign-in details" onClick={()=>setCreatedStudentLogin(null)}>×</button></div>}
       <div className="page-header student-management-header">
         <div className="student-management-actions">
         <button type="button" className="btn btn-sm btn-secondary student-view-toggle" aria-pressed={showAllDetails} onClick={() => setShowAllDetails(current => !current)}>
@@ -796,7 +797,17 @@ export default function StudentMgmt() {
                           aria-label={`View details for ${s.name || 'student'}`} aria-haspopup="dialog" onClick={() => setViewStudentId(s._id)}>
                           <TeachingIcon name="eye" size={16} />
                         </button>
-                        <button type="button" className="student-row-edit" onClick={() => { const enrollment = getStudentEnrollment(s); setEditTarget({ ...s, course: enrollment?.course?._id || enrollment?.course || '' }); setShowModal(true); }}>Edit</button>
+                        <button type="button" className="student-row-edit" onClick={() => {
+                          const enrollment = getStudentEnrollment(s);
+                          setEditTarget({
+                            ...s,
+                            enrollmentId: enrollment?._id,
+                            course: enrollment?.course?._id || enrollment?.course || '',
+                            academicYear: enrollment?.academicYear || s.academicYear,
+                            cohort: enrollment?.batch || enrollment?.cohort || s.batch || s.cohort || '',
+                          });
+                          setShowModal(true);
+                        }}>Edit</button>
                         <button type="button" className="student-row-delete" aria-label={`Delete ${s.name || 'student'}`} onClick={() => setDeleteTarget(s)}>×</button>
                       </div>
                     </td>
@@ -823,7 +834,7 @@ export default function StudentMgmt() {
         <CrudModal
           title={editTarget ? 'Edit Student' : 'Add New Student'}
           fields={STUDENT_FIELDS}
-          initial={editTarget ? {...editTarget,cohort:getStudentEnrollment(editTarget)?.cohort||editTarget.cohort||''} : {}}
+          initial={editTarget || {}}
           courses={courses}
           coursesLoading={coursesLoading}
           onSave={handleSave}

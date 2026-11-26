@@ -3,6 +3,8 @@ const {verifyPassword} = require('../utils/passwords');
 const { createStudent, createTeacher, createJudge } = require('../controllers/userController');
 const User = require('../models/User');
 const Student = require('../models/Student');
+const Course = require('../models/Course');
+const Enrollment = require('../models/Enrollment');
 const Teacher = require('../models/Teacher');
 const studentIds = require('../services/studentIdService');
 studentIds.nextStudentId = async () => 'TA26001';
@@ -139,6 +141,41 @@ const runTests = async () => {
       'Student creation rejects duplicate email'
     );
     User.findOne = () => Promise.resolve(null);
+  }
+
+  {
+    const email = 'multiple@student.telesom.com';
+    const user = { _id: new mongoose.Types.ObjectId(), email, role: 'student', isActive: true };
+    const student = { _id: new mongoose.Types.ObjectId(), studentId: 'TA26001', status: 'active' };
+    const course = new mongoose.Types.ObjectId();
+    const originalCourseLookup = Course.findById;
+    const originalEnrollmentLookup = Enrollment.exists;
+    const originalEnrollmentCreate = Enrollment.create;
+    let enrollment;
+    User.findOne = async query => query.email === email ? user : null;
+    Student.findOne = async query => query.user === user._id ? student : null;
+    Course.findById = async () => ({ _id: course });
+    Enrollment.exists = async query => enrollment?.course === query.course ? enrollment : null;
+    Enrollment.create = async payload => { enrollment = payload; };
+    const request = () => createMock({ name: 'Existing Student', email, course: String(course), academicYear: '2026' });
+    try {
+      const additional = request();
+      await createStudent(additional.req, additional.res, additional.next);
+      const result = additional.getResult();
+      assert(result.statusCode === 201 && result.responseBody?.data?.accountCreated === false &&
+        result.responseBody.data.student === student && enrollment?.student === student._id,
+        'Student registration reuses the account and adds another course');
+
+      const duplicate = request();
+      await createStudent(duplicate.req, duplicate.res, duplicate.next);
+      assert(duplicate.getResult().statusCode === 409, 'Student registration rejects the same email and course');
+    } finally {
+      User.findOne = async () => null;
+      Student.findOne = async () => null;
+      Course.findById = originalCourseLookup;
+      Enrollment.exists = originalEnrollmentLookup;
+      Enrollment.create = originalEnrollmentCreate;
+    }
   }
 
   {

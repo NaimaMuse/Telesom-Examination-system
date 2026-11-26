@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import TeachingIcon from '../../components/TeachingIcon';
-import {studentClassesOnDate, makeupClassesByDate, teachingDateKey} from '../teacher/teachingSchedule.mjs';
+import {studentClassesOnDate, makeupClassesByDate, remainingStudentClasses, teachingDateKey} from '../teacher/teachingSchedule.mjs';
 import './StudentClassDates.css';
 
 const weekdays = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -9,7 +9,7 @@ const formatDate = (date, options) => date.toLocaleDateString('en-GB', {...optio
 const addDays = (date, count) => new Date(date.getTime() + count * 86400000);
 const formatCourseDate = key => formatDate(new Date(key + 'T12:00:00Z'), {day:'numeric', month:'short', year:'numeric'});
 
-function StudentCourseDuration({schedules}) {
+function StudentCourseDuration({schedules, makeupClasses}) {
   const contracts = schedules.filter(schedule => schedule.startDate);
   const [contractId, setContractId] = useState('');
   const contract = contracts.find(item => item._id === contractId) || contracts[0];
@@ -17,7 +17,7 @@ function StudentCourseDuration({schedules}) {
     <header className="student-calendar-header">
       <div className="student-calendar-title"><TeachingIcon name="calendar" size={21}/><div>
         <h2 id="student-duration-title">Course Duration</h2>
-        <p>Your course dates and days left</p>
+        <p>Your course dates and remaining classes</p>
       </div></div>
     </header>
     <div className="student-duration-body">
@@ -28,7 +28,7 @@ function StudentCourseDuration({schedules}) {
       <dl>
         <div><dt>Start Date</dt><dd>{contract?.startDate ? formatCourseDate(contract.startDate) : '—'}</dd></div>
         <div><dt>End Date</dt><dd>{contract?.endDate ? formatCourseDate(contract.endDate) : '—'}</dd></div>
-        <div><dt>Days Left</dt><dd>{contract?.remainingContractDays ?? '—'}</dd></div>
+        <div><dt>Classes Left</dt><dd>{remainingStudentClasses(contract, makeupClasses) ?? '—'}</dd></div>
       </dl>
     </div>
   </section>;
@@ -93,7 +93,7 @@ export default function StudentClassCalendar({schedules, makeupClasses, sidebar}
   </section>
   <div className="student-calendar-sidebar">
     {sidebar}
-    <StudentCourseDuration schedules={schedules}/>
+    <StudentCourseDuration schedules={schedules} makeupClasses={makeupClasses}/>
   </div>
   </div>;
 }

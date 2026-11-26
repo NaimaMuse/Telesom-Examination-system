@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {classesOnDate,contractEndDate,makeupClassesByDate,studentClassesOnDate,teachingDateKey} from '../src/pages/teacher/teachingSchedule.mjs';
+import {classesOnDate,contractEndDate,makeupClassesByDate,remainingStudentClasses,studentClassesOnDate,teachingDateKey} from '../src/pages/teacher/teachingSchedule.mjs';
 const contract={_id:'c',startDate:'2026-11-02',totalDays:120,dayBasis:'calendar',status:'active',cohort:'A',academicYear:'2026',course:{cohort:'A',academicYear:'2026',teachingSchedule:[{day:1,startTime:'08:00',endTime:'10:00'},{day:3,startTime:'10:00',endTime:'11:00'}]}};
 assert.equal(contractEndDate(contract.startDate,120),'2027-03-01');
 assert.equal(contractEndDate('',120),'');
@@ -30,6 +30,16 @@ const rescheduled = {_id:makeup._id,status:'scheduled',date:'2026-11-10'};
 const makeupDates = makeupClassesByDate([rescheduled]);
 assert.equal(makeupDates.has('2026-11-09'),false);
 assert.deepEqual(makeupDates.get('2026-11-10'),[rescheduled]);
+
+const courseTerm = {...contract, endDate:'2026-11-04'};
+const beforeFirstClass = new Date('2026-11-02T07:59:00+03:00');
+const afterFirstClass = new Date('2026-11-02T10:00:00+03:00');
+const scheduledMakeup = {...makeup, contract:contract._id, displayStatus:'Scheduled'};
+assert.equal(remainingStudentClasses(courseTerm, [], beforeFirstClass), 2);
+assert.equal(remainingStudentClasses(courseTerm, [], afterFirstClass), 1);
+assert.equal(remainingStudentClasses(courseTerm, [scheduledMakeup], afterFirstClass), 2);
+assert.equal(remainingStudentClasses(courseTerm, [{...scheduledMakeup, contract:'other'}], afterFirstClass), 1);
+assert.equal(remainingStudentClasses(courseTerm, [], new Date('2026-11-05T00:00:00+03:00')), 0);
 
 const {contractDurationDays,contractDurationLabel}=await import('../src/pages/teacher/teachingSchedule.mjs');
 assert.equal(contractDurationDays('2026-11-05',4,'months'),120);

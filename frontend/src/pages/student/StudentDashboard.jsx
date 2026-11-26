@@ -12,6 +12,9 @@ const timeZone = 'Africa/Nairobi';
 const dateFormatter = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric', month: 'short', year: 'numeric', timeZone,
 });
+const makeupDateFormatter = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', timeZone,
+});
 const clockFormatter = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone,
 });
@@ -78,7 +81,6 @@ const dashboardRequests = {
   attendance: '/student/attendance/summary',
   makeup: '/academy/makeup-classes',
   outlines: '/academy/outlines',
-  announcements: '/announcements',
 };
 
 export default function StudentDashboard() {
@@ -114,9 +116,6 @@ export default function StudentDashboard() {
   const avgPct = results.length ? Math.round(results.reduce((sum, result) => sum + result.marks / result.totalMarks * 100, 0) / results.length) + '%' : '—';
   const attPct = attendance?.total ? Math.round(attendance.present / attendance.total * 100) + '%' : '—';
 
-  const makeupStatus = !data.makeup ? 'Makeup schedule unavailable.'
-    : makeup.length === 0 ? 'No makeup classes scheduled.'
-      : `${makeup.length} makeup ${makeup.length === 1 ? 'class' : 'classes'} scheduled.`;
   const stats = [
     ['book', data.courseData ? courses.length : '—', 'Enrolled Courses'],
     ['clipboard', data.assessments ? upcoming.length : '—', 'Upcoming Exams'],
@@ -149,10 +148,14 @@ export default function StudentDashboard() {
           {item.date && <time dateTime={item.date}>{formatDate(item.date)}</time>}
         </li>)}</ul> : <p className="student-home-empty">No upcoming exams or quizzes.</p>}
       </DashboardPanel>
-      <DashboardPanel title="Announcements" icon="megaphone">
+      <DashboardPanel title="Makeup class" icon="megaphone">
         <ul className="student-home-announcements">
-          <li>{makeupStatus}</li>
-          {(data.announcements?.announcements || []).filter(row=>matchesPageSearch(search,row.title,row.message)).slice(0, 2).map(item => <li key={item._id} title={item.title}>{item.title}</li>)}
+          {makeup.length ? makeup.map(item => {
+            const date = item.date || teachingDateKey(item.start);
+            return <li key={item._id}>
+              <time dateTime={date}>{makeupDateFormatter.format(new Date(date + 'T12:00:00Z'))}</time>
+            </li>;
+          }) : <li>{data.makeup ? 'No makeup classes scheduled.' : 'Makeup schedule unavailable.'}</li>}
         </ul>
       </DashboardPanel>
     </div>

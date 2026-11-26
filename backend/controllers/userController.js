@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const {hashPassword} = require('../utils/passwords');
 const User = require('../models/User');
 const Student = require('../models/Student');
+const Course = require('../models/Course');
+const Enrollment = require('../models/Enrollment');
 const Teacher = require('../models/Teacher');
 const studentIds = require('../services/studentIdService');
 const batchService = require('../services/batchService');
@@ -58,7 +60,7 @@ const normalizeGender = (gender) => {
  * Uses a MongoDB transaction when the database supports it.
  * Falls back to create-then-cleanup on standalone MongoDB.
  */
-const createUserWithProfile = async ({ userData, ProfileModel, profileData }) => {
+const createUserWithProfile = async ({ userData, ProfileModel, profileData, enrollmentData }) => {
   const session = await mongoose.startSession();
 
   try {
@@ -68,6 +70,9 @@ const createUserWithProfile = async ({ userData, ProfileModel, profileData }) =>
       [{ ...profileData, user: user._id }],
       { session }
     );
+    if (enrollmentData) {
+      await Enrollment.create([{ ...enrollmentData, student: profile._id }], { session });
+    }
     await session.commitTransaction();
     return { user, profile };
   } catch (error) {
@@ -86,14 +91,17 @@ const createUserWithProfile = async ({ userData, ProfileModel, profileData }) =>
 
   const user = await User.create(userData);
 
+  let profile;
   try {
-    const profile = await ProfileModel.create({
+    profile = await ProfileModel.create({
       ...profileData,
       user: user._id,
     });
+    if (enrollmentData) await Enrollment.create({ ...enrollmentData, student: profile._id });
     return { user, profile };
   } catch (profileError) {
     try {
+      if (profile) await ProfileModel.findByIdAndDelete(profile._id);
       await User.findByIdAndDelete(user._id);
     } catch (cleanupError) {
       console.error(
@@ -132,6 +140,7 @@ const createStudent = async (req, res, next) => {
       address,
       academicYear,
       status,
+      course: courseId,
     } = req.body;
 
     if (!name || !String(name).trim()) {
@@ -148,6 +157,54 @@ const createStudent = async (req, res, next) => {
     }
 
     const previousAccount = normalizedEmail && await User.findOne({ email: normalizedEmail });
+    let enrollmentData;
+    if (courseId !== undefined) {
+      if (!mongoose.isObjectIdOrHexString(courseId)) {
+        res.status(400);
+        return next(new Error('Select a valid course'));
+      }
+      if (typeof academicYear !== 'string' || !academicYear.trim()) {
+        res.status(400);
+        return next(new Error('Academic year is required'));
+      }
+      const course = await Course.findById(courseId);
+      if (!course) {
+        res.status(404);
+        return next(new Error('Course not found'));
+      }
+      enrollmentData = {
+        course: course._id,
+        academicYear,
+        batch: req.body.batch || '',
+        semester: course.semester,
+        fromStudentRegistration: true,
+      };
+    }
+
+    if (enrollmentData && previousAccount?.role === 'student' && previousAccount.isActive) {
+      const student = await Student.findOne({ user: previousAccount._id });
+      if (student && student.status !== 'dropped') {
+        const enrollment = { ...enrollmentData, student: student._id };
+        const duplicateMessage = 'This email is already registered for this course';
+        try {
+          if (await Enrollment.exists({ student: student._id, course: enrollment.course })) {
+            res.status(409);
+            return next(new Error(duplicateMessage));
+          }
+          await batchService.validateBatch(enrollment.batch, academicYear);
+          await Enrollment.create(enrollment);
+        } catch (error) {
+          if (!isDuplicateKeyError(error)) throw error;
+          res.status(409);
+          return next(new Error(duplicateMessage));
+        }
+        return res.status(201).json({
+          success: true,
+          message: 'Student enrolled successfully',
+          data: { user: toSafeUser(previousAccount), student, accountCreated: false },
+        });
+      }
+    }
     // Older deletions disabled the login but left the email in the unique index.
     if (previousAccount && !(
       previousAccount.role === 'student' &&
@@ -184,6 +241,7 @@ const createStudent = async (req, res, next) => {
         isActive: true,
       },
       ProfileModel: Student,
+      enrollmentData,
       profileData: {
         studentId: normalizedStudentId,
         gender: normalizedGender,
@@ -201,6 +259,7 @@ const createStudent = async (req, res, next) => {
       data: {
         user: toSafeUser(user),
         student,
+        accountCreated: true,
       },
     });
   } catch (error) {
