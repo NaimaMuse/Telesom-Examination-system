@@ -133,11 +133,11 @@ async function updateContract(user,id,data) {
     await contract.save();return summary(contract);
   });
 }
-  async function createLesson(user,id,data,{outlineId=null}={}) {
+  async function createLesson(user,id,data,{outlineId=null,parentLesson=null,position=0}={}) {
   const contract=await loadContract(id);await authorize(user,contract,true);
   if(contract.status!=='active')fail('This contract is cancelled.');
     if((!outlineId||data.plannedDate)&&(!validDate(data.plannedDate)||data.plannedDate<contract.startDate||(contract.endDate&&data.plannedDate>contract.endDate)))fail('Planned date must be within the contract dates.');
-    return Lesson.create({outline:outlineId,contract:contract._id,teacher:contract.teacher,course:contract.course,batch:contract.batch,title:data.title,description:data.description,plannedDate:data.plannedDate||null});
+    return Lesson.create({outline:outlineId,parentLesson,position,contract:contract._id,teacher:contract.teacher,course:contract.course,batch:contract.batch,title:data.title,subtitle:data.subtitle,subtitles:data.subtitles,description:data.description,plannedDate:data.plannedDate||null});
 }
 async function setLessonStatus(user,contractId,lessonId,status,now=new Date()) {
   const original=await loadContract(contractId);await authorize(user,original,true);

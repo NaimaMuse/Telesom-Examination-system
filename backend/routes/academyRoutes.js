@@ -1,4 +1,4 @@
-const {orderPlan,lessonProgress,numberChapters,moveItem}=require('../services/outlinePlanService');
+const {orderPlan,lessonProgress,numberChapters,numberLessons,moveItem}=require('../services/outlinePlanService');
 const express=require('express'),multer=require('multer'),mongoose=require('mongoose');
 const sharp=require('sharp');
 const {protect}=require('../middleware/authMiddleware');
@@ -135,6 +135,25 @@ const saveProfilePicture = asyncHandler(async(req,res)=>{
 router.put('/profile-picture',authorizeRoles('teacher'),profileUpload.single('file'),saveProfilePicture);
 router.put('/profile-picture/:teacherId',asyncHandler(async()=>{fail('Teachers can only update their own profile picture from their account.',403);}));
 router.delete('/profile-picture',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{const teacher=await teacherFor(req.user);teacher.profilePicture='';await teacher.save();res.json({picture:''});}));
+function validateChapterNumber(number, siblings, currentId) {
+  if (number === undefined) return undefined;
+  if (!Number.isSafeInteger(number) || number < 1) fail('Enter a positive whole chapter number.',400);
+  if (numberChapters(siblings).some(row => String(row._id) !== String(currentId) && row.chapterNumber === number)) {
+    fail('This chapter number is already used for this course contract.',409);
+  }
+  return number;
+}
+
+function chapterLabelFields(body, siblings, currentId) {
+  if (body.chapterLabel === undefined) {
+    return {chapterLabel: undefined, chapterNumber: validateChapterNumber(body.chapterNumber, siblings, currentId)};
+  }
+  const chapterLabel = typeof body.chapterLabel === 'string' ? body.chapterLabel.trim() : '';
+  const number = /^\p{L}.*\s+([0-9]+)$/u.exec(chapterLabel)?.[1];
+  if (!number || chapterLabel.length > 60) fail('Enter a label and number, such as Module 3.',400);
+  return {chapterLabel, chapterNumber: validateChapterNumber(Number(number), siblings, currentId)};
+}
+
 router.get('/outlines',asyncHandler(async(req,res)=>{
   res.set('Cache-Control','no-store');
   let filter={};
@@ -146,37 +165,98 @@ router.get('/outlines',asyncHandler(async(req,res)=>{
     filter={published:true,$or:rows.map(e=>({course:e.course,academicYear:e.academicYear,batch:e.batch||''}))};
   }
   const outlines=await Outline.find(filter).populate('teacher','teacherId').populate('course','title name').lean();
-  const chapterIndex=numberChapters(await Outline.find({contract:{$in:outlines.map(o=>o.contract)}}).select('_id contract position createdAt').lean());
+  const chapterIndex=numberChapters(await Outline.find({contract:{$in:outlines.map(o=>o.contract)}}).select('_id contract position createdAt chapterNumber').lean());
   const numbers=new Map(chapterIndex.map(o=>[String(o._id),o.chapterNumber]));
   const lessons=(await Lesson.find({outline:{$in:outlines.map(o=>o._id)}}).lean()).sort(orderPlan);
-  res.json({outlines:outlines.sort(orderPlan).map(o=>{const rows=lessons.filter(l=>String(l.outline)===String(o._id)).map((l,index)=>({...l,lessonNumber:index+1,progress:lessonProgress(l)}));const completed=rows.filter(l=>l.status==='completed').length;return {...o,chapterNumber:numbers.get(String(o._id)),lessons:req.user.role==='student'?rows.map(l=>({_id:l._id,title:l.title,description:l.description,plannedDate:l.plannedDate,status:l.status,progress:l.progress,lessonNumber:l.lessonNumber,completedDay:l.completedDay})):rows,totalLessons:rows.length,completedLessons:completed,remainingLessons:rows.length-completed,progress:rows.length?Math.round(rows.reduce((sum,l)=>sum+l.progress,0)/rows.length):0};})});
+  res.json({outlines:outlines.sort(orderPlan).map(o=>{const rows=numberLessons(lessons.filter(l=>String(l.outline)===String(o._id))).map(l=>({...l,progress:lessonProgress(l)}));const completed=rows.filter(l=>l.status==='completed').length;return {...o,chapterNumber:numbers.get(String(o._id)),lessons:req.user.role==='student'?rows.map(l=>({_id:l._id,title:l.title,subtitle:l.subtitle,subtitles:l.subtitles,description:l.description,plannedDate:l.plannedDate,status:l.status,progress:l.progress,lessonNumber:l.lessonNumber,parentLesson:l.parentLesson,completedDay:l.completedDay})):rows,totalLessons:rows.length,completedLessons:completed,remainingLessons:rows.length-completed,progress:rows.length?Math.round(rows.reduce((sum,l)=>sum+l.progress,0)/rows.length):0};})});
 }));router.post('/outlines',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{
   const contract=await contractService.loadContract(id(req.body.contract));await contractService.authorize(req.user,contract,true);
-  const outline=await contractService.withContractLock(contract._id,async()=>{const siblings=await Outline.find({contract:contract._id}).select('position').lean();return Outline.create({contract:contract._id,teacher:contract.teacher,course:contract.course,batch:contract.batch,academicYear:contract.academicYear,position:Math.max(-1,...siblings.map(o=>o.position||0))+1,...pick(req.body,['title','description','published'])});});
+  const outline=await contractService.withContractLock(contract._id,async()=>{
+    const siblings=await Outline.find({contract:contract._id}).select('contract position createdAt chapterNumber').lean();
+    const chapterFields=chapterLabelFields(req.body,siblings);
+    return Outline.create({contract:contract._id,teacher:contract.teacher,course:contract.course,batch:contract.batch,academicYear:contract.academicYear,...chapterFields,position:Math.max(-1,...siblings.map(o=>o.position||0))+1,...pick(req.body,['title','description','published'])});
+  });
   res.status(201).json({outline});
 }));
 router.patch('/outlines/:id',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{
-  const outline=await Outline.findById(id(req.params.id));await outlineAccess(req.user,outline,true);outline.set(pick(req.body,['title','description','published']));await outline.save();res.json({outline});
+  const outlineId=id(req.params.id);
+  const existing=await Outline.findById(outlineId);
+  await outlineAccess(req.user,existing,true);
+  const outline=await contractService.withContractLock(existing.contract,async()=>{
+    const current=await Outline.findById(outlineId);
+    if(!current)fail('Chapter not found.',404);
+    if(req.body.chapterNumber!==undefined||req.body.chapterLabel!==undefined){
+      const siblings=await Outline.find({contract:current.contract}).select('contract position createdAt chapterNumber').lean();
+      current.set(chapterLabelFields(req.body,siblings,current._id));
+    }
+    current.set(pick(req.body,['title','description','published']));
+    return current.save();
+  });
+  res.json({outline});
 }));
+async function lessonParent(outline, value, lessonId) {
+  if (!value) return null;
+  const parent = id(value);
+  if (String(parent) === String(lessonId) ||
+      !await Lesson.exists({_id:parent,outline,parentLesson:null})) {
+    fail('Choose a main lesson from this chapter.',400);
+  }
+  if (lessonId && await Lesson.exists({outline,parentLesson:lessonId})) {
+    fail('Move the sub-lessons before nesting this lesson.',409);
+  }
+  return parent;
+}
+
+async function nextLessonPosition(outline, parentLesson) {
+  const last = await Lesson.findOne({outline,parentLesson}).sort({position:-1}).select('position').lean();
+  return (last?.position ?? -1) + 1;
+}
+
 router.post('/outlines/:id/lessons',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{
   const outline=await Outline.findById(id(req.params.id));await outlineAccess(req.user,outline,true);
-  const lesson=await contractService.withContractLock(outline.contract,async()=>{if(!await Outline.exists({_id:outline._id}))fail('Chapter not found.',404);const siblings=await Lesson.find({outline:outline._id}).select('position').lean();const lesson=await contractService.createLesson(req.user,outline.contract,req.body,{outlineId:outline._id});lesson.position=Math.max(-1,...siblings.map(l=>l.position||0))+1;await lesson.save();return lesson;});res.status(201).json({lesson});
+  const lesson=await contractService.withContractLock(outline.contract,async()=>{
+    if(!await Outline.exists({_id:outline._id}))fail('Chapter not found.',404);
+    const parentLesson=await lessonParent(outline._id,req.body.parentLesson);
+    const position=await nextLessonPosition(outline._id,parentLesson);
+    return contractService.createLesson(req.user,outline.contract,req.body,{outlineId:outline._id,parentLesson,position});
+  });
+  res.status(201).json({lesson});
 }));
 router.patch('/outlines/:id/lessons/:lessonId',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{
   const outline=await Outline.findById(id(req.params.id));await outlineAccess(req.user,outline,true);
-  const lesson=await Lesson.findOne({_id:id(req.params.lessonId),outline:outline._id,contract:outline.contract});
-  if(!lesson)fail('Lesson not found.',404);
-  const updates=pick(req.body,['title','description','plannedDate']);
-  // An unchanged null date on a chapter lesson must not run the query-level required validator.
-  if (updates.plannedDate === lesson.plannedDate) delete updates.plannedDate;
-  if(updates.plannedDate!==undefined&&updates.plannedDate!==lesson.plannedDate){
-    if(lesson.status==='completed')fail('Reverse completion before changing the lesson schedule.');
-    const contract=await contractService.loadContract(outline.contract);
-    if(!contractService.validDate(updates.plannedDate)||updates.plannedDate<contract.startDate||(contract.endDate&&updates.plannedDate>contract.endDate))fail('Planned date must be within the contract dates.');
-  }
-  const saved=await Lesson.findOneAndUpdate({_id:lesson._id,status:lesson.status},{$set:updates},{new:true,runValidators:true});
-  if(!saved)fail('The lesson changed while you were editing. Please reload.',409);
-  res.json({lesson:saved});
+  await contractService.withContractLock(outline.contract,async()=>{
+    const lesson=await Lesson.findOne({_id:id(req.params.lessonId),outline:outline._id,contract:outline.contract});
+    if(!lesson)fail('Lesson not found.',404);
+    const updates=pick(req.body,['title','subtitle','subtitles','description','plannedDate']);
+    if(req.body.parentLesson!==undefined && String(req.body.parentLesson||'')!==String(lesson.parentLesson||'')){
+      updates.parentLesson=await lessonParent(outline._id,req.body.parentLesson,lesson._id);
+      updates.position=await nextLessonPosition(outline._id,updates.parentLesson);
+    }
+    // An unchanged null date on a chapter lesson must not run the query-level required validator.
+    if (updates.plannedDate === lesson.plannedDate) delete updates.plannedDate;
+    if(updates.plannedDate!==undefined&&updates.plannedDate!==lesson.plannedDate){
+      if(lesson.status==='completed')fail('Reverse completion before changing the lesson schedule.');
+      const contract=await contractService.loadContract(outline.contract);
+      if(!contractService.validDate(updates.plannedDate)||updates.plannedDate<contract.startDate||(contract.endDate&&updates.plannedDate>contract.endDate))fail('Planned date must be within the contract dates.');
+    }
+    const saved=await Lesson.findOneAndUpdate({_id:lesson._id,status:lesson.status},{$set:updates},{new:true,runValidators:true});
+    if(!saved)fail('The lesson changed while you were editing. Please reload.',409);
+    res.json({lesson:saved});
+  });
+}));
+router.delete('/outlines/:id/lessons/:lessonId',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{
+  const outline=await Outline.findById(id(req.params.id));await outlineAccess(req.user,outline,true);
+  const lessonId=id(req.params.lessonId);
+  const lockCourse=await require('../models/Course').findOne().sort({_id:1}).select('_id');
+  if(!lockCourse)fail('Course not found.',404);
+  await withCourseLock(lockCourse._id,()=>contractService.withContractLock(outline.contract,async()=>{
+    const scope={_id:lessonId,outline:outline._id,contract:outline.contract};
+    if(!await Lesson.exists(scope))fail('Lesson not found.',404);
+    if(await Lesson.exists({outline:outline._id,parentLesson:lessonId}))fail('Move or delete its sub-lessons first.',409);
+    if(await Makeup.exists({lesson:lessonId}))fail('This lesson has a linked makeup class. Contact Admin before removing it.',409);
+    await Lesson.deleteOne(scope);
+  }));
+  res.json({message:'Lesson deleted.'});
 }));
 router.post('/outlines/:id/move',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{
   const outline=await Outline.findById(id(req.params.id));await outlineAccess(req.user,outline,true);
@@ -185,7 +265,11 @@ router.post('/outlines/:id/move',authorizeRoles('teacher'),asyncHandler(async(re
 }));
 router.post('/outlines/:id/lessons/:lessonId/move',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{
   const outline=await Outline.findById(id(req.params.id));await outlineAccess(req.user,outline,true);
-  await contractService.withContractLock(outline.contract,()=>moveItem(Lesson,{outline:outline._id},id(req.params.lessonId),req.body.direction));
+  await contractService.withContractLock(outline.contract,async()=>{
+    const lesson=await Lesson.findOne({_id:id(req.params.lessonId),outline:outline._id}).select('parentLesson');
+    if(!lesson)fail('Lesson not found.',404);
+    await moveItem(Lesson,{outline:outline._id,parentLesson:lesson.parentLesson||null},lesson._id,req.body.direction);
+  });
   res.json({message:'Lesson order updated.'});
 }));
 router.patch('/outlines/:id/lessons/:lessonId/progress',authorizeRoles('teacher'),asyncHandler(async(req,res)=>{

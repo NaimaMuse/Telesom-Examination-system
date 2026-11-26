@@ -6,6 +6,8 @@ const schema = new mongoose.Schema({
   batch:{type:String,required:true},
   academicYear:{type:String,required:true},
   title:{type:String,required:true,trim:true,maxlength:200},
+  chapterNumber:{type:Number,min:1,validate:Number.isSafeInteger},
+  chapterLabel:{type:String,trim:true,maxlength:60},
   position:{type:Number,default:0,min:0},
   description:{type:String,trim:true,maxlength:4000,default:''},
   published:{type:Boolean,default:false},

@@ -223,6 +223,15 @@ const dbName='telesom_academy_test_'+crypto.randomBytes(6).toString('hex');let s
   assert.strictEqual((await readChapter(su)).chapterNumber,1);
   assert.strictEqual((await request('POST','/academy/outlines/'+chapter._id+'/lessons/'+forms._id+'/move',{direction:'up'},tu)).status,200);
   assert.deepStrictEqual((await readChapter(su)).lessons.map(l=>l._id),[forms._id,tags._id]);
+  const chapterLessons = '/academy/outlines/'+chapter._id+'/lessons';
+  response=await request('POST',chapterLessons,{title:'Form controls',parentLesson:forms._id},tu);
+  assert.strictEqual(response.status,201);
+  const child=response.body.lesson;
+  assert.deepStrictEqual((await readChapter(su)).lessons.map(l=>[l._id,l.lessonNumber]),[[forms._id,1],[child._id,'1.1'],[tags._id,2]]);
+  assert.strictEqual((await request('POST',chapterLessons,{title:'Too deep',parentLesson:child._id},tu)).status,400);
+  assert.strictEqual((await request('DELETE',chapterLessons+'/'+forms._id,null,tu)).status,409);
+  assert.strictEqual((await request('DELETE',chapterLessons+'/'+child._id,null,su)).status,403);
+  assert.strictEqual((await request('DELETE',chapterLessons+'/'+child._id,null,tu)).status,200);
   assert.strictEqual((await request('PATCH','/academy/outlines/'+chapter._id+'/lessons/'+tags._id+'/progress',{progress:50},tu)).status,200);
   assert.strictEqual((await readChapter(su)).progress,25);
   assert.strictEqual((await readChapter(su)).lessons.find(l=>l._id===tags._id).progress,50);
